@@ -91,14 +91,22 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 	successCount := 0
 	failedRepos := []string{}
 
-	// Clean and create _Repos directory
 	cmdCleanRepos := exec.Command("sh", "-c", "rm -rf _Repos && mkdir -p _Repos")
 	if out, err := cmdCleanRepos.CombinedOutput(); err != nil {
 		util.ErrorHandler(fmt.Errorf("failed to clean _Repos directory: %v: %s", err, string(out)))
 		return
 	}
 
-	// Initialize git repository
+	defer func() {
+		fmt.Println("\n=== Cleaning up ===")
+		cleanupCmd := exec.Command("sh", "-c", "rm -rf _Repos")
+		if out, err := cleanupCmd.CombinedOutput(); err != nil {
+			fmt.Printf("⚠ Warning: failed to cleanup _Repos: %v: %s\n", err, string(out))
+		} else {
+			fmt.Println("✓ Successfully removed _Repos directory")
+		}
+	}()
+
 	initScript := `cd _Repos && \
         git init && \
         git config user.email "shardendumishra01@gmail.com" && \
