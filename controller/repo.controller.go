@@ -97,7 +97,7 @@ func RepoControllerPrivate(RepoURL string, config model.ConfigModel) []string {
 	res, err := client.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").
-		SetAuthToken(config.GithubTokenPrivate).
+		SetAuthToken(config.GitHubTokenPrivate).
 		Get(RepoURL)
 
 	if err != nil {

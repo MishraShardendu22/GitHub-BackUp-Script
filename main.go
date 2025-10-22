@@ -25,8 +25,8 @@ func main() {
 	for _, repo := range allRepos {
 		fmt.Println(repo)
 	}
-	
-	// CloneRepos(allRepos, config)
+
+	CloneRepos(allRepos, config)
 }
 
 func CloneRepos(repoNames []string, config *model.ConfigModel) {
@@ -99,7 +99,8 @@ func loadConfig() *model.ConfigModel {
 		MainAccount:         util.GetEnv("MAIN_ACCOUNT", ""),
 		ProjectAccount:      util.GetEnv("PROJECT_ACCOUNT", ""),
 		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),
-		GithubTokenPrivate:  util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
+		GitHubTokenMain:     util.GetEnv("GITHUB_TOKEN_MAIN", ""),
+		GitHubTokenPrivate:  util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
 		GitHubTokenPersonal: util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
 	}
 }
