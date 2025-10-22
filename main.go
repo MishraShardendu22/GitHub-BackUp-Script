@@ -30,50 +30,76 @@ func main() {
 }
 
 func CloneRepos(repoNames []string, config *model.ConfigModel) {
-	repoCount := 1
-	cmd1 := exec.Command("sh", "-c", "cd _Repos && git init && (git checkout -b main || git checkout main || true) && if [ -z \"$(git rev-parse --verify HEAD 2>/dev/null)\" ]; then touch README.md && git add README.md && git commit -m 'Initial commit'; fi && (git remote get-url origin >/dev/null 2>&1 && git remote set-url origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git || git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git) && git push --force origin main && cd ..")
-	if out, err := cmd1.CombinedOutput(); err != nil {
-		util.ErrorHandler(fmt.Errorf("initial git setup failed: %v: %s", err, string(out)))
-	}
+    repoCount := 1
+    
+    // Clean and reinitialize _Repos directory for each run
+    cmdCleanRepos := exec.Command("sh", "-c", "rm -rf _Repos && mkdir -p _Repos")
+    if out, err := cmdCleanRepos.CombinedOutput(); err != nil {
+        util.ErrorHandler(fmt.Errorf("failed to clean _Repos directory: %v: %s", err, string(out)))
+    }
 
-	for _, fullName := range repoNames {
-		url := "git@github.com:" + fullName + ".git"
+    // Initialize git repo with proper remote setup
+    initScript := `
+        cd _Repos && 
+        git init && 
+        git config user.email "backup@example.com" && 
+        git config user.name "GitHub Backup" && 
+        git checkout -b main && 
+        touch README.md && 
+        git add README.md && 
+        git commit -m 'Initial commit' && 
+        git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && 
+        git push --force origin main && 
+        cd ..
+    `
+    cmd1 := exec.Command("sh", "-c", initScript)
+    if out, err := cmd1.CombinedOutput(); err != nil {
+        util.ErrorHandler(fmt.Errorf("initial git setup failed: %v: %s", err, string(out)))
+    }
 
-		repoName := fullName[strings.Index(fullName, "/")+1:]
+    for _, fullName := range repoNames {
+        url := "git@github.com:" + fullName + ".git"
+        repoName := fullName[strings.Index(fullName, "/")+1:]
+        repoPath := "_Repos/" + repoName
 
-		repoPath := "_Repos/" + repoName
+        // Clone repo
+        cmdClone := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf \"%s\" && git clone %s", repoName, url))
+        if out, err := cmdClone.CombinedOutput(); err != nil {
+            util.ErrorHandler(fmt.Errorf("git clone failed for %s: %v: %s", url, err, string(out)))
+            continue
+        }
 
-		// remove existing folder if present to ensure a clean clone
-		cmdCleanup := exec.Command("sh", "-c", "rm -rf \""+repoPath+"\"")
-		if out, err := cmdCleanup.CombinedOutput(); err != nil {
-			util.ErrorHandler(fmt.Errorf("failed to cleanup existing repo path %s: %v: %s", repoPath, err, string(out)))
-		}
+        // Remove .git directory
+        cmdRemoveGit := exec.Command("sh", "-c", fmt.Sprintf("cd %s && rm -rf .git", repoPath))
+        if out, err := cmdRemoveGit.CombinedOutput(); err != nil {
+            util.ErrorHandler(fmt.Errorf("failed to remove .git in %s: %v: %s", repoPath, err, string(out)))
+        }
 
-		cmd1 := exec.Command("sh", "-c", "cd _Repos && git clone "+url)
-		if out, err := cmd1.CombinedOutput(); err != nil {
-			util.ErrorHandler(fmt.Errorf("git clone failed for %s: %v: %s", url, err, string(out)))
-		}
+        // Add, commit, and push
+        commitMsg := fmt.Sprintf("Backup Added on %s for the repo %s", time.Now().Format("2006-01-02 Monday 15:04:05"), repoName)
+        cmdCommit := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git add \"%s\" && if git diff --staged --quiet; then echo 'no changes'; else git commit -m \"%s\"; fi", repoName, commitMsg))
+        if out, err := cmdCommit.CombinedOutput(); err != nil {
+            util.ErrorHandler(fmt.Errorf("git add/commit failed for %s: %v: %s", repoName, err, string(out)))
+        }
 
-		cmd2 := exec.Command("sh", "-c", "cd "+repoPath+" && rm -rf .git")
-		if out, err := cmd2.CombinedOutput(); err != nil {
-			util.ErrorHandler(fmt.Errorf("failed to remove .git in %s: %v: %s", repoPath, err, string(out)))
-		}
+        // Verify remote before push
+        cmdVerifyRemote := exec.Command("sh", "-c", "cd _Repos && git remote -v")
+        if out, err := cmdVerifyRemote.CombinedOutput(); err == nil {
+            fmt.Printf("Current remote: %s\n", string(out))
+        }
 
-		commitMsg := "Backup Added on " + time.Now().Format("2006-01-02 Monday 15:04:05") + " for the repo " + repoName
-		cmd3 := exec.Command("sh", "-c", "cd _Repos && git add \""+repoName+"\" && if git diff --staged --quiet; then echo 'no changes to commit'; else git commit -m \""+commitMsg+"\"; fi")
-		if out, err := cmd3.CombinedOutput(); err != nil {
-			util.ErrorHandler(fmt.Errorf("git add/commit failed for %s: %v: %s", repoName, err, string(out)))
-		}
+        // Push to backup repo
+        cmdPush := exec.Command("sh", "-c", "cd _Repos && git push origin main")
+        if out, err := cmdPush.CombinedOutput(); err != nil {
+            util.ErrorHandler(fmt.Errorf("git push failed for repo %s: %v: %s", repoName, err, string(out)))
+            continue
+        }
 
-		cmd4 := exec.Command("sh", "-c", "cd _Repos && git push origin main")
-		if out, err := cmd4.CombinedOutput(); err != nil {
-			util.ErrorHandler(fmt.Errorf("git push failed in _Repos: %v: %s", err, string(out)))
-		}
-
-		fmt.Println("Repo Count: ", repoCount)
-		repoCount++
-	}
+        fmt.Printf("Repo Count: %d - %s backed up successfully\n", repoCount, repoName)
+        repoCount++
+    }
 }
+
 
 func GetAllRepos(config *model.ConfigModel, urls *model.URL) []string {
 	orgReposPersonal := controller.RepoController(urls.GetAllOrgRepos, *config)
