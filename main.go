@@ -111,7 +111,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
         git init && \
         git config user.email "shardendumishra01@gmail.com" && \
         git config user.name "ShardenduMishra22" && \
-        git checkout -b main && \
+        git checkout -B main && \
         touch README.md && \
         git add README.md && \
         git commit -m 'Initial commit' && \
