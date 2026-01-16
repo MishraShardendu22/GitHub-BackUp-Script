@@ -235,7 +235,6 @@ func loadConfig() *model.ConfigModel {
 		MainAccount:         util.GetEnv("MAIN_ACCOUNT", ""),
 		ProjectAccount:      util.GetEnv("PROJECT_ACCOUNT", ""),
 		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),
-		GitHubTokenMain:     util.GetEnv("GITHUB_TOKEN_MAIN", ""),
 		GitHubTokenPrivate:  util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
 		GitHubTokenPersonal: util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
 	}

@@ -5,7 +5,6 @@ type ConfigModel struct {
 	MainAccount         string
 	BackupRepoPath      string
 	ProjectAccount      string
-	GitHubTokenMain     string
 	GitHubTokenPrivate  string
 	GitHubTokenPersonal string
 }
