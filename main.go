@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -15,9 +17,11 @@ import (
 )
 
 const (
-	maxRetries = 3
-	baseDelay  = 2 * time.Second
-	repoDelay  = 300 * time.Millisecond
+	maxRetries   = 3
+	baseDelay    = 2 * time.Second
+	repoDelay    = 300 * time.Millisecond
+	cloneTimeout = 10 * time.Minute // Timeout for git clone operations
+	pushTimeout  = 5 * time.Minute  // Timeout for git push operations
 )
 
 func main() {
@@ -51,36 +55,67 @@ func sanitizeCommitMessage(msg string) string {
 }
 
 // retryCommand executes command with exponential backoff retry logic
-func retryCommand(cmdFunc func() *exec.Cmd, operation string) error {
+func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Duration) error {
 	var lastErr error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		cmd := cmdFunc()
-		output, err := cmd.CombinedOutput()
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 
-		if err == nil {
-			return nil
+		err := cmd.Start()
+		if err != nil {
+			cancel()
+			return fmt.Errorf("%s: failed to start command: %v", operation, err)
 		}
 
-		lastErr = fmt.Errorf("%s: %v: %s", operation, err, string(output))
+		// Wait for command to complete or timeout
+		done := make(chan error, 1)
+		go func() {
+			done <- cmd.Wait()
+		}()
 
-		// Check if it's a transient error worth retrying
-		outputStr := string(output)
-		isTransient := strings.Contains(outputStr, "Could not resolve hostname") ||
-			strings.Contains(outputStr, "Connection reset") ||
-			strings.Contains(outputStr, "Connection timed out") ||
-			strings.Contains(outputStr, "temporary failure")
+		select {
+		case <-ctx.Done():
+			// Timeout occurred
+			cmd.Process.Kill()
+			cancel()
+			lastErr = fmt.Errorf("%s: timeout after %v", operation, timeout)
 
-		if !isTransient {
-			// Not a transient error, don't retry
-			return lastErr
-		}
+			if attempt < maxRetries {
+				delay := baseDelay * time.Duration(1<<uint(attempt-1))
+				fmt.Printf("[ATTEMPT %d/%d] %s timed out. Retrying in %v...\n",
+					attempt, maxRetries, operation, delay)
+				time.Sleep(delay)
+				continue
+			}
+		case err := <-done:
+			cancel()
+			if err == nil {
+				return nil
+			}
+			lastErr = fmt.Errorf("%s: %v", operation, err)
 
-		if attempt < maxRetries {
-			delay := baseDelay * time.Duration(1<<uint(attempt-1))
-			fmt.Printf("[ATTEMPT %d/%d] %s failed (transient error). Retrying in %v...\n",
-				attempt, maxRetries, operation, delay)
-			time.Sleep(delay)
+			// Check if it's a transient error worth retrying
+			errorStr := err.Error()
+			isTransient := strings.Contains(errorStr, "Could not resolve hostname") ||
+				strings.Contains(errorStr, "Connection reset") ||
+				strings.Contains(errorStr, "Connection timed out") ||
+				strings.Contains(errorStr, "temporary failure") ||
+				strings.Contains(errorStr, "early EOF")
+
+			if !isTransient {
+				// Not a transient error, don't retry
+				return lastErr
+			}
+
+			if attempt < maxRetries {
+				delay := baseDelay * time.Duration(1<<uint(attempt-1))
+				fmt.Printf("[ATTEMPT %d/%d] %s failed (transient error). Retrying in %v...\n",
+					attempt, maxRetries, operation, delay)
+				time.Sleep(delay)
+			}
 		}
 	}
 
@@ -129,7 +164,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 
 	err := retryCommand(func() *exec.Cmd {
 		return exec.Command("sh", "-c", initScript)
-	}, "Initial git setup")
+	}, "Initial git setup", pushTimeout)
 
 	if err != nil {
 		util.ErrorHandler(err)
@@ -157,8 +192,8 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 
 		// Clone repository with retry
 		err := retryCommand(func() *exec.Cmd {
-			return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone '%s'", url))
-		}, fmt.Sprintf("Clone %s", repoName))
+			return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --progress '%s'", url))
+		}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
 
 		if err != nil {
 			fmt.Printf("  ✗ Failed to clone: %v\n", err)
@@ -193,7 +228,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		// Push with retry
 		err = retryCommand(func() *exec.Cmd {
 			return exec.Command("sh", "-c", "cd _Repos && git push origin main")
-		}, fmt.Sprintf("Push %s", repoName))
+		}, fmt.Sprintf("Push %s", repoName), pushTimeout)
 
 		if err != nil {
 			fmt.Printf("  ✗ Failed to push: %v\n", err)
