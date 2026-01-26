@@ -98,6 +98,14 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 	}
 
 	defer func() {
+		fmt.Println("\n=== Creating local backup ===")
+		backupCmd := exec.Command("sh", "-c", "rm -rf backup && mkdir -p backup && cp -r _Repos/* backup/")
+		if out, err := backupCmd.CombinedOutput(); err != nil {
+			fmt.Printf("⚠ Warning: failed to create backup: %v: %s\n", err, string(out))
+		} else {
+			fmt.Println("✓ Successfully created local backup in 'backup' folder")
+		}
+
 		fmt.Println("\n=== Cleaning up ===")
 		cleanupCmd := exec.Command("sh", "-c", "rm -rf _Repos")
 		if out, err := cleanupCmd.CombinedOutput(); err != nil {
