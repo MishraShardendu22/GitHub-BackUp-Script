@@ -157,7 +157,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
         git checkout -B main && \
         touch README.md && \
         git add README.md && \
-        git commit -m 'Initial commit' && \
+        git cm 'Initial commit' && \
         git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && \
         git push --force origin main && \
         cd ..`
@@ -218,7 +218,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 				"if git diff --staged --quiet; then "+
 				"  echo 'no changes'; "+
 				"else "+
-				"  git commit -m '%s'; "+
+				"  git cm '%s'; "+
 				"fi", repoName, commitMsg))
 
 		if _, err := commitCmd.CombinedOutput(); err != nil {
