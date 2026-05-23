@@ -29,20 +29,15 @@ func RepoController(RepoURL string, config model.ConfigModel) []string {
 
 		res, err := req.Get(paginatedUrl)
 
-		// if the request itself failed, bail out
 		if err != nil {
 			util.ErrorHandler(err)
 		}
 
-		// if GitHub returned a non-200 status, include the body in the error
 		if res.StatusCode() != 200 {
 			body := string(res.Body())
 			if res.StatusCode() == 401 {
-				// bad credentials - likely the personal token is invalid
-				// Retry unauthenticated once for public endpoints to allow continuing (may be rate limited)
 				log.Printf("warning: unauthorized (401) with provided token; retrying unauthenticated. Response: %s", body)
 
-				// retry without token
 				retryRes, retryErr := client.R().
 					EnableTrace().
 					SetHeader("Content-Type", "application/json").
@@ -60,14 +55,11 @@ func RepoController(RepoURL string, config model.ConfigModel) []string {
 					util.ErrorHandler(fmt.Errorf("unexpected status %d after retry: %s", retryRes.StatusCode(), retryBody))
 				}
 
-				// replace res with retryRes for unmarshalling below
 				res = retryRes
 			}
 			if res.StatusCode() == 403 {
-				// rate limited or forbidden
 				util.ErrorHandler(fmt.Errorf("forbidden or rate limited (403). If unauthenticated, set GITHUB_TOKEN_PERSONAL to increase rate limits. Response: %s", body))
 			}
-			// if we reached here and status isn't 200, bail with response body
 			if res.StatusCode() != 200 {
 				util.ErrorHandler(fmt.Errorf("unexpected status %d: %s", res.StatusCode(), body))
 			}

@@ -1,197 +1,211 @@
-# GitHub Backup Script (detailed)
+# GitHub Backup Script
 
-This repository contains a small Go utility that helps back up GitHub repositories into a single local backup repository (located at `_Repos/` by default). The tool enumerates repositories using the GitHub API (organization repos, public user repos, and private repos when a token is provided), optionally clones them, strips their `.git` directories, and commits the repository contents into a centralized backup repository.
+A Go utility that discovers GitHub repositories via the API, clones each repo, removes its git history, and commits the working tree into a single backup repository. It also creates a local snapshot in a `backup/` folder before cleaning up temporary files.
 
-This README explains configuration, internals, behavior, and safety considerations in detail so you can run the tool safely and adapt it to your needs.
+Use this README as a tour of how the application works. Code examples below are taken directly from the implementation.
 
-## Table of contents
+**High-level flow**
+- Load configuration from environment variables.
+- Build GitHub API endpoints for org, public, and private repos.
+- Fetch all repo full names.
+- Initialize a backup git repo in `_Repos`.
+- For each repo: clone, strip `.git`, stage, commit, push.
+- Copy `_Repos` to `backup/`, then remove `_Repos`.
 
-- Overview
-- Quick start
-- Configuration (env & .env)
-- Internals
-   - models
-   - controller behavior and pagination
-   - clone & backup flow
-   - error handling
-- Examples and common workflows
-- Troubleshooting
-- Security and safety
-- Contributing
-- License
+**Entry point**
+The entry point lives in [main.go](main.go). The application flow is routed through `runBackupFlow()`.
 
-## Quick start
+```go
+func main() {
+	fmt.Println("Hello from GitHub Backup Script")
+	runBackupFlow()
+}
 
-1. Install prerequisites:
+func runBackupFlow() {
+	config := loadConfig()
+	urls := ImportantURL(config)
 
-```bash
-sudo apt-get install -y git
-# install Go (follow official instructions for your OS/version)
+	allRepos := GetAllRepos(config, urls)
+	fmt.Println("The Amount of repos is:", len(allRepos))
+
+	printRepoList(allRepos)
+	CloneRepos(allRepos, config)
+}
 ```
 
-2. Create a `.env` at the project root (optional for development). Example below.
-
-3. Build and run:
-
-```bash
-go build -o github-backup ./...
-# or run directly
-go run main.go
-```
-
-By default the program prints discovered repositories and counts. To perform an actual backup (clone, remove `.git`, commit and push), uncomment the `CloneRepos(allRepos, config)` line in `main.go`.
-
-## Configuration
-
-The application reads configuration from environment variables. In development the repository loads a `.env` file (via `github.com/joho/godotenv`) if present. Do NOT commit your `.env` to version control.
-
-Important environment variables (names used in `main.go` and `model.ConfigModel`):
-
-- `ORG_ACCOUNT` — Organization name to list organization repositories for the org endpoint.
-- `PROJECT_ACCOUNT` — User account whose public repositories will be listed.
-- `MAIN_ACCOUNT` — Present in the config model but unused by current code (reserved for future features).
-- `BACKUP_REPO_PATH` — Target path for the local backup repository (the code uses a default `_Repos` in many places; set this if you change the location).
-- `GITHUB_TOKEN_PERSONAL` — Personal access token used for authenticated calls to GitHub API and to increase rate limits. Required for listing private repos via the private endpoint.
-- `GITHUB_TOKEN_PRIVATE` — (Note: code uses `GithubTokenPrivate` field when calling the private repo endpoint). Provide a token if you want to list private repos from the account that owns the token.
-
-Example `.env` (DO NOT COMMIT):
+**Configuration (.env)**
+Environment variables are read via `util.GetEnv` and optionally loaded from a local `.env` during development. See [.env.sample](.env.sample) for the full list.
 
 ```env
-ORG_ACCOUNT=MyOrg
-PROJECT_ACCOUNT=MyProjectUser
-BACKUP_REPO_PATH=_Repos
-GITHUB_TOKEN_PERSONAL=ghp_XXXXXXXXXXXXXXXXXXXXXXXX
-GITHUB_TOKEN_PRIVATE=ghp_YYYYYYYYYYYYYYYYYYYYYYYY
+ORG_ACCOUNT=
+MAIN_ACCOUNT=
+PROJECT_ACCOUNT=
+BACKUP_REPO_PATH=
+GITHUB_TOKEN_PRIVATE=
+GITHUB_TOKEN_PERSONAL=
 ```
 
-## Internals (detailed)
+`loadConfig()` wires these values into `model.ConfigModel` in [model/config.model.go](model/config.model.go):
 
-This section outlines the key code paths and data models so you understand what the program does and how it behaves under edge conditions.
-
-Files to inspect:
-
-- `main.go` — orchestration and the user-visible flow.
-- `controller/repo.controller.go` — GitHub API request logic (pagination, retries, unauthenticated fallback).
-- `model/*.go` — data models for configuration and GitHub responses.
-- `util/*` — helper utilities (environment reads and fatal error handler).
-
-### Models
-
-`model.ConfigModel` fields:
-
-- `OrgAccount` (string)
-- `MainAccount` (string)
-- `BackupRepoPath` (string)
-- `ProjectAccount` (string)
-- `GitHubTokenPersonal` (string) — used by controller when present
-- `GithubTokenPrivate` (string) — used specifically by the private repo controller
-
-`model.Repo` mirrors the minimal fields returned by GitHub's repository API JSON and includes fields like `FullName`, `CloneURL`, `SSHURL`, `Private`, `DefaultBranch`, `PushedAt`, and metadata like `Description` and `Language`.
-
-### Controller behavior and pagination
-
-`controller.RepoController(RepoURL string, config model.ConfigModel) []string`:
-
-- Uses `resty` HTTP client to GET paginated endpoints. It expects the `RepoURL` to be a base URL that accepts a page number appended (the code appends page numbers via `strconv.Itoa(page)`).
-- It sets `Content-Type: application/json` header and uses `config.GitHubTokenPersonal` as a bearer token when present.
-- Pagination loop: starts at `page=1`, fetches results, unmarshals into `[]model.Repo`, appends `FullName` to the return list, increments `page`, and stops when receiving an empty array.
-- Error handling and retries:
-   - If the request returns 401 (unauthorized) and a token was supplied, it logs a warning and retries the same request unauthenticated once — this helps continue when token lacks proper scope but public endpoints are available.
-   - If the response is 403, the controller treats it as forbidden or rate-limited and calls `util.ErrorHandler` with an explanatory message. That function logs and exits the program with code 1.
-   - Any unexpected status codes or JSON unmarshal errors are passed to `util.ErrorHandler` and terminate the program.
-
-`controller.RepoControllerPrivate(RepoURL string, config model.ConfigModel) []string`:
-
-- Calls the provided `RepoURL` once with `config.GithubTokenPrivate` as the auth token. If it gets a 401, it calls `util.ErrorHandler` and exits. It expects a 200 and unmarshals the response into `[]model.Repo` and returns `FullName` values.
-
-Implications:
-
-- The controllers terminate the program on many non-200 responses — this is intentional to avoid proceeding with partial or invalid data.
-- Use valid tokens to avoid 401/403 errors and rate limits. For public-only operations you can omit tokens but may be rate-limited by GitHub's unauthenticated limits.
-
-### Clone & backup flow (CloneRepos)
-
-The `CloneRepos` function (in `main.go`) is currently commented out from the default run. When enabled it:
-
-1. Runs an initial shell command that:
-    - `cd _Repos && git init && (git checkout -b main || git checkout main || true)` — ensures there is a git repo and a `main` branch.
-    - Creates a `README.md` and initial commit if the repo has no commits.
-    - Attempts to set or add a remote `origin` (the code uses a sample remote URL in the command; you should change this to your backup repository remote URL).
-    - Pushes force to `origin main` to ensure the remote has the initial commit.
-
-2. For each `owner/repo` in the list:
-    - Clones `git@github.com:owner/repo.git` into `_Repos/<repo>`.
-    - Removes the cloned repo's `.git` (`rm -rf _Repos/<repo>/.git`) — this strips commit history and metadata, leaving only files.
-    - Adds the repo folder to the `_Repos` repo, commits with a message that includes the timestamp and repo name (skips commit if no staged changes), and pushes to `origin main`.
-
-Important notes:
-
-- The cloning/pushing flow executes shell commands using `sh -c` and interpolates repo names into shell strings. Be cautious about repo names that contain unexpected characters, though GitHub repo names are generally safe.
-- The code uses SSH clone URLs (`git@github.com:owner/repo.git`). Ensure the machine running this has SSH keys and access to clone the repositories and push to your backup remote. If you prefer HTTPS, modify the URL construction.
-
-### Error handling
-
-- `util.ErrorHandler(err)` is used across the code. It logs the error and calls `os.Exit(1)`. The program therefore fails fast on many error conditions (network failures, unexpected statuses, unmarshal errors).
-- The controller implements a small retry/fallback for 401 when a token is present (it retries unauthenticated once). For 403 (rate-limited) it exits with a helpful message advising to set `GITHUB_TOKEN_PERSONAL` to increase rate limits.
-
-## Examples and common workflows
-
-1) Run discovery only (safe):
-
-```bash
-# set envs or create .env
-go run main.go
+```go
+func loadConfig() *model.ConfigModel {
+	return &model.ConfigModel{
+		OrgAccount:          util.GetEnv("ORG_ACCOUNT", ""),
+		MainAccount:         util.GetEnv("MAIN_ACCOUNT", ""),
+		ProjectAccount:      util.GetEnv("PROJECT_ACCOUNT", ""),
+		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),
+		GitHubTokenPrivate:  util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
+		GitHubTokenPersonal: util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
+	}
+}
 ```
 
-This prints counts and repository full names discovered. It does not clone or push anything with the default `main.go` as shipped here.
+**Repo discovery**
+Repo discovery is coordinated by `GetAllRepos()` in [main.go](main.go). It combines org, public, and private lists into a single slice.
 
-2) Perform a full backup (be careful):
+```go
+func GetAllRepos(config *model.ConfigModel, urls *model.URL) []string {
+	orgReposPersonal := controller.RepoController(urls.GetAllOrgRepos, *config)
+	publicReposPersonal := controller.RepoController(urls.GetAllPublicRepos, *config)
+	privatePersonalAndOrgReops := controller.RepoControllerPrivate(urls.GetAllPrivateRepos, *config)
 
-- Edit `main.go` and uncomment the `CloneRepos(allRepos, config)` line. Also double-check the initial git remote URL that the script sets in `_Repos` and change it to your backup repo remote.
-- Ensure your SSH agent has keys that can read the repos to clone and push to the backup remote.
-- Run:
+	var allRepos []string
+	allRepos = append(allRepos, orgReposPersonal...)
+	allRepos = append(allRepos, publicReposPersonal...)
+	allRepos = append(allRepos, privatePersonalAndOrgReops...)
 
-```bash
-go run main.go
+	return allRepos
+}
 ```
 
-This will:
+The controllers are implemented in [controller/repo.controller.go](controller/repo.controller.go). The public/org controller paginates until an empty page is returned:
 
-- Initialize `_Repos` as a git repository and ensure `main` exists.
-- Clone each discovered repository into `_Repos/<repo>`.
-- Remove `.git` inside each cloned repo.
-- Stage and commit each repo contents into `_Repos` and push to the configured remote.
+```go
+for {
+	paginatedUrl := RepoURL + strconv.Itoa(page)
+	req := client.R().EnableTrace().SetHeader("Content-Type", "application/json")
 
-## Troubleshooting
+	if config.GitHubTokenPersonal != "" {
+		req.SetAuthToken(config.GitHubTokenPersonal)
+	}
 
-- If you see `unauthorized (401)` errors:
-   - Check that `GITHUB_TOKEN_PERSONAL` and `GITHUB_TOKEN_PRIVATE` are set correctly and have the necessary scopes.
+	res, err := req.Get(paginatedUrl)
+	if err != nil {
+		util.ErrorHandler(err)
+	}
 
-- If you see `forbidden or rate limited (403)`:
-   - You likely hit unauthenticated rate limits. Set `GITHUB_TOKEN_PERSONAL` to a token with the appropriate scopes.
+	var repos []model.Repo
+	if err := json.Unmarshal(res.Body(), &repos); err != nil {
+		util.ErrorHandler(err)
+	}
 
-- If git clone or git push commands fail:
-   - Verify SSH keys and access rights. Test cloning manually: `git clone git@github.com:owner/repo.git`.
-   - Check the initial `_Repos` remote URL. The script uses a hard-coded sample remote; update it to your real backup remote.
+	if len(repos) == 0 {
+		break
+	}
 
-- If the program exits with a fatal error but you expected it to continue:
-   - The project uses `util.ErrorHandler` to exit on many errors by design. Wrap or modify error handling if you prefer a tolerant approach.
+	for _, repo := range repos {
+		repoNames = append(repoNames, repo.FullName)
+	}
 
-## Security and safety
+	page++
+}
+```
 
-- Never commit `.env` with tokens to source control. Store tokens in a secrets manager for production use.
-- The backup flow strips `.git` directories from cloned repositories. If you want to preserve commit history, do not remove `.git` — instead modify the code to preserve it and use a different backup strategy (e.g., mirror clones).
-- Avoid running this script on machines with untrusted network access or compromised SSH keys.
+**Backup pipeline**
+`CloneRepos()` performs the backup in [main.go](main.go). The flow is:
+1) Prepare a clean `_Repos` directory.
+2) Initialize a backup git repository and push an initial commit.
+3) For each repo: clone, remove its `.git`, stage and commit, push.
+4) Create a local snapshot `backup/` and clean `_Repos`.
 
-## Contributing
+```go
+if err := prepareReposDir(); err != nil {
+	util.ErrorHandler(err)
+	return
+}
 
-Contributions are welcome. A few guidelines:
+defer backupAndCleanup()
 
-- Open an issue to discuss larger changes.
-- Keep changes small and well-tested. Add tests for controller logic using mocked HTTP responses when possible.
-- Be explicit in PR descriptions about behavior that modifies or deletes `.git` directories or pushes to remotes.
+if err := setupInitialBackupRepo(); err != nil {
+	util.ErrorHandler(err)
+	return
+}
 
-## License
+for idx, fullName := range repoNames {
+	repoName := extractRepoName(fullName)
+	repoPath := buildRepoPath(repoName)
+	url := buildCloneURL(fullName)
 
-This repository does not include an explicit LICENSE file. If you want an open-source license, add a `LICENSE` at the repo root (MIT is suggested for small projects).
+	cleanupExistingRepo(repoName)
+	if err := cloneRepo(url, repoName); err != nil {
+		failedRepos = append(failedRepos, fullName)
+		continue
+	}
+
+	removeGitMetadata(repoPath)
+	commitMsg := buildCommitMessage(repoName)
+	stageAndCommitRepo(repoName, commitMsg)
+
+	if err := pushBackupRepo(repoName); err != nil {
+		failedRepos = append(failedRepos, fullName)
+		continue
+	}
+}
+```
+
+`setupInitialBackupRepo()` runs a shell script that initializes `_Repos` as a git repo and pushes to a preconfigured remote. You can adjust the remote or other git settings in `buildInitScript()`.
+
+**Retries and error handling**
+Shell operations that can fail (clone, push, initial setup) are wrapped in `retryCommand()`, which retries transient errors with exponential backoff.
+
+```go
+func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Duration) error {
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		cmd := cmdFunc()
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err := cmd.Start()
+		if err != nil {
+			cancel()
+			return fmt.Errorf("%s: failed to start command: %v", operation, err)
+		}
+
+		done := make(chan error, 1)
+		go func() { done <- cmd.Wait() }()
+
+		select {
+		case <-ctx.Done():
+			cmd.Process.Kill()
+			cancel()
+		case err := <-done:
+			cancel()
+			if err == nil {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("%s failed after %d attempts", operation, maxRetries)
+}
+```
+
+Fatal errors are handled by `util.ErrorHandler` in [util/error.util.go](util/error.util.go):
+
+```go
+func ErrorHandler(err error) {
+	if err == nil {
+		return
+	}
+
+	log.Printf("fatal error: %v\n", err)
+	os.Exit(1)
+}
+```
+
+**Notes and assumptions**
+- The script uses SSH aliases in clone and remote URLs (for example `github.com-project` and `github.com-learning`). Make sure your SSH config defines these aliases.
+- Backups use `_Repos` and `backup` directories by default; `BACKUP_REPO_PATH` is read but not used in the current flow.
+- `loadConfig()` currently reads `GITHUB_TOKEN_PERSONAL` for both personal and private token fields. If you want separate tokens, adjust the mapping in code.
 

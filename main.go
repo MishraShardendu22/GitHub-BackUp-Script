@@ -18,26 +18,32 @@ import (
 
 const (
 	maxRetries   = 3
+	pushTimeout  = 5 * time.Minute
 	baseDelay    = 2 * time.Second
+	cloneTimeout = 10 * time.Minute
 	repoDelay    = 300 * time.Millisecond
-	cloneTimeout = 10 * time.Minute // Timeout for git clone operations
-	pushTimeout  = 5 * time.Minute  // Timeout for git push operations
 )
 
 func main() {
 	fmt.Println("Hello from GitHub Backup Script")
+	runBackupFlow()
+}
+
+func runBackupFlow() {
 	config := loadConfig()
 	urls := ImportantURL(config)
 
-	var allRepos []string
-	allRepos = GetAllRepos(config, urls)
+	allRepos := GetAllRepos(config, urls)
 	fmt.Println("The Amount of repos is:", len(allRepos))
 
-	for _, repo := range allRepos {
+	printRepoList(allRepos)
+	CloneRepos(allRepos, config)
+}
+
+func printRepoList(repos []string) {
+	for _, repo := range repos {
 		fmt.Println(repo)
 	}
-
-	CloneRepos(allRepos, config)
 }
 
 func sanitizeShellArg(arg string) string {
@@ -54,7 +60,6 @@ func sanitizeCommitMessage(msg string) string {
 	return msg
 }
 
-// retryCommand executes command with exponential backoff retry logic
 func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Duration) error {
 	var lastErr error
 
@@ -70,7 +75,6 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 			return fmt.Errorf("%s: failed to start command: %v", operation, err)
 		}
 
-		// Wait for command to complete or timeout
 		done := make(chan error, 1)
 		go func() {
 			done <- cmd.Wait()
@@ -78,7 +82,6 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 
 		select {
 		case <-ctx.Done():
-			// Timeout occurred
 			cmd.Process.Kill()
 			cancel()
 			lastErr = fmt.Errorf("%s: timeout after %v", operation, timeout)
@@ -97,7 +100,6 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 			}
 			lastErr = fmt.Errorf("%s: %v", operation, err)
 
-			// Check if it's a transient error worth retrying
 			errorStr := err.Error()
 			isTransient := strings.Contains(errorStr, "Could not resolve hostname") ||
 				strings.Contains(errorStr, "Connection reset") ||
@@ -106,7 +108,6 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 				strings.Contains(errorStr, "early EOF")
 
 			if !isTransient {
-				// Not a transient error, don't retry
 				return lastErr
 			}
 
@@ -126,47 +127,14 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 	successCount := 0
 	failedRepos := []string{}
 
-	cmdCleanRepos := exec.Command("sh", "-c", "rm -rf _Repos && mkdir -p _Repos")
-	if out, err := cmdCleanRepos.CombinedOutput(); err != nil {
-		util.ErrorHandler(fmt.Errorf("failed to clean _Repos directory: %v: %s", err, string(out)))
+	if err := prepareReposDir(); err != nil {
+		util.ErrorHandler(err)
 		return
 	}
 
-	defer func() {
-		fmt.Println("\n=== Creating local backup ===")
-		backupCmd := exec.Command("sh", "-c", "rm -rf backup && mkdir -p backup && cp -r _Repos/* backup/")
-		if out, err := backupCmd.CombinedOutput(); err != nil {
-			fmt.Printf("⚠ Warning: failed to create backup: %v: %s\n", err, string(out))
-		} else {
-			fmt.Println("✓ Successfully created local backup in 'backup' folder")
-		}
+	defer backupAndCleanup()
 
-		fmt.Println("\n=== Cleaning up ===")
-		cleanupCmd := exec.Command("sh", "-c", "rm -rf _Repos")
-		if out, err := cleanupCmd.CombinedOutput(); err != nil {
-			fmt.Printf("⚠ Warning: failed to cleanup _Repos: %v: %s\n", err, string(out))
-		} else {
-			fmt.Println("✓ Successfully removed _Repos directory")
-		}
-	}()
-
-	initScript := `cd _Repos && \
-        git init && \
-        git config user.email "shardendumishra01@gmail.com" && \
-        git config user.name "ShardenduMishra22" && \
-        git checkout -B main && \
-        touch README.md && \
-        git add README.md && \
-        git cm 'Initial commit' && \
-        git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && \
-        git push --force origin main && \
-        cd ..`
-
-	err := retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c", initScript)
-	}, "Initial git setup", pushTimeout)
-
-	if err != nil {
+	if err := setupInitialBackupRepo(); err != nil {
 		util.ErrorHandler(err)
 		return
 	}
@@ -178,59 +146,26 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 			time.Sleep(repoDelay)
 		}
 
-		repoName := fullName[strings.Index(fullName, "/")+1:]
-		repoPath := "_Repos/" + sanitizeShellArg(repoName)
-		url := fmt.Sprintf("git@github.com-project:%s.git", fullName)
+		repoName := extractRepoName(fullName)
+		repoPath := buildRepoPath(repoName)
+		url := buildCloneURL(fullName)
 
 		fmt.Printf("[%d/%d] Processing: %s\n", idx+1, len(repoNames), fullName)
 
-		// Cleanup existing directory
-		cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s'", repoName))
-		if _, err := cleanupCmd.CombinedOutput(); err != nil {
-			fmt.Printf("  ⚠ Warning: cleanup failed: %v\n", err)
-		}
+		cleanupExistingRepo(repoName)
 
-		// Clone repository with retry
-		err := retryCommand(func() *exec.Cmd {
-			return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --progress '%s'", url))
-		}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
-
-		if err != nil {
+		if err := cloneRepo(url, repoName); err != nil {
 			fmt.Printf("  ✗ Failed to clone: %v\n", err)
 			failedRepos = append(failedRepos, fullName)
 			continue
 		}
 
-		// Remove .git directory
-		removeGitCmd := exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && rm -rf .git", repoPath))
-		if _, err := removeGitCmd.CombinedOutput(); err != nil {
-			fmt.Printf("  ⚠ Warning: failed to remove .git: %v\n", err)
-		}
+		removeGitMetadata(repoPath)
 
-		// Create commit message with proper escaping
-		commitMsg := sanitizeCommitMessage(fmt.Sprintf("Backup Added on %s for the repo %s",
-			time.Now().Format("2006-01-02 Monday 15:04:05"),
-			repoName))
+		commitMsg := buildCommitMessage(repoName)
+		stageAndCommitRepo(repoName, commitMsg)
 
-		// Add and commit changes
-		commitCmd := exec.Command("sh", "-c",
-			fmt.Sprintf("cd _Repos && git add '%s' && "+
-				"if git diff --staged --quiet; then "+
-				"  echo 'no changes'; "+
-				"else "+
-				"  git cm '%s'; "+
-				"fi", repoName, commitMsg))
-
-		if _, err := commitCmd.CombinedOutput(); err != nil {
-			fmt.Printf("  ⚠ Warning: commit failed: %v\n", err)
-		}
-
-		// Push with retry
-		err = retryCommand(func() *exec.Cmd {
-			return exec.Command("sh", "-c", "cd _Repos && git push origin main")
-		}, fmt.Sprintf("Push %s", repoName), pushTimeout)
-
-		if err != nil {
+		if err := pushBackupRepo(repoName); err != nil {
 			fmt.Printf("  ✗ Failed to push: %v\n", err)
 			failedRepos = append(failedRepos, fullName)
 			continue
@@ -240,7 +175,116 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		fmt.Printf("  ✓ Successfully backed up (%d/%d successful)\n\n", successCount, len(repoNames))
 	}
 
-	// Summary
+	printBackupSummary(repoNames, successCount, failedRepos)
+}
+
+func prepareReposDir() error {
+	cmdCleanRepos := exec.Command("sh", "-c", "rm -rf _Repos && mkdir -p _Repos")
+	if out, err := cmdCleanRepos.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to clean _Repos directory: %v: %s", err, string(out))
+	}
+
+	return nil
+}
+
+func backupAndCleanup() {
+	fmt.Println("\n=== Creating local backup ===")
+	backupCmd := exec.Command("sh", "-c", "rm -rf backup && mkdir -p backup && cp -r _Repos/* backup/")
+	if out, err := backupCmd.CombinedOutput(); err != nil {
+		fmt.Printf("⚠ Warning: failed to create backup: %v: %s\n", err, string(out))
+	} else {
+		fmt.Println("✓ Successfully created local backup in 'backup' folder")
+	}
+
+	fmt.Println("\n=== Cleaning up ===")
+	cleanupCmd := exec.Command("sh", "-c", "rm -rf _Repos")
+	if out, err := cleanupCmd.CombinedOutput(); err != nil {
+		fmt.Printf("⚠ Warning: failed to cleanup _Repos: %v: %s\n", err, string(out))
+	} else {
+		fmt.Println("✓ Successfully removed _Repos directory")
+	}
+}
+
+func setupInitialBackupRepo() error {
+	initScript := buildInitScript()
+	return retryCommand(func() *exec.Cmd {
+		return exec.Command("sh", "-c", initScript)
+	}, "Initial git setup", pushTimeout)
+}
+
+func buildInitScript() string {
+	return `cd _Repos && \
+		git init && \
+		git config user.email "shardendumishra01@gmail.com" && \
+		git config user.name "ShardenduMishra22" && \
+		git checkout -B main && \
+		touch README.md && \
+		git add README.md && \
+		git cm 'Initial commit' && \
+		git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && \
+		git push --force origin main && \
+		cd ..`
+}
+
+func extractRepoName(fullName string) string {
+	return fullName[strings.Index(fullName, "/")+1:]
+}
+
+func buildRepoPath(repoName string) string {
+	return "_Repos/" + sanitizeShellArg(repoName)
+}
+
+func buildCloneURL(fullName string) string {
+	return fmt.Sprintf("git@github.com-project:%s.git", fullName)
+}
+
+func cleanupExistingRepo(repoName string) {
+	cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s'", repoName))
+	if _, err := cleanupCmd.CombinedOutput(); err != nil {
+		fmt.Printf("  ⚠ Warning: cleanup failed: %v\n", err)
+	}
+}
+
+func cloneRepo(url string, repoName string) error {
+	return retryCommand(func() *exec.Cmd {
+		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --progress '%s'", url))
+	}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
+}
+
+func removeGitMetadata(repoPath string) {
+	removeGitCmd := exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && rm -rf .git", repoPath))
+	if _, err := removeGitCmd.CombinedOutput(); err != nil {
+		fmt.Printf("  ⚠ Warning: failed to remove .git: %v\n", err)
+	}
+}
+
+func buildCommitMessage(repoName string) string {
+	return sanitizeCommitMessage(fmt.Sprintf("Backup Added on %s for the repo %s",
+		time.Now().Format("2006-01-02 Monday 15:04:05"),
+		repoName))
+}
+
+func stageAndCommitRepo(repoName string, commitMsg string) {
+	commitCmd := exec.Command("sh", "-c",
+		fmt.Sprintf("cd _Repos && git add '%s' && "+
+			"if git diff --staged --quiet; then "+
+			"  echo 'no changes'; "+
+			"else "+
+			"  git cm '%s'; "+
+			"fi", repoName, commitMsg))
+
+	if _, err := commitCmd.CombinedOutput(); err != nil {
+		fmt.Printf("  ⚠ Warning: commit failed: %v\n", err)
+	}
+}
+
+func pushBackupRepo(repoName string) error {
+	return retryCommand(func() *exec.Cmd {
+		return exec.Command("sh", "-c", "cd _Repos && git push origin main")
+	}, fmt.Sprintf("Push %s", repoName), pushTimeout)
+}
+
+func printBackupSummary(repoNames []string, successCount int, failedRepos []string) {
 	fmt.Println("\n=== Backup Summary ===")
 	fmt.Printf("Total repos: %d\n", len(repoNames))
 	fmt.Printf("Successful: %d\n", successCount)
