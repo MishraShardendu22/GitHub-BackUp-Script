@@ -25,5 +25,5 @@ func main() {
 		zap.Int("port", 8080),
 	)
 
-	service.RunBackupFlow(cfg)
+	service.RunBackupFlow(cfg, db)
 }

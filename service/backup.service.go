@@ -1,23 +1,72 @@
 package service
 
 import (
+	"database/sql"
+
 	"github.com/MishraShardendu22/github-backup/config"
 	"github.com/MishraShardendu22/github-backup/controller"
+	"github.com/MishraShardendu22/github-backup/database"
 	"github.com/MishraShardendu22/github-backup/model"
 	"github.com/MishraShardendu22/github-backup/util"
 	"go.uber.org/zap"
 )
 
-func RunBackupFlow(cfg *model.ConfigModel) {
-	urls := config.ImportantURL(cfg)
+func RunBackupFlow(cfg *model.ConfigModel, db *sql.DB) {
+	if err := database.InitSchema(db); err != nil {
+		util.ErrorHandler(err)
+		return
+	}
 
+	if err := database.CleanupExpired(db); err != nil {
+		util.ErrorHandler(err)
+		return
+	}
+
+	hasRepoList, err := database.HasRepoList(db)
+	if err != nil {
+		util.ErrorHandler(err)
+		return
+	}
+
+	if hasRepoList {
+		pendingRepos, err := database.GetPendingRepos(db)
+		if err != nil {
+			util.ErrorHandler(err)
+			return
+		}
+
+		if len(pendingRepos) == 0 {
+			util.Logger().Info("Backup already completed in current window; skipping")
+			return
+		}
+
+		util.Logger().Info("Resuming repository backup",
+			zap.Int("count", len(pendingRepos)),
+		)
+
+		printRepoList(pendingRepos)
+		CloneRepos(pendingRepos, cfg, db)
+		return
+	}
+
+	urls := config.ImportantURL(cfg)
 	allRepos := GetAllRepos(cfg, urls)
 	util.Logger().Info("Repositories loaded",
 		zap.Int("count", len(allRepos)),
 	)
 
+	if err := database.ResetRepoState(db); err != nil {
+		util.ErrorHandler(err)
+		return
+	}
+
+	if err := database.SeedRepoList(db, allRepos); err != nil {
+		util.ErrorHandler(err)
+		return
+	}
+
 	printRepoList(allRepos)
-	CloneRepos(allRepos, cfg)
+	CloneRepos(allRepos, cfg, db)
 }
 
 func GetAllRepos(config *model.ConfigModel, urls *model.URL) []string {

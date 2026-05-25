@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/MishraShardendu22/github-backup/database"
 	"github.com/MishraShardendu22/github-backup/model"
 	"github.com/MishraShardendu22/github-backup/util"
 	"go.uber.org/zap"
@@ -107,7 +109,7 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 	return fmt.Errorf("%s failed after %d attempts: %v", operation, maxRetries, lastErr)
 }
 
-func CloneRepos(repoNames []string, config *model.ConfigModel) {
+func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 	successCount := 0
 	failedRepos := []string{}
 
@@ -133,6 +135,41 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		repoName := extractRepoName(fullName)
 		// repoPath := buildRepoPath(repoName)
 		url := buildCloneURL(fullName)
+		currentHash := ""
+
+		if db != nil {
+			hash, err := getRemoteHeadHash(url)
+			if err != nil {
+				util.Logger().Warn("Failed to fetch remote hash; continuing with backup",
+					zap.String("repository", fullName),
+					zap.Error(err),
+				)
+			} else {
+				currentHash = hash
+				storedHash, hasStored, err := database.GetRepoHash(db, fullName)
+				if err != nil {
+					util.Logger().Warn("Failed to read stored repository hash; continuing with backup",
+						zap.String("repository", fullName),
+						zap.Error(err),
+					)
+				} else if hasStored && storedHash == currentHash {
+					util.Logger().Info("Repository unchanged; skipping backup",
+						zap.String("repository", fullName),
+					)
+
+					recordCompletion(db, fullName)
+					if err := database.UpsertRepoHash(db, fullName, currentHash); err != nil {
+						util.Logger().Warn("Failed to refresh repository hash",
+							zap.String("repository", fullName),
+							zap.Error(err),
+						)
+					}
+
+					successCount++
+					continue
+				}
+			}
+		}
 
 		util.Logger().Info("Processing repository",
 			zap.Int("current", idx+1),
@@ -147,6 +184,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 				zap.String("repository", fullName),
 				zap.Error(err),
 			)
+			recordFailure(db, fullName, err)
 			failedRepos = append(failedRepos, fullName)
 			continue
 		}
@@ -161,7 +199,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 				zap.String("repository", fullName),
 				zap.Error(err),
 			)
-
+			recordFailure(db, fullName, err)
 			failedRepos = append(failedRepos, fullName)
 			continue
 		}
@@ -178,9 +216,21 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 				zap.String("repository", fullName),
 				zap.Error(err),
 			)
+			recordFailure(db, fullName, err)
 			failedRepos = append(failedRepos, fullName)
 			continue
 		}
+
+		if db != nil && currentHash != "" {
+			if err := database.UpsertRepoHash(db, fullName, currentHash); err != nil {
+				util.Logger().Warn("Failed to store repository hash",
+					zap.String("repository", fullName),
+					zap.Error(err),
+				)
+			}
+		}
+
+		recordCompletion(db, fullName)
 
 		successCount++
 		util.Logger().Info("Successfully backed up repository",
@@ -191,6 +241,32 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 	}
 
 	printBackupSummary(repoNames, successCount, failedRepos)
+}
+
+func recordFailure(db *sql.DB, repo string, failure error) {
+	if db == nil || failure == nil {
+		return
+	}
+
+	if err := database.LogFailure(db, repo, failure); err != nil {
+		util.Logger().Warn("Failed to record repository failure",
+			zap.String("repository", repo),
+			zap.Error(err),
+		)
+	}
+}
+
+func recordCompletion(db *sql.DB, repo string) {
+	if db == nil {
+		return
+	}
+
+	if err := database.MarkRepoCompleted(db, repo); err != nil {
+		util.Logger().Warn("Failed to record repository completion",
+			zap.String("repository", repo),
+			zap.Error(err),
+		)
+	}
 }
 
 func prepareReposDir() error {
@@ -261,6 +337,20 @@ func extractRepoName(fullName string) string {
 
 func buildCloneURL(fullName string) string {
 	return fmt.Sprintf("git@github.com-project:%s.git", fullName)
+}
+
+func getRemoteHeadHash(repoURL string) (string, error) {
+	out, err := exec.Command("git", "ls-remote", repoURL, "HEAD").CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("git ls-remote failed: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+
+	fields := strings.Fields(string(out))
+	if len(fields) == 0 {
+		return "", fmt.Errorf("git ls-remote returned no hash")
+	}
+
+	return fields[0], nil
 }
 
 func cleanupExistingRepo(repoName string) {
