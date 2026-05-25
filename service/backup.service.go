@@ -8,8 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func RunBackupFlow() {
-	cfg := config.LoadConfig()
+func RunBackupFlow(cfg *model.ConfigModel) {
 	urls := config.ImportantURL(cfg)
 
 	allRepos := GetAllRepos(cfg, urls)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/MishraShardendu22/github-backup/config"
+	"github.com/MishraShardendu22/github-backup/database"
 	"github.com/MishraShardendu22/github-backup/service"
 	"github.com/MishraShardendu22/github-backup/util"
 	"go.uber.org/zap"
@@ -14,10 +15,15 @@ func main() {
 	defer logger.Sync()
 
 	config.LoadEnv()
+	cfg := config.LoadConfig()
+
+	db, err := database.ConnectSQLite(cfg)
+	util.ErrorHandler(err)
+	defer db.Close()
 
 	logger.Info("Server started",
 		zap.Int("port", 8080),
 	)
 
-	service.RunBackupFlow()
+	service.RunBackupFlow(cfg)
 }
