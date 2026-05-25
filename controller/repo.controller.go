@@ -3,12 +3,12 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/MishraShardendu22/github-backup/model"
 	"github.com/MishraShardendu22/github-backup/util"
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 )
 
 func RepoController(RepoURL string, config model.ConfigModel) []string {
@@ -21,7 +21,6 @@ func RepoController(RepoURL string, config model.ConfigModel) []string {
 		req := client.R().
 			EnableTrace().
 			SetHeader("Content-Type", "application/json")
-
 
 		if config.GitHubTokenPersonal != "" {
 			req.SetAuthToken(config.GitHubTokenPersonal)
@@ -36,7 +35,10 @@ func RepoController(RepoURL string, config model.ConfigModel) []string {
 		if res.StatusCode() != 200 {
 			body := string(res.Body())
 			if res.StatusCode() == 401 {
-				log.Printf("warning: unauthorized (401) with provided token; retrying unauthenticated. Response: %s", body)
+				util.Logger().Warn("Unauthorized with provided token; retrying unauthenticated",
+					zap.Int("status", res.StatusCode()),
+					zap.String("response", body),
+				)
 
 				retryRes, retryErr := client.R().
 					EnableTrace().

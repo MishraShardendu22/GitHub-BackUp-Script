@@ -22,18 +22,21 @@ type Owner struct {
 }
 
 type Repo struct {
-	ID              int      `json:"id"`
 	Fork            bool     `json:"fork"`
-	Name            string   `json:"name"`
-	Owner           Owner    `json:"owner"`
-	Topics          []string `json:"topics"`
 	Private         bool     `json:"private"`
+	Archived        bool     `json:"archived"`
+	Disabled        bool     `json:"disabled"`
+	ID              int      `json:"id"`
+	ForksCount      int      `json:"forks_count"`
+	WatchersCount   int      `json:"watchers_count"`
+	StargazersCount int      `json:"stargazers_count"`
+	OpenIssuesCount int      `json:"open_issues_count"`
+	Owner           Owner    `json:"owner"`
+	Name            string   `json:"name"`
 	SSHURL          string   `json:"ssh_url"`
 	GitURL          string   `json:"git_url"`
 	Language        string   `json:"language"`
 	HTMLURL         string   `json:"html_url"`
-	Archived        bool     `json:"archived"`
-	Disabled        bool     `json:"disabled"`
 	FullName        string   `json:"full_name"`
 	CloneURL        string   `json:"clone_url"`
 	PushedAt        string   `json:"pushed_at"`
@@ -41,9 +44,6 @@ type Repo struct {
 	CreatedAt       string   `json:"created_at"`
 	UpdatedAt       string   `json:"updated_at"`
 	Description     string   `json:"description"`
-	ForksCount      int      `json:"forks_count"`
-	WatchersCount   int      `json:"watchers_count"`
 	DefaultBranch   string   `json:"default_branch"`
-	StargazersCount int      `json:"stargazers_count"`
-	OpenIssuesCount int      `json:"open_issues_count"`
+	Topics          []string `json:"topics"`
 }

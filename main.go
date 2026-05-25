@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -14,6 +13,7 @@ import (
 	"github.com/MishraShardendu22/github-backup/model"
 	"github.com/MishraShardendu22/github-backup/util"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 const (
@@ -25,7 +25,17 @@ const (
 )
 
 func main() {
-	fmt.Println("Hello from GitHub Backup Script")
+	logger, err := util.InitLogger()
+	util.ErrorHandler(err)
+	
+	defer logger.Sync()
+
+	loadEnv()
+
+	logger.Info("Server started",
+		zap.Int("port", 8080),
+	)
+
 	runBackupFlow()
 }
 
@@ -34,7 +44,9 @@ func runBackupFlow() {
 	urls := ImportantURL(config)
 
 	allRepos := GetAllRepos(config, urls)
-	fmt.Println("The Amount of repos is:", len(allRepos))
+	util.Logger().Info("Repositories loaded",
+		zap.Int("count", len(allRepos)),
+	)
 
 	printRepoList(allRepos)
 	CloneRepos(allRepos, config)
@@ -42,7 +54,9 @@ func runBackupFlow() {
 
 func printRepoList(repos []string) {
 	for _, repo := range repos {
-		fmt.Println(repo)
+		util.Logger().Info("Repository discovered",
+			zap.String("repository", repo),
+		)
 	}
 }
 
@@ -53,7 +67,6 @@ func sanitizeShellArg(arg string) string {
 
 func sanitizeCommitMessage(msg string) string {
 	msg = strings.ReplaceAll(msg, "'", "'\\''")
-
 	msg = strings.ReplaceAll(msg, "\"", "\\\"")
 	msg = strings.ReplaceAll(msg, "`", "\\`")
 	msg = strings.ReplaceAll(msg, "$", "\\$")
@@ -88,8 +101,12 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 
 			if attempt < maxRetries {
 				delay := baseDelay * time.Duration(1<<uint(attempt-1))
-				fmt.Printf("[ATTEMPT %d/%d] %s timed out. Retrying in %v...\n",
-					attempt, maxRetries, operation, delay)
+				util.Logger().Warn("Command timed out; retrying",
+					zap.Int("attempt", attempt),
+					zap.Int("max_retries", maxRetries),
+					zap.String("operation", operation),
+					zap.Duration("retry_in", delay),
+				)
 				time.Sleep(delay)
 				continue
 			}
@@ -113,8 +130,13 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 
 			if attempt < maxRetries {
 				delay := baseDelay * time.Duration(1<<uint(attempt-1))
-				fmt.Printf("[ATTEMPT %d/%d] %s failed (transient error). Retrying in %v...\n",
-					attempt, maxRetries, operation, delay)
+				util.Logger().Warn("Command failed with transient error; retrying",
+					zap.Int("attempt", attempt),
+					zap.Int("max_retries", maxRetries),
+					zap.String("operation", operation),
+					zap.Duration("retry_in", delay),
+					zap.Error(err),
+				)
 				time.Sleep(delay)
 			}
 		}
@@ -139,7 +161,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		return
 	}
 
-	fmt.Print("\n=== Starting Repository Backup ===\n")
+	util.Logger().Info("Starting repository backup")
 
 	for idx, fullName := range repoNames {
 		if idx > 0 {
@@ -150,12 +172,19 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		repoPath := buildRepoPath(repoName)
 		url := buildCloneURL(fullName)
 
-		fmt.Printf("[%d/%d] Processing: %s\n", idx+1, len(repoNames), fullName)
+		util.Logger().Info("Processing repository",
+			zap.Int("current", idx+1),
+			zap.Int("total", len(repoNames)),
+			zap.String("repository", fullName),
+		)
 
 		cleanupExistingRepo(repoName)
 
 		if err := cloneRepo(url, repoName); err != nil {
-			fmt.Printf("  ✗ Failed to clone: %v\n", err)
+			util.Logger().Error("Failed to clone repository",
+				zap.String("repository", fullName),
+				zap.Error(err),
+			)
 			failedRepos = append(failedRepos, fullName)
 			continue
 		}
@@ -166,13 +195,20 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		stageAndCommitRepo(repoName, commitMsg)
 
 		if err := pushBackupRepo(repoName); err != nil {
-			fmt.Printf("  ✗ Failed to push: %v\n", err)
+			util.Logger().Error("Failed to push repository backup",
+				zap.String("repository", fullName),
+				zap.Error(err),
+			)
 			failedRepos = append(failedRepos, fullName)
 			continue
 		}
 
 		successCount++
-		fmt.Printf("  ✓ Successfully backed up (%d/%d successful)\n\n", successCount, len(repoNames))
+		util.Logger().Info("Successfully backed up repository",
+			zap.String("repository", fullName),
+			zap.Int("successful", successCount),
+			zap.Int("total", len(repoNames)),
+		)
 	}
 
 	printBackupSummary(repoNames, successCount, failedRepos)
@@ -188,20 +224,30 @@ func prepareReposDir() error {
 }
 
 func backupAndCleanup() {
-	fmt.Println("\n=== Creating local backup ===")
+	util.Logger().Info("Creating local backup")
 	backupCmd := exec.Command("sh", "-c", "rm -rf backup && mkdir -p backup && cp -r _Repos/* backup/")
 	if out, err := backupCmd.CombinedOutput(); err != nil {
-		fmt.Printf("⚠ Warning: failed to create backup: %v: %s\n", err, string(out))
+		util.Logger().Warn("Failed to create local backup",
+			zap.Error(err),
+			zap.String("output", string(out)),
+		)
 	} else {
-		fmt.Println("✓ Successfully created local backup in 'backup' folder")
+		util.Logger().Info("Successfully created local backup",
+			zap.String("folder", "backup"),
+		)
 	}
 
-	fmt.Println("\n=== Cleaning up ===")
+	util.Logger().Info("Cleaning up")
 	cleanupCmd := exec.Command("sh", "-c", "rm -rf _Repos")
 	if out, err := cleanupCmd.CombinedOutput(); err != nil {
-		fmt.Printf("⚠ Warning: failed to cleanup _Repos: %v: %s\n", err, string(out))
+		util.Logger().Warn("Failed to cleanup repository workspace",
+			zap.Error(err),
+			zap.String("output", string(out)),
+		)
 	} else {
-		fmt.Println("✓ Successfully removed _Repos directory")
+		util.Logger().Info("Successfully removed repository workspace",
+			zap.String("directory", "_Repos"),
+		)
 	}
 }
 
@@ -220,7 +266,7 @@ func buildInitScript() string {
 		git checkout -B main && \
 		touch README.md && \
 		git add README.md && \
-		git cm 'Initial commit' && \
+		git commit -m 'Initial commit' -s -S && \
 		git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && \
 		git push --force origin main && \
 		cd ..`
@@ -241,7 +287,10 @@ func buildCloneURL(fullName string) string {
 func cleanupExistingRepo(repoName string) {
 	cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s'", repoName))
 	if _, err := cleanupCmd.CombinedOutput(); err != nil {
-		fmt.Printf("  ⚠ Warning: cleanup failed: %v\n", err)
+		util.Logger().Warn("Repository cleanup failed",
+			zap.String("repository", repoName),
+			zap.Error(err),
+		)
 	}
 }
 
@@ -254,7 +303,10 @@ func cloneRepo(url string, repoName string) error {
 func removeGitMetadata(repoPath string) {
 	removeGitCmd := exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && rm -rf .git", repoPath))
 	if _, err := removeGitCmd.CombinedOutput(); err != nil {
-		fmt.Printf("  ⚠ Warning: failed to remove .git: %v\n", err)
+		util.Logger().Warn("Failed to remove git metadata",
+			zap.String("path", repoPath),
+			zap.Error(err),
+		)
 	}
 }
 
@@ -270,11 +322,14 @@ func stageAndCommitRepo(repoName string, commitMsg string) {
 			"if git diff --staged --quiet; then "+
 			"  echo 'no changes'; "+
 			"else "+
-			"  git cm '%s'; "+
+			"  git commit -m '%s' -s -S; "+
 			"fi", repoName, commitMsg))
 
 	if _, err := commitCmd.CombinedOutput(); err != nil {
-		fmt.Printf("  ⚠ Warning: commit failed: %v\n", err)
+		util.Logger().Warn("Commit failed",
+			zap.String("repository", repoName),
+			zap.Error(err),
+		)
 	}
 }
 
@@ -285,15 +340,17 @@ func pushBackupRepo(repoName string) error {
 }
 
 func printBackupSummary(repoNames []string, successCount int, failedRepos []string) {
-	fmt.Println("\n=== Backup Summary ===")
-	fmt.Printf("Total repos: %d\n", len(repoNames))
-	fmt.Printf("Successful: %d\n", successCount)
-	fmt.Printf("Failed: %d\n", len(failedRepos))
+	util.Logger().Info("Backup summary",
+		zap.Int("total", len(repoNames)),
+		zap.Int("successful", successCount),
+		zap.Int("failed", len(failedRepos)),
+	)
 
 	if len(failedRepos) > 0 {
-		fmt.Println("\nFailed repositories:")
 		for _, repo := range failedRepos {
-			fmt.Printf("  - %s\n", repo)
+			util.Logger().Warn("Repository backup failed",
+				zap.String("repository", repo),
+			)
 		}
 	}
 }
@@ -305,13 +362,19 @@ func GetAllRepos(config *model.ConfigModel, urls *model.URL) []string {
 
 	var allRepos []string
 	allRepos = append(allRepos, orgReposPersonal...)
-	fmt.Println("Org repos count:", len(orgReposPersonal))
+	util.Logger().Info("Org repositories loaded",
+		zap.Int("count", len(orgReposPersonal)),
+	)
 
 	allRepos = append(allRepos, publicReposPersonal...)
-	fmt.Println("Public repos count:", len(publicReposPersonal))
+	util.Logger().Info("Public repositories loaded",
+		zap.Int("count", len(publicReposPersonal)),
+	)
 
 	allRepos = append(allRepos, privatePersonalAndOrgReops...)
-	fmt.Println("Private repos count:", len(privatePersonalAndOrgReops))
+	util.Logger().Info("Private repositories loaded",
+		zap.Int("count", len(privatePersonalAndOrgReops)),
+	)
 
 	return allRepos
 }
@@ -335,12 +398,14 @@ func ImportantURL(config *model.ConfigModel) *model.URL {
 	}
 }
 
-func init() {
+func loadEnv() {
 	currEnv := "development"
 
 	if currEnv == "development" {
 		if err := godotenv.Load(); err != nil {
-			log.Printf("Warning: error loading .env file: %v", err)
+			util.Logger().Warn("Error loading .env file",
+				zap.Error(err),
+			)
 		}
 	}
 }

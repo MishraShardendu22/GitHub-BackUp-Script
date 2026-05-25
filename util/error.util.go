@@ -1,9 +1,9 @@
 package util
 
 import (
-	"log"
-
 	"os"
+
+	"go.uber.org/zap"
 )
 
 func ErrorHandler(err error) {
@@ -11,7 +11,8 @@ func ErrorHandler(err error) {
 		return
 	}
 
-	log.Printf("fatal error: %v\n", err)
+	logger := Logger()
+	logger.Error("fatal error", zap.Error(err))
+	_ = logger.Sync()
 	os.Exit(1)
-
 }
