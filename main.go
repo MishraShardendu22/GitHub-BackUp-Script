@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 
@@ -27,7 +26,7 @@ const (
 func main() {
 	logger, err := util.InitLogger()
 	util.ErrorHandler(err)
-	
+
 	defer logger.Sync()
 
 	loadEnv()
@@ -60,10 +59,11 @@ func printRepoList(repos []string) {
 	}
 }
 
-func sanitizeShellArg(arg string) string {
-	reg := regexp.MustCompile(`[^\w\s\-\/\.]`)
-	return reg.ReplaceAllString(arg, "")
-}
+// Older version
+// func sanitizeShellArg(arg string) string {
+// 	reg := regexp.MustCompile(`[^\w\s\-\/\.]`)
+// 	return reg.ReplaceAllString(arg, "")
+// }
 
 func sanitizeCommitMessage(msg string) string {
 	msg = strings.ReplaceAll(msg, "'", "'\\''")
@@ -169,7 +169,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 		}
 
 		repoName := extractRepoName(fullName)
-		repoPath := buildRepoPath(repoName)
+		// repoPath := buildRepoPath(repoName)
 		url := buildCloneURL(fullName)
 
 		util.Logger().Info("Processing repository",
@@ -189,10 +189,27 @@ func CloneRepos(repoNames []string, config *model.ConfigModel) {
 			continue
 		}
 
-		removeGitMetadata(repoPath)
+		// Older version
+		// removeGitMetadata(repoPath)
+		// commitMsg := buildCommitMessage(repoName)
+		// stageAndCommitRepo(repoName, commitMsg)
+
+		if err := archiveRepo(repoName); err != nil {
+			util.Logger().Error("Failed to archive repository",
+				zap.String("repository", fullName),
+				zap.Error(err),
+			)
+
+			failedRepos = append(failedRepos, fullName)
+			continue
+		}
 
 		commitMsg := buildCommitMessage(repoName)
-		stageAndCommitRepo(repoName, commitMsg)
+
+		stageAndCommitRepo(
+			fmt.Sprintf("%s.tar.gz", repoName),
+			commitMsg,
+		)
 
 		if err := pushBackupRepo(repoName); err != nil {
 			util.Logger().Error("Failed to push repository backup",
@@ -276,16 +293,16 @@ func extractRepoName(fullName string) string {
 	return fullName[strings.Index(fullName, "/")+1:]
 }
 
-func buildRepoPath(repoName string) string {
-	return "_Repos/" + sanitizeShellArg(repoName)
-}
+// func buildRepoPath(repoName string) string {
+// 	return "_Repos/" + sanitizeShellArg(repoName)
+// }
 
 func buildCloneURL(fullName string) string {
 	return fmt.Sprintf("git@github.com-project:%s.git", fullName)
 }
 
 func cleanupExistingRepo(repoName string) {
-	cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s'", repoName))
+	cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s.git' '%s.tar.gz'", repoName, repoName))
 	if _, err := cleanupCmd.CombinedOutput(); err != nil {
 		util.Logger().Warn("Repository cleanup failed",
 			zap.String("repository", repoName),
@@ -296,19 +313,38 @@ func cleanupExistingRepo(repoName string) {
 
 func cloneRepo(url string, repoName string) error {
 	return retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --progress '%s'", url))
+		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --progress --mirror '%s' '%s.git'", url, repoName))
 	}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
 }
 
-func removeGitMetadata(repoPath string) {
-	removeGitCmd := exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && rm -rf .git", repoPath))
-	if _, err := removeGitCmd.CombinedOutput(); err != nil {
-		util.Logger().Warn("Failed to remove git metadata",
-			zap.String("path", repoPath),
-			zap.Error(err),
+func archiveRepo(repoName string) error {
+	repoDir := fmt.Sprintf("%s.git", repoName)
+	archiveName := fmt.Sprintf("%s.tar.gz", repoName)
+
+	return retryCommand(func() *exec.Cmd {
+		return exec.Command(
+			"sh",
+			"-c",
+			fmt.Sprintf(
+				"cd _Repos && tar -czf '%s' '%s' && rm -rf '%s'",
+				archiveName,
+				repoDir,
+				repoDir,
+			),
 		)
-	}
+	}, fmt.Sprintf("Archive %s", repoName), cloneTimeout)
 }
+
+// Older version needed to remove .git folder to avoid nested git repos, but with --mirror clone, it's not needed anymore
+// func removeGitMetadata(repoPath string) {
+// 	removeGitCmd := exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && rm -rf .git", repoPath))
+// 	if _, err := removeGitCmd.CombinedOutput(); err != nil {
+// 		util.Logger().Warn("Failed to remove git metadata",
+// 			zap.String("path", repoPath),
+// 			zap.Error(err),
+// 		)
+// 	}
+// }
 
 func buildCommitMessage(repoName string) string {
 	return sanitizeCommitMessage(fmt.Sprintf("Backup Added on %s for the repo %s",
