@@ -321,7 +321,7 @@ func buildInitScript() string {
 		git checkout -B main && \
 		touch README.md && \
 		git add README.md && \
-		git commit -m 'Initial commit' -s -S && \
+		git commit -m 'Initial commit' -s && \
 		git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && \
 		git push --force origin main && \
 		cd ..`
@@ -410,7 +410,7 @@ func stageAndCommitRepo(repoName string, commitMsg string) {
 			"if git diff --staged --quiet; then "+
 			"  echo 'no changes'; "+
 			"else "+
-			"  git commit -m '%s' -s -S; "+
+			"  git commit -m '%s' -s; "+
 			"fi", repoName, commitMsg))
 
 	if _, err := commitCmd.CombinedOutput(); err != nil {
