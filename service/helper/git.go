@@ -147,6 +147,6 @@ func buildInitScript(backupRepoPath string) string {
 		git add README.md && \
 		git commit -m 'init: Initial commit' -s && \
 		git remote add origin '%s' && \
-		git push origin main && \
+		git push origin main || (git pull --no-rebase --allow-unrelated-histories origin main --no-edit && git push origin main) && \
 		cd ..`, backupRepoPath)
 }
