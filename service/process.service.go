@@ -11,6 +11,7 @@ import (
 	"github.com/MishraShardendu22/github-backup/database"
 	"github.com/MishraShardendu22/github-backup/model"
 	"github.com/MishraShardendu22/github-backup/service/helper"
+	"github.com/MishraShardendu22/github-backup/service/monitor"
 	"github.com/MishraShardendu22/github-backup/util"
 	"go.uber.org/zap"
 )
@@ -54,6 +55,14 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 
 	util.Logger().Info("Starting repository backup")
 
+	// Start monitoring run
+	mon := monitor.Get()
+	start := time.Now()
+	if mon != nil {
+		mon.StartRun(len(repoNames))
+		mon.Log("info", fmt.Sprintf("Starting backup of %d repositories", len(repoNames)), "")
+	}
+
 	// Phase 1: Parallel hash checks to determine which repos need cloning
 	util.Logger().Info("Phase 1: Checking repository hashes",
 		zap.Int("total", len(repoNames)),
@@ -92,6 +101,18 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 	// Phase 3: Serial commit + batch push (git operations on working tree must be serial)
 	util.Logger().Info("Phase 3: Committing and pushing backups")
 	successCount, failedRepos := serialCommitAndPush(cloneResults, db)
+
+	// Complete monitoring run
+	if mon != nil {
+		durationMs := time.Since(start).Milliseconds()
+		errMsg := ""
+		if len(failedRepos) > 0 {
+			errMsg = fmt.Sprintf("%d repos failed", len(failedRepos))
+		}
+		mon.CompleteRun(successCount, len(failedRepos), skippedCount, durationMs, errMsg)
+		mon.Log("info", fmt.Sprintf("Backup complete: %d success, %d failed, %d skipped in %dms",
+			successCount, len(failedRepos), skippedCount, durationMs), "")
+	}
 
 	printBackupSummary(repoNames, successCount, skippedCount, failedRepos)
 }
@@ -230,9 +251,16 @@ func serialCommitAndPush(results []repoResult, db *sql.DB) (int, []string) {
 	var failedRepos []string
 
 	for _, res := range results {
+		mon := monitor.Get()
+
 		if res.Err != nil {
 			recordFailure(db, res.FullName, res.Err)
 			failedRepos = append(failedRepos, res.FullName)
+			if mon != nil {
+				mon.LogRepoResult(res.FullName, "failed", res.CurrentHash, 0, 0, res.Err.Error())
+				mon.Log("error", "Backup failed: "+res.Err.Error(), res.FullName)
+				mon.UpdateProgress(successCount, len(failedRepos), 0)
+			}
 			continue
 		}
 
@@ -267,6 +295,11 @@ func serialCommitAndPush(results []repoResult, db *sql.DB) (int, []string) {
 		util.Logger().Info("Successfully backed up repository",
 			zap.String("repository", res.FullName),
 		)
+		if mon != nil {
+			mon.LogRepoResult(res.FullName, "completed", res.CurrentHash, 0, 0, "")
+			mon.Log("info", "Backup completed", res.FullName)
+			mon.UpdateProgress(successCount, len(failedRepos), 0)
+		}
 	}
 
 	// Final push for remaining commits

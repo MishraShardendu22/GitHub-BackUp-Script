@@ -1,4 +1,14 @@
 .env*
+!.env.sample
 go.sum
 _Repos
 app.db
+backup
+
+# Frontend
+frontend/node_modules
+frontend/.next
+frontend/.env.local
+
+# Go binary
+github-backup
