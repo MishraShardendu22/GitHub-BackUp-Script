@@ -1,51 +1,120 @@
 package database
 
-import "database/sql"
+import (
+	"database/sql"
 
-const repoHashSQL = `
-	CREATE TABLE IF NOT EXISTS repo_hashes (
-		repository_name TEXT PRIMARY KEY,
-		last_commit_hash TEXT NOT NULL,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		expires_at DATETIME DEFAULT (datetime('now', '+7 days'))
+	"github.com/MishraShardendu22/github-backup/model"
+)
+
+const reposTableSQL = `
+	CREATE TABLE IF NOT EXISTS repos (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		full_name TEXT NOT NULL UNIQUE,
+		clone_url TEXT NOT NULL,
+		latest_commit_hash TEXT NOT NULL,
+		last_backed_up_at DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 `
 
-const upsertRepoHashSQL = `
-	INSERT INTO repo_hashes (repository_name, last_commit_hash, expires_at)
-	VALUES (?, ?, datetime('now', '+7 days'))
-	ON CONFLICT(repository_name) DO UPDATE SET
-		last_commit_hash = excluded.last_commit_hash,
-		updated_at = CURRENT_TIMESTAMP,
-		expires_at = datetime('now', '+7 days');
+const upsertRepoSQL = `
+	INSERT INTO repos (name, full_name, clone_url, latest_commit_hash, last_backed_up_at, updated_at)
+	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	ON CONFLICT(full_name) DO UPDATE SET
+		name = excluded.name,
+		clone_url = excluded.clone_url,
+		latest_commit_hash = excluded.latest_commit_hash,
+		last_backed_up_at = CURRENT_TIMESTAMP,
+		updated_at = CURRENT_TIMESTAMP;
 `
 
-const selectRepoHashSQL = `
-	SELECT last_commit_hash FROM repo_hashes WHERE repository_name = ?
+const selectRepoSQL = `
+	SELECT id, name, full_name, clone_url, latest_commit_hash, last_backed_up_at, created_at, updated_at
+	FROM repos WHERE full_name = ?
 `
 
-const cleanupRepoHashSQL = `
-	DELETE FROM repo_hashes
-	WHERE expires_at <= datetime('now')
+const selectAllReposSQL = `
+	SELECT id, name, full_name, clone_url, latest_commit_hash, last_backed_up_at, created_at, updated_at
+	FROM repos ORDER BY id
 `
 
-func GetRepoHash(db *sql.DB, repo string) (string, bool, error) {
-	var hash string
-	if err := db.QueryRow(selectRepoHashSQL, repo).Scan(&hash); err != nil {
+const deleteRepoSQL = `
+	DELETE FROM repos WHERE full_name = ?
+`
+
+const repoStatsSQL = `
+	SELECT
+		COUNT(1),
+		COUNT(CASE WHEN last_backed_up_at IS NOT NULL THEN 1 END),
+		(SELECT COUNT(DISTINCT repository_name) FROM failed_logs),
+		MAX(updated_at)
+	FROM repos
+`
+
+func GetRepo(db *sql.DB, fullName string) (model.RepoRecord, bool, error) {
+	var r model.RepoRecord
+	err := db.QueryRow(selectRepoSQL, fullName).Scan(
+		&r.ID, &r.Name, &r.FullName, &r.CloneURL,
+		&r.LatestCommitHash, &r.LastBackedUpAt,
+		&r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", false, nil
+			return r, false, nil
 		}
-		return "", false, err
+		return r, false, err
 	}
 
-	return hash, true, nil
+	return r, true, nil
 }
 
-func UpsertRepoHash(db *sql.DB, repo string, hash string) error {
-	if repo == "" || hash == "" {
+func UpsertRepo(db *sql.DB, name, fullName, cloneURL, hash string) error {
+	if fullName == "" || hash == "" {
 		return nil
 	}
 
-	_, err := db.Exec(upsertRepoHashSQL, repo, hash)
+	_, err := db.Exec(upsertRepoSQL, name, fullName, cloneURL, hash)
 	return err
+}
+
+func GetAllReposFromDB(db *sql.DB) ([]model.RepoRecord, error) {
+	rows, err := db.Query(selectAllReposSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var repos []model.RepoRecord
+	for rows.Next() {
+		var r model.RepoRecord
+		if err := rows.Scan(
+			&r.ID, &r.Name, &r.FullName, &r.CloneURL,
+			&r.LatestCommitHash, &r.LastBackedUpAt,
+			&r.CreatedAt, &r.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		repos = append(repos, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return repos, nil
+}
+
+func DeleteRepo(db *sql.DB, fullName string) error {
+	_, err := db.Exec(deleteRepoSQL, fullName)
+	return err
+}
+
+func GetRepoStats(db *sql.DB) (model.RepoStats, error) {
+	var s model.RepoStats
+	err := db.QueryRow(repoStatsSQL).Scan(
+		&s.TotalRepos, &s.BackedUpRepos, &s.FailedRepos, &s.LastRunAt,
+	)
+	return s, err
 }

@@ -91,32 +91,51 @@ func RepoController(RepoURL string, config model.ConfigModel) []string {
 // same as above but for private repos
 func RepoControllerPrivate(RepoURL string, config model.ConfigModel) []string {
 	client := resty.New()
-	res, err := client.R().
-		EnableTrace().
-		SetHeader("Content-Type", "application/json").
-		SetAuthToken(config.GitHubTokenPrivate).
-		Get(RepoURL)
-
-	if err != nil {
-		util.ErrorHandler(err)
-	}
-
-	if res.StatusCode() != 200 {
-		body := string(res.Body())
-		if res.StatusCode() == 401 {
-			util.ErrorHandler(fmt.Errorf("unauthorized (401). Check GITHUB_TOKEN_PRIVATE in your environment or .env. Response: %s", body))
-		}
-		util.ErrorHandler(fmt.Errorf("unexpected status %d: %s", res.StatusCode(), body))
-	}
-
-	var repos []model.Repo
-	if err := json.Unmarshal(res.Body(), &repos); err != nil {
-		util.ErrorHandler(err)
-	}
-
+	var page int = 1
 	var repoNames []string
-	for _, repo := range repos {
-		repoNames = append(repoNames, repo.FullName)
+
+	for {
+		paginatedUrl := RepoURL + strconv.Itoa(page)
+		res, err := client.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").
+			SetAuthToken(config.GitHubTokenPrivate).
+			Get(paginatedUrl)
+
+		if err != nil {
+			util.ErrorHandler(err)
+		}
+
+		if res.StatusCode() != 200 {
+			body := string(res.Body())
+			if page == 1 {
+				if res.StatusCode() == 401 {
+					util.ErrorHandler(fmt.Errorf("unauthorized (401). Check GITHUB_TOKEN_PRIVATE in your environment or .env. Response: %s", body))
+				}
+				util.ErrorHandler(fmt.Errorf("unexpected status %d: %s", res.StatusCode(), body))
+			}
+			util.Logger().Error("Failed to fetch private repos page",
+				zap.Int("page", page),
+				zap.Int("status", res.StatusCode()),
+				zap.String("response", body),
+			)
+			break
+		}
+
+		var repos []model.Repo
+		if err := json.Unmarshal(res.Body(), &repos); err != nil {
+			util.ErrorHandler(err)
+		}
+
+		if len(repos) == 0 {
+			break
+		}
+
+		for _, repo := range repos {
+			repoNames = append(repoNames, repo.FullName)
+		}
+
+		page++
 	}
 
 	return repoNames

@@ -1,5 +1,10 @@
 package model
 
+import (
+	"database/sql"
+	"time"
+)
+
 type ConfigModel struct {
 	OrgAccount          string
 	MainAccount         string
@@ -47,4 +52,22 @@ type Repo struct {
 	Description     string   `json:"description"`
 	DefaultBranch   string   `json:"default_branch"`
 	Topics          []string `json:"topics"`
+}
+
+type RepoRecord struct {
+	ID               int
+	Name             string
+	FullName         string
+	CloneURL         string
+	LatestCommitHash string
+	LastBackedUpAt   sql.NullTime
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type RepoStats struct {
+	TotalRepos    int
+	BackedUpRepos int
+	FailedRepos   int
+	LastRunAt     sql.NullTime
 }

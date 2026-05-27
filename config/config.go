@@ -33,7 +33,7 @@ func LoadConfig() *model.ConfigModel {
 
 func ImportantURL(config *model.ConfigModel) *model.URL {
 	return &model.URL{
-		GetAllPrivateRepos: "https://api.github.com/user/repos?type=private&per_page=100&page=1",
+		GetAllPrivateRepos: "https://api.github.com/user/repos?type=private&per_page=100&page=",
 		GetAllOrgRepos:     "https://api.github.com/orgs/" + config.OrgAccount + "/repos?type=all&per_page=50&page=",
 		GetAllPublicRepos:  "https://api.github.com/users/" + config.ProjectAccount + "/repos?type=public&per_page=50&page=",
 	}

@@ -16,18 +16,13 @@ import (
 )
 
 const (
-	maxRetries   = 3
-	pushTimeout  = 5 * time.Minute
-	baseDelay    = 2 * time.Second
-	cloneTimeout = 10 * time.Minute
-	repoDelay    = 300 * time.Millisecond
+	maxRetries    = 3
+	pushBatchSize = 10
+	pushTimeout   = 5 * time.Minute
+	baseDelay     = 2 * time.Second
+	cloneTimeout  = 10 * time.Minute
+	repoDelay     = 300 * time.Millisecond
 )
-
-// Older version
-// func sanitizeShellArg(arg string) string {
-// 	reg := regexp.MustCompile(`[^\w\s\-\/.]`)
-// 	return reg.ReplaceAllString(arg, "")
-// }
 
 func sanitizeCommitMessage(msg string) string {
 	msg = strings.ReplaceAll(msg, "'", "'\\''")
@@ -109,21 +104,24 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 	return fmt.Errorf("%s failed after %d attempts: %v", operation, maxRetries, lastErr)
 }
 
-func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
+func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 	successCount := 0
+	skippedCount := 0
+	commitsSincePush := 0
 	failedRepos := []string{}
 
-	if err := prepareReposDir(); err != nil {
+	if err := ensureReposDirExists(); err != nil {
 		util.ErrorHandler(err)
 		return
 	}
 
-	defer backupAndCleanup()
-
-	if err := setupInitialBackupRepo(); err != nil {
+	if err := ensureBackupRepoInitialized(config); err != nil {
 		util.ErrorHandler(err)
 		return
 	}
+
+	// Handle deleted repos (in DB but no longer on GitHub)
+	processDeletedRepos(repoNames, config, db)
 
 	util.Logger().Info("Starting repository backup")
 
@@ -133,39 +131,32 @@ func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 		}
 
 		repoName := extractRepoName(fullName)
-		// repoPath := buildRepoPath(repoName)
 		url := buildCloneURL(fullName)
 		currentHash := ""
 
-		if db != nil {
-			hash, err := getRemoteHeadHash(url)
-			if err != nil {
-				util.Logger().Warn("Failed to fetch remote hash; continuing with backup",
-					zap.String("repository", fullName),
-					zap.Error(err),
-				)
-			} else {
-				currentHash = hash
-				storedHash, hasStored, err := database.GetRepoHash(db, fullName)
-				if err != nil {
-					util.Logger().Warn("Failed to read stored repository hash; continuing with backup",
-						zap.String("repository", fullName),
-						zap.Error(err),
-					)
-				} else if hasStored && storedHash == currentHash {
-					util.Logger().Info("Repository unchanged; skipping backup",
-						zap.String("repository", fullName),
-					)
+		// Get remote HEAD hash
+		hash, err := getRemoteHeadHash(url)
+		if err != nil {
+			util.Logger().Warn("Failed to fetch remote hash; will clone anyway",
+				zap.String("repository", fullName),
+				zap.Error(err),
+			)
+		} else {
+			currentHash = hash
 
-					recordCompletion(db, fullName)
-					if err := database.UpsertRepoHash(db, fullName, currentHash); err != nil {
-						util.Logger().Warn("Failed to refresh repository hash",
-							zap.String("repository", fullName),
-							zap.Error(err),
-						)
-					}
-
-					successCount++
+			// Check if repo exists in DB with same hash
+			if db != nil {
+				dbRepo, found, dbErr := database.GetRepo(db, fullName)
+				if dbErr != nil {
+					util.Logger().Warn("Failed to read repo from DB; will clone anyway",
+						zap.String("repository", fullName),
+						zap.Error(dbErr),
+					)
+				} else if found && dbRepo.LatestCommitHash == currentHash {
+					util.Logger().Info("Repository unchanged; skipping",
+						zap.String("repository", fullName),
+					)
+					skippedCount++
 					continue
 				}
 			}
@@ -177,8 +168,10 @@ func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 			zap.String("repository", fullName),
 		)
 
+		// Clean up any existing clone/archive for this repo
 		cleanupExistingRepo(repoName)
 
+		// Clone with --bare --depth=1
 		if err := cloneRepo(url, repoName); err != nil {
 			util.Logger().Error("Failed to clone repository",
 				zap.String("repository", fullName),
@@ -189,11 +182,7 @@ func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 			continue
 		}
 
-		// Older version
-		// removeGitMetadata(repoPath)
-		// commitMsg := buildCommitMessage(repoName)
-		// stageAndCommitRepo(repoName, commitMsg)
-
+		// Archive: tar.gz the bare clone, then remove the .git dir
 		if err := archiveRepo(repoName); err != nil {
 			util.Logger().Error("Failed to archive repository",
 				zap.String("repository", fullName),
@@ -204,33 +193,34 @@ func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 			continue
 		}
 
+		// Stage and commit the tarball
 		commitMsg := buildCommitMessage(repoName)
-
 		stageAndCommitRepo(
 			fmt.Sprintf("%s.tar.gz", repoName),
 			commitMsg,
 		)
+		commitsSincePush++
 
-		if err := pushBackupRepo(repoName); err != nil {
-			util.Logger().Error("Failed to push repository backup",
-				zap.String("repository", fullName),
-				zap.Error(err),
-			)
-			recordFailure(db, fullName, err)
-			failedRepos = append(failedRepos, fullName)
-			continue
+		// Batch push: push every pushBatchSize commits
+		if commitsSincePush >= pushBatchSize {
+			if err := pushBackupRepo("batch"); err != nil {
+				util.Logger().Error("Failed to push batch",
+					zap.Error(err),
+				)
+			} else {
+				commitsSincePush = 0
+			}
 		}
 
+		// Update DB with new hash
 		if db != nil && currentHash != "" {
-			if err := database.UpsertRepoHash(db, fullName, currentHash); err != nil {
+			if err := database.UpsertRepo(db, repoName, fullName, url, currentHash); err != nil {
 				util.Logger().Warn("Failed to store repository hash",
 					zap.String("repository", fullName),
 					zap.Error(err),
 				)
 			}
 		}
-
-		recordCompletion(db, fullName)
 
 		successCount++
 		util.Logger().Info("Successfully backed up repository",
@@ -240,7 +230,103 @@ func CloneRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 		)
 	}
 
-	printBackupSummary(repoNames, successCount, failedRepos)
+	// Final push for any remaining commits
+	if commitsSincePush > 0 {
+		if err := pushBackupRepo("final"); err != nil {
+			util.Logger().Error("Failed to push final batch",
+				zap.Error(err),
+			)
+		}
+	}
+
+	printBackupSummary(repoNames, successCount, skippedCount, failedRepos)
+}
+
+// First Ensuring _Repos exist
+func ensureReposDirExists() error {
+	cmd := exec.Command("mkdir", "-p", "_Repos")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to create _Repos directory: %v: %s", err, string(out))
+	}
+
+	return nil
+}
+
+
+func processDeletedRepos(currentRepoNames []string, config *model.ConfigModel, db *sql.DB) {
+	if db == nil {
+		return
+	}
+
+	dbRepos, err := database.GetAllReposFromDB(db)
+	if err != nil {
+		util.Logger().Warn("Failed to fetch repos from DB for cleanup", zap.Error(err))
+		return
+	}
+
+	if len(dbRepos) == 0 {
+		return
+	}
+
+	// Build set of current repo names for O(1) lookup
+	currentSet := make(map[string]bool, len(currentRepoNames))
+	for _, name := range currentRepoNames {
+		currentSet[name] = true
+	}
+
+	deletedCount := 0
+	for _, dbRepo := range dbRepos {
+		if !currentSet[dbRepo.FullName] {
+			util.Logger().Info("Repository no longer on GitHub; removing",
+				zap.String("repository", dbRepo.FullName),
+			)
+
+			repoName := extractRepoName(dbRepo.FullName)
+			cleanupExistingRepo(repoName)
+
+			// Stage the removal in the backup repo
+			removeCmd := exec.Command("sh", "-c",
+				fmt.Sprintf("cd _Repos && git rm -f '%s.tar.gz' 2>/dev/null || true", repoName))
+			if out, err := removeCmd.CombinedOutput(); err != nil {
+				util.Logger().Warn("Failed to git rm deleted repo archive",
+					zap.String("repository", dbRepo.FullName),
+					zap.Error(err),
+					zap.String("output", string(out)),
+				)
+			}
+
+			commitMsg := sanitizeCommitMessage(fmt.Sprintf("Removed deleted repo %s on %s",
+				repoName, time.Now().Format("2006-01-02 Monday 15:04:05")))
+			commitCmd := exec.Command("sh", "-c",
+				fmt.Sprintf("cd _Repos && git diff --staged --quiet || git commit -m '%s' -s", commitMsg))
+			if _, err := commitCmd.CombinedOutput(); err != nil {
+				util.Logger().Warn("Failed to commit deleted repo removal",
+					zap.String("repository", dbRepo.FullName),
+					zap.Error(err),
+				)
+			}
+
+			if err := database.DeleteRepo(db, dbRepo.FullName); err != nil {
+				util.Logger().Warn("Failed to delete repo from DB",
+					zap.String("repository", dbRepo.FullName),
+					zap.Error(err),
+				)
+			}
+
+			deletedCount++
+		}
+	}
+
+	if deletedCount > 0 {
+		util.Logger().Info("Cleaned up deleted repositories",
+			zap.Int("count", deletedCount),
+		)
+
+		// Push the deletion commits
+		if err := pushBackupRepo("deleted-repos-cleanup"); err != nil {
+			util.Logger().Warn("Failed to push deleted repo cleanup", zap.Error(err))
+		}
+	}
 }
 
 func recordFailure(db *sql.DB, repo string, failure error) {
@@ -256,84 +342,56 @@ func recordFailure(db *sql.DB, repo string, failure error) {
 	}
 }
 
-func recordCompletion(db *sql.DB, repo string) {
-	if db == nil {
-		return
+func ensureBackupRepoInitialized(config *model.ConfigModel) error {
+	// Check if _Repos/.git already exists
+	if _, err := os.Stat("_Repos/.git"); err == nil {
+		util.Logger().Info("Backup repository already initialized; skipping init")
+
+		// Make sure the remote URL is up to date
+		if config.BackupRepoPath != "" {
+			updateRemoteCmd := exec.Command("sh", "-c",
+				fmt.Sprintf("cd _Repos && git remote set-url origin '%s' 2>/dev/null || git remote add origin '%s'",
+					config.BackupRepoPath, config.BackupRepoPath))
+			if out, err := updateRemoteCmd.CombinedOutput(); err != nil {
+				util.Logger().Warn("Failed to update remote URL",
+					zap.Error(err),
+					zap.String("output", string(out)),
+				)
+			}
+		}
+
+		return nil
 	}
 
-	if err := database.MarkRepoCompleted(db, repo); err != nil {
-		util.Logger().Warn("Failed to record repository completion",
-			zap.String("repository", repo),
-			zap.Error(err),
-		)
-	}
-}
-
-func prepareReposDir() error {
-	cmdCleanRepos := exec.Command("sh", "-c", "rm -rf _Repos && mkdir -p _Repos")
-	if out, err := cmdCleanRepos.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to clean _Repos directory: %v: %s", err, string(out))
+	// Fresh init — first time setup
+	backupRepoPath := config.BackupRepoPath
+	if backupRepoPath == "" {
+		return fmt.Errorf("BACKUP_REPO_PATH is not set; cannot initialize backup repository")
 	}
 
-	return nil
-}
-
-func backupAndCleanup() {
-	util.Logger().Info("Creating local backup")
-	backupCmd := exec.Command("sh", "-c", "rm -rf backup && mkdir -p backup && cp -r _Repos/* backup/")
-	if out, err := backupCmd.CombinedOutput(); err != nil {
-		util.Logger().Warn("Failed to create local backup",
-			zap.Error(err),
-			zap.String("output", string(out)),
-		)
-	} else {
-		util.Logger().Info("Successfully created local backup",
-			zap.String("folder", "backup"),
-		)
-	}
-
-	util.Logger().Info("Cleaning up")
-	cleanupCmd := exec.Command("sh", "-c", "rm -rf _Repos")
-	if out, err := cleanupCmd.CombinedOutput(); err != nil {
-		util.Logger().Warn("Failed to cleanup repository workspace",
-			zap.Error(err),
-			zap.String("output", string(out)),
-		)
-	} else {
-		util.Logger().Info("Successfully removed repository workspace",
-			zap.String("directory", "_Repos"),
-		)
-	}
-}
-
-func setupInitialBackupRepo() error {
-	initScript := buildInitScript()
+	initScript := buildInitScript(backupRepoPath)
 	return retryCommand(func() *exec.Cmd {
 		return exec.Command("sh", "-c", initScript)
 	}, "Initial git setup", pushTimeout)
 }
 
-func buildInitScript() string {
-	return `cd _Repos && \
+func buildInitScript(backupRepoPath string) string {
+	return fmt.Sprintf(`cd _Repos && \
 		git init && \
 		git config user.email "shardendumishra01@gmail.com" && \
 		git config user.name "ShardenduMishra22" && \
 		git checkout -B main && \
 		touch README.md && \
 		git add README.md && \
-		git commit -m 'Initial commit' -s && \
-		git remote add origin git@github.com-learning:ShardenduMishra22/MishraShardendu22-Backup.git && \
-		git push --force origin main && \
-		cd ..`
+		git commit -m 'init: Initial commit' -s && \
+		git remote add origin '%s' && \
+		git push origin main && \
+		cd ..`, backupRepoPath)
 }
 
 func extractRepoName(fullName string) string {
 	return fullName[strings.Index(fullName, "/")+1:]
 }
-
-// func buildRepoPath(repoName string) string {
-// 	return "_Repos/" + sanitizeShellArg(repoName)
-// }
 
 func buildCloneURL(fullName string) string {
 	return fmt.Sprintf("git@github.com-project:%s.git", fullName)
@@ -365,7 +423,7 @@ func cleanupExistingRepo(repoName string) {
 
 func cloneRepo(url string, repoName string) error {
 	return retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --progress --mirror '%s' '%s.git'", url, repoName))
+		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --bare --depth=1 '%s' '%s.git'", url, repoName))
 	}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
 }
 
@@ -386,17 +444,6 @@ func archiveRepo(repoName string) error {
 		)
 	}, fmt.Sprintf("Archive %s", repoName), cloneTimeout)
 }
-
-// Older version needed to remove .git folder to avoid nested git repos, but with --mirror clone, it's not needed anymore
-// func removeGitMetadata(repoPath string) {
-// 	removeGitCmd := exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && rm -rf .git", repoPath))
-// 	if _, err := removeGitCmd.CombinedOutput(); err != nil {
-// 		util.Logger().Warn("Failed to remove git metadata",
-// 			zap.String("path", repoPath),
-// 			zap.Error(err),
-// 		)
-// 	}
-// }
 
 func buildCommitMessage(repoName string) string {
 	return sanitizeCommitMessage(fmt.Sprintf("Backup Added on %s for the repo %s",
@@ -421,8 +468,8 @@ func stageAndCommitRepo(repoName string, commitMsg string) {
 	}
 }
 
-func pushBackupRepo(repoName string) error {
+func pushBackupRepo(label string) error {
 	return retryCommand(func() *exec.Cmd {
 		return exec.Command("sh", "-c", "cd _Repos && git push origin main")
-	}, fmt.Sprintf("Push %s", repoName), pushTimeout)
+	}, fmt.Sprintf("Push (%s)", label), pushTimeout)
 }
