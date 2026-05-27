@@ -2,12 +2,16 @@ package db
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+//go:embed schema.sql
+var migrationSQL string
 
 var Pool *pgxpool.Pool
 
@@ -48,15 +52,10 @@ func Close() {
 }
 
 func RunMigrations() error {
-	sql, err := os.ReadFile("migrations/001_schema.sql")
-	if err != nil {
-		return fmt.Errorf("read migration file: %w", err)
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err = Pool.Exec(ctx, string(sql))
+	_, err := Pool.Exec(ctx, migrationSQL)
 	if err != nil {
 		return fmt.Errorf("run migration: %w", err)
 	}

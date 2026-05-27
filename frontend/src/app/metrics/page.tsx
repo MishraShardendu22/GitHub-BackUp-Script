@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, TrendingUp, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
 import type { MetricsData, BackupRun } from "@/lib/types";
 import {
@@ -12,8 +11,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  LineChart,
-  Line,
   AreaChart,
   Area,
 } from "recharts";
@@ -33,51 +30,43 @@ export default function MetricsPage() {
 
   const chartData =
     data?.runs.map((r: BackupRun) => ({
-      date: new Date(r.started_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
+      date: new Date(r.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       successful: r.successful,
       failed: r.failed,
-      skipped: r.skipped,
       duration: Math.round(r.duration_ms / 1000),
       total: r.total_repos,
     })) ?? [];
 
   return (
     <div>
-      <div
-        style={{
-          marginBottom: 32,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
         <div>
-          <h1
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              marginBottom: 4,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <BarChart3 size={28} /> Metrics & Analytics
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", marginBottom: 8 }}>
+            ANALYTICS
+          </div>
+          <h1 style={{ fontSize: 36, fontFamily: "var(--font-serif)", marginBottom: 8 }}>
+            Metrics
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
-            Backup performance trends and statistics
+          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+            Backup performance trends and operational statistics.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 4, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 20, padding: 3 }}>
           {[7, 14, 30, 90].map((d) => (
             <button
               key={d}
               onClick={() => setDays(d)}
-              className={days === d ? "btn btn-primary" : "btn btn-outline"}
-              style={{ padding: "6px 12px", fontSize: 12 }}
+              style={{
+                padding: "5px 14px",
+                borderRadius: 16,
+                fontSize: 12,
+                fontWeight: 500,
+                border: "none",
+                cursor: "pointer",
+                background: days === d ? "var(--text)" : "transparent",
+                color: days === d ? "white" : "var(--text-secondary)",
+                fontFamily: "var(--font-sans)",
+              }}
             >
               {d}d
             </button>
@@ -85,123 +74,54 @@ export default function MetricsPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 16,
-          marginBottom: 32,
-        }}
-      >
-        <div className="card">
-          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-            <TrendingUp size={14} /> Total Runs
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>{data?.total_runs ?? 0}</div>
+      {/* Summary */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
+        <div className="stat-card">
+          <div className="stat-label">Total Runs</div>
+          <div className="stat-value">{data?.total_runs ?? 0}</div>
         </div>
-        <div className="card">
-          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-            <Clock size={14} /> Avg Duration
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>
-            {data?.avg_duration_ms ? formatDuration(data.avg_duration_ms) : "N/A"}
-          </div>
+        <div className="stat-card">
+          <div className="stat-label">Avg Duration</div>
+          <div className="stat-value">{data?.avg_duration_ms ? formatDuration(data.avg_duration_ms) : "—"}</div>
         </div>
-        <div className="card">
-          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-            <CheckCircle2 size={14} /> Successful
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#10b981" }}>
-            {data?.total_successful ?? 0}
-          </div>
+        <div className="stat-card">
+          <div className="stat-label">Successful</div>
+          <div className="stat-value" style={{ color: "var(--success)" }}>{data?.total_successful ?? 0}</div>
         </div>
-        <div className="card">
-          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-            <XCircle size={14} /> Failed
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#ef4444" }}>
-            {data?.total_failed ?? 0}
-          </div>
+        <div className="stat-card">
+          <div className="stat-label">Failed</div>
+          <div className="stat-value" style={{ color: "var(--danger)" }}>{data?.total_failed ?? 0}</div>
         </div>
       </div>
 
       {/* Charts */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
         <div className="card">
-          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>
-            Success vs Failure per Run
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Success vs failure</div>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-              <XAxis dataKey="date" stroke="#8888a0" fontSize={11} />
-              <YAxis stroke="#8888a0" fontSize={11} />
-              <Tooltip
-                contentStyle={{
-                  background: "#16161f",
-                  border: "1px solid #2a2a3a",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <Bar dataKey="successful" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="failed" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="skipped" fill="#6b7280" radius={[4, 4, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2ddd5" />
+              <XAxis dataKey="date" stroke="#9b9590" fontSize={11} />
+              <YAxis stroke="#9b9590" fontSize={11} />
+              <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e2ddd5", borderRadius: 8, fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
+              <Bar dataKey="successful" fill="#27ae60" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="failed" fill="#c0392b" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="card">
-          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>
-            Execution Duration (seconds)
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Duration trend (seconds)</div>
+          <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-              <XAxis dataKey="date" stroke="#8888a0" fontSize={11} />
-              <YAxis stroke="#8888a0" fontSize={11} />
-              <Tooltip
-                contentStyle={{
-                  background: "#16161f",
-                  border: "1px solid #2a2a3a",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="duration"
-                stroke="#6366f1"
-                fill="rgba(99, 102, 241, 0.1)"
-                strokeWidth={2}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2ddd5" />
+              <XAxis dataKey="date" stroke="#9b9590" fontSize={11} />
+              <YAxis stroke="#9b9590" fontSize={11} />
+              <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e2ddd5", borderRadius: 8, fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
+              <Area type="monotone" dataKey="duration" stroke="#1a1a1a" fill="rgba(26, 26, 26, 0.05)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      <div className="card">
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>
-          Repos Processed per Run
-        </h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-            <XAxis dataKey="date" stroke="#8888a0" fontSize={11} />
-            <YAxis stroke="#8888a0" fontSize={11} />
-            <Tooltip
-              contentStyle={{
-                background: "#16161f",
-                border: "1px solid #2a2a3a",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-            />
-            <Line type="monotone" dataKey="total" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
-            <Line type="monotone" dataKey="successful" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-          </LineChart>
-        </ResponsiveContainer>
       </div>
     </div>
   );

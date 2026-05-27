@@ -124,8 +124,16 @@ func StageAndCommitRepo(repoName string, commitMsg string) {
 
 func PushBackupRepo(label string) error {
 	return retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c", "rm -rf ~/.ssh/sockets/* && cd _Repos && git push origin main")
-		// return exec.Command("sh", "-c", "cd _Repos && git push origin main")
+		cmd := exec.Command(
+			"git",
+			"-c", "core.compression=0",
+			"push",
+			"origin",
+			"main",
+		)
+
+		cmd.Dir = "_Repos"
+		return cmd
 	}, fmt.Sprintf("Push (%s)", label), pushTimeout)
 }
 

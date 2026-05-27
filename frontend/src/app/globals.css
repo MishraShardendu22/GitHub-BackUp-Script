@@ -1,125 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-card: #16161f;
-  --bg-hover: #1e1e2a;
-  --border: #2a2a3a;
-  --text-primary: #e4e4ef;
-  --text-secondary: #8888a0;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
+  --bg: #f7f5f0;
+  --bg-card: #ffffff;
+  --bg-hover: #f0ede6;
+  --border: #e2ddd5;
+  --border-light: #eae6df;
+  --text: #1a1a1a;
+  --text-secondary: #6b6560;
+  --text-muted: #9b9590;
+  --accent: #c0392b;
+  --accent-hover: #a93226;
+  --success: #27ae60;
+  --danger: #c0392b;
+  --warning: #d4a017;
+  --font-serif: 'Instrument Serif', 'Georgia', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #3a3a4a;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* Card base */
+/* Card */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: 10px;
+  padding: 20px 24px;
 }
 
-.card-hover:hover {
-  background: var(--bg-hover);
-  border-color: #3a3a4a;
-  transition: all 0.2s ease;
+.card-flat {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 16px 20px;
 }
 
-/* Status badges */
+/* Stat Card */
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+/* Badge */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
-  border-radius: 9999px;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  border: 1px solid transparent;
 }
 
 .badge-success {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.2);
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .badge-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.2);
+  background: #fce4ec;
+  color: #c62828;
 }
 
 .badge-running {
-  background: rgba(99, 102, 241, 0.1);
-  color: #818cf8;
-  border-color: rgba(99, 102, 241, 0.2);
+  background: #e3f2fd;
+  color: #1565c0;
 }
 
 .badge-neutral {
-  background: rgba(136, 136, 160, 0.1);
-  color: #8888a0;
-  border-color: rgba(136, 136, 160, 0.2);
+  background: #f5f5f5;
+  color: #757575;
 }
 
-/* Button */
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s;
   border: 1px solid transparent;
+  font-family: var(--font-sans);
 }
 
 .btn-primary {
+  background: var(--text);
+  color: white;
+  border-color: var(--text);
+}
+
+.btn-primary:hover {
+  background: #333;
+}
+
+.btn-danger {
   background: var(--accent);
   color: white;
 }
-.btn-primary:hover {
+
+.btn-danger:hover {
   background: var(--accent-hover);
 }
 
 .btn-outline {
-  background: transparent;
-  color: var(--text-secondary);
-  border-color: var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
+
 .btn-outline:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+}
+
+.btn-ghost:hover {
+  color: var(--text);
+  background: var(--bg-hover);
 }
 
 /* Table */
@@ -131,18 +178,19 @@ body {
 .table th {
   text-align: left;
   padding: 10px 16px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
   border-bottom: 1px solid var(--border);
 }
 
 .table td {
   padding: 12px 16px;
-  font-size: 14px;
-  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
 }
 
 .table tr:last-child td {
@@ -153,24 +201,152 @@ body {
   background: var(--bg-hover);
 }
 
-/* Log levels */
-.log-info { color: #60a5fa; }
-.log-warn { color: #fbbf24; }
-.log-error { color: #f87171; }
-.log-debug { color: #8888a0; }
-
 /* Input */
 .input {
   width: 100%;
   padding: 10px 14px;
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--text-primary);
+  color: var(--text);
   font-size: 14px;
+  font-family: var(--font-sans);
   outline: none;
+  transition: border-color 0.15s;
 }
 
 .input:focus {
-  border-color: var(--accent);
+  border-color: var(--text);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Textarea */
+.textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  outline: none;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.textarea:focus {
+  border-color: var(--text);
+}
+
+/* Log levels */
+.log-info { color: #1565c0; }
+.log-warn { color: #d4a017; }
+.log-error { color: #c62828; }
+.log-debug { color: #9b9590; }
+
+/* Pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.pill:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.pill-active {
+  background: var(--text);
+  color: white;
+  border-color: var(--text);
+}
+
+/* Section */
+.section-title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  background: var(--border-light);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--text);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* Horizontal bar chart */
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.bar-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.bar-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
 }

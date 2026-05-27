@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Sidebar from "@/components/layout/sidebar";
+import { Inter } from "next/font/google";
+import Header from "@/components/layout/header";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "GitHub Backup Monitor",
-  description: "Real-time monitoring dashboard for GitHub repository backups",
+  title: "Backup Observatory",
+  description: "Monitor backup metrics and failures from the latest stored data",
 };
 
 export default function RootLayout({
@@ -24,20 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex">
-        <Sidebar />
-        <main
-          style={{
-            marginLeft: 240,
-            flex: 1,
-            padding: "24px 32px",
-            minHeight: "100vh",
-          }}
-        >
+    <html lang="en" className={`${inter.variable}`}>
+      <body>
+        <Header />
+        <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
           {children}
         </main>
       </body>

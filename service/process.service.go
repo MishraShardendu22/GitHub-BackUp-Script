@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	pushBatchSize   = 10
+	pushBatchSize   = 2
 	cloneWorkers    = 5
 	hashCheckWorkers = 10
 )
