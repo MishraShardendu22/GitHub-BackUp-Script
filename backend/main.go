@@ -42,6 +42,9 @@ func main() {
 	// Middleware
 	app.Use(middleware.SetupLogger())
 	app.Use(middleware.SetupCORS())
+	app.Options("/*", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
 
 	// Routes
 	routes.Setup(app)

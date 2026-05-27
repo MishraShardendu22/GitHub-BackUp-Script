@@ -8,9 +8,10 @@ import (
 
 func SetupCORS() fiber.Handler {
 	return cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders: "Content-Type,Authorization",
+		AllowOrigins:     "https://mishra.is-a.dev",
+		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Authorization",
+		AllowCredentials: true,
 	})
 }
 

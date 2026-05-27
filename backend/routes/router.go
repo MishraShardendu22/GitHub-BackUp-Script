@@ -48,5 +48,7 @@ func Setup(app *fiber.App) {
 		}
 		return fiber.ErrUpgradeRequired
 	})
-	app.Get("/ws/live", ws.New(websocket.HandleWebSocket))
+	app.Get("/ws/live", ws.New(websocket.HandleWebSocket, ws.Config{
+		Origins: []string{"https://mishra.is-a.dev"},
+	}))
 }
