@@ -49,7 +49,7 @@ export const getRepos = () =>
 
 // AI
 export const postChat = (message: string, conversationId?: number, webSearch = false) =>
-  fetchAPI<{ conversation_id: number; message: string; tokens_used: number; web_search: boolean; model: string }>(
+  fetchAPI<{ conversation_id: number; message: string; tokens_used: number; web_search: boolean; model: string; sources?: import("./types").ChatSource[] }>(
     "/api/ai/chat",
     {
       method: "POST",

@@ -19,6 +19,15 @@ type ChatRequest struct {
 	WebSearch bool   `json:"web_search"`
 }
 
+type aiCitation struct {
+	Type        string `json:"type"`
+	URLCitation struct {
+		URL     string `json:"url"`
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	} `json:"url_citation"`
+}
+
 func PostChat(c *fiber.Ctx) error {
 	var req ChatRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -86,7 +95,8 @@ When answering, prefer concrete values from the database. Keep responses concise
 	var result struct {
 		Choices []struct {
 			Message struct {
-				Content string `json:"content"`
+				Content     string       `json:"content"`
+				Annotations []aiCitation `json:"annotations"`
 			} `json:"message"`
 		} `json:"choices"`
 		Usage struct {
@@ -101,12 +111,35 @@ When answering, prefer concrete values from the database. Keep responses concise
 	aiContent := result.Choices[0].Message.Content
 	tokens := result.Usage.TotalTokens
 
+	sources := make([]fiber.Map, 0)
+	seen := map[string]bool{}
+	for _, annotation := range result.Choices[0].Message.Annotations {
+		if annotation.Type != "url_citation" {
+			continue
+		}
+		url := strings.TrimSpace(annotation.URLCitation.URL)
+		if url == "" || seen[url] {
+			continue
+		}
+		seen[url] = true
+		label := strings.TrimSpace(annotation.URLCitation.Title)
+		if label == "" {
+			label = url
+		}
+		sources = append(sources, fiber.Map{
+			"label":   label,
+			"url":     url,
+			"content": strings.TrimSpace(annotation.URLCitation.Content),
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"conversation_id": 0,
 		"message":         aiContent,
 		"tokens_used":     tokens,
 		"web_search":      req.WebSearch,
 		"model":           model,
+		"sources":         sources,
 	})
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getDashboardStats, getLatestReport, postChat, sendReport } from "@/lib/api";
 import { formatBytes, formatDate, formatDuration } from "@/lib/utils";
-import type { ChatMessage, DashboardStats, ReportBundle } from "@/lib/types";
+import type { ChatMessage, ChatSource, DashboardStats, ReportBundle } from "@/lib/types";
 import styles from "./page.module.css";
 
 const starterQuestions = [
@@ -43,6 +43,27 @@ function parseSourceItem(source: string): ParsedSource {
   }
 
   return { label: source };
+}
+
+function renderChatSources(sources?: ChatSource[]) {
+  if (!sources || sources.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={styles.messageSources}>
+      <span className={styles.messageSourcesLabel}>Sources</span>
+      <ul className={styles.messageSourcesList}>
+        {sources.map((source, index) => (
+          <li key={`${source.url}-${index}`} className={styles.messageSourceItem}>
+            <a className={styles.messageSourceLink} href={source.url} target="_blank" rel="noreferrer">
+              {source.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default function AssistantPage() {
@@ -408,6 +429,7 @@ export default function AssistantPage() {
           tokens_used: response.tokens_used,
           web_search: response.web_search,
           created_at: new Date().toISOString(),
+          sources: response.sources,
         },
       ]);
     } catch {
@@ -538,7 +560,10 @@ export default function AssistantPage() {
 
                   <div className={isUser ? styles.userBubble : styles.assistantBubble}>
                     {message.role === "assistant" ? (
-                      <ReportCard text={message.content} />
+                      <>
+                        <ReportCard text={message.content} />
+                        {renderChatSources((message as ChatMessage & { sources?: ChatSource[] }).sources)}
+                      </>
                     ) : (
                       <p className={styles.userText}>{message.content}</p>
                     )}

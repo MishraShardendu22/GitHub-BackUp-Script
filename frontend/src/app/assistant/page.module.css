@@ -344,6 +344,47 @@
   text-decoration: underline;
 }
 
+.messageSources {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8e4dc;
+}
+
+.messageSourcesLabel {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8d8882;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.messageSourcesList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.messageSourceItem {
+  min-width: 0;
+}
+
+.messageSourceLink {
+  display: inline-block;
+  font-size: 12px;
+  color: #234c7a;
+  text-decoration: none;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.messageSourceLink:hover {
+  text-decoration: underline;
+}
+
 .fallbackMarkdown {
   font-size: 14px;
   line-height: 1.7;

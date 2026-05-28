@@ -99,6 +99,13 @@ export interface ChatMessage {
   tokens_used: number;
   web_search: boolean;
   created_at: string;
+  sources?: ChatSource[];
+}
+
+export interface ChatSource {
+  label: string;
+  url: string;
+  content?: string;
 }
 
 export interface ReportMetric {
