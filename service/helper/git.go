@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	pushTimeout  = 5 * time.Minute
-	cloneTimeout = 10 * time.Minute
+	pushTimeout  = 20 * time.Minute
+	cloneTimeout = 20 * time.Minute
 )
 
 func EnsureReposDirExists() error {
