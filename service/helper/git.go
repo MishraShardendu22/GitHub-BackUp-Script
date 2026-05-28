@@ -72,7 +72,7 @@ func GetRemoteHeadHash(repoURL string) (string, error) {
 }
 
 func CleanupExistingRepo(repoName string) {
-	cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s.git' '%s.tar.gz'", repoName, repoName))
+	cleanupCmd := exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && rm -rf '%s' '%s.tar.gz'", repoName, repoName))
 	if _, err := cleanupCmd.CombinedOutput(); err != nil {
 		util.Logger().Warn("Repository cleanup failed",
 			zap.String("repository", repoName),
@@ -83,12 +83,13 @@ func CleanupExistingRepo(repoName string) {
 
 func CloneRepo(url string, repoName string) error {
 	return retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --bare --depth=1 '%s' '%s.git'", url, repoName))
+		// Shallow clone the working tree (non-bare) and remove the .git directory so only the latest code remains
+		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --depth=1 '%s' '%s' && rm -rf '%s/.git'", url, repoName, repoName))
 	}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
 }
 
 func ArchiveRepo(repoName string) error {
-	repoDir := fmt.Sprintf("%s.git", repoName)
+	repoDir := fmt.Sprintf("%s", repoName)
 	archiveName := fmt.Sprintf("%s.tar.gz", repoName)
 
 	return retryCommand(func() *exec.Cmd {
