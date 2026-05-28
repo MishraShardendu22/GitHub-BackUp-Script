@@ -2,19 +2,27 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { WsMessage } from "@/lib/types";
+import { formatBytes } from "@/lib/utils";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws/live";
+function buildLiveSocketUrl() {
+  const configuredBase = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const baseUrl = new URL(configuredBase);
+  const secureProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+  return `${secureProtocol}//${baseUrl.host}/ws/live`;
+}
 
 export default function LivePage() {
   const [connected, setConnected] = useState(false);
   const [logs, setLogs] = useState<WsMessage[]>([]);
   const [status, setStatus] = useState<WsMessage | null>(null);
+  const [analytics, setAnalytics] = useState<WsMessage | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     function connect() {
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(buildLiveSocketUrl());
       wsRef.current = ws;
       ws.onopen = () => setConnected(true);
       ws.onclose = () => { setConnected(false); setTimeout(connect, 3000); };
@@ -26,6 +34,8 @@ export default function LivePage() {
             setLogs((prev) => [...prev.slice(-500), msg]);
           } else if (msg.type === "status") {
             setStatus(msg);
+          } else if (msg.type === "analytics") {
+            setAnalytics(msg);
           }
         } catch { /* ignore */ }
       };
@@ -105,6 +115,31 @@ export default function LivePage() {
           <div className="stat-card" style={{ textAlign: "center" }}>
             <div className="stat-value">{status.skipped ?? 0}</div>
             <div className="stat-label" style={{ marginBottom: 0, marginTop: 4 }}>Skipped</div>
+          </div>
+        </div>
+      )}
+
+      {analytics && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+          <div className="stat-card">
+            <div className="stat-label">Total backup size</div>
+            <div className="stat-value">{formatBytes(analytics.total_size_bytes ?? 0)}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Largest repository</div>
+            <div className="stat-value" style={{ fontSize: 18 }}>
+              {analytics.largest_repository ?? "—"}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+              {formatBytes(analytics.largest_archive_bytes ?? 0)} archived
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Tracked repositories</div>
+            <div className="stat-value">{analytics.repositories_tracked ?? 0}</div>
+            <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+              {analytics.sampled_at ? new Date(analytics.sampled_at).toLocaleTimeString() : "Live sample"}
+            </div>
           </div>
         </div>
       )}

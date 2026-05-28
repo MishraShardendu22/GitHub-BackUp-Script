@@ -89,7 +89,7 @@ export interface MetricsData {
 }
 
 export interface WsMessage {
-  type: "log" | "status";
+  type: "log" | "status" | "analytics";
   id?: number;
   level?: string;
   message?: string;
@@ -102,4 +102,10 @@ export interface WsMessage {
   failed?: number;
   skipped?: number;
   started_at?: string;
+  total_size_bytes?: number;
+  largest_archive_bytes?: number;
+  largest_repository?: string;
+  repositories_tracked?: number;
+  runs_tracked?: number;
+  sampled_at?: string;
 }

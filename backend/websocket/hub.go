@@ -11,9 +11,9 @@ import (
 )
 
 type Hub struct {
-	clients    map[*ws.Conn]bool
-	mu         sync.RWMutex
-	broadcast  chan []byte
+	clients   map[*ws.Conn]bool
+	mu        sync.RWMutex
+	broadcast chan []byte
 }
 
 var DefaultHub = &Hub{
@@ -88,6 +88,35 @@ func (h *Hub) StartPolling() {
 					"started_at":  startedAt,
 				})
 				h.Broadcast(statusMsg)
+			}
+
+			var totalSizeBytes int64
+			var largestArchiveBytes int64
+			var largestRepository string
+			var repositoriesTracked int
+			var runsTracked int
+
+			err = db.Pool.QueryRow(ctx,
+				`SELECT
+					COALESCE(SUM(archive_size_bytes), 0),
+					COALESCE(MAX(archive_size_bytes), 0),
+					COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), ''),
+					COALESCE(COUNT(DISTINCT repo_full_name), 0),
+					COALESCE(COUNT(DISTINCT run_id), 0)
+				 FROM backup_results`).Scan(
+				&totalSizeBytes, &largestArchiveBytes, &largestRepository, &repositoriesTracked, &runsTracked)
+
+			if err == nil {
+				analyticsMsg, _ := json.Marshal(map[string]interface{}{
+					"type":                  "analytics",
+					"total_size_bytes":      totalSizeBytes,
+					"largest_archive_bytes": largestArchiveBytes,
+					"largest_repository":    largestRepository,
+					"repositories_tracked":  repositoriesTracked,
+					"runs_tracked":          runsTracked,
+					"sampled_at":            time.Now().UTC(),
+				})
+				h.Broadcast(analyticsMsg)
 			}
 
 			// Send new logs since last check
