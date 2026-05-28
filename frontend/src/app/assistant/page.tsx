@@ -23,6 +23,28 @@ type ParsedReport = {
   sources?: string[];
 };
 
+type ParsedSource = {
+  label: string;
+  url?: string;
+};
+
+function parseSourceItem(source: string): ParsedSource {
+  const markdownLink = source.match(/^(.+?)\s*\[(.+?)\]\((https?:\/\/[^)\s]+)\)$/);
+  if (markdownLink) {
+    return { label: markdownLink[2].trim(), url: markdownLink[3].trim() };
+  }
+
+  const urlMatch = source.match(/(https?:\/\/[^\s)]+)$/);
+  if (urlMatch) {
+    return {
+      label: source.replace(urlMatch[1], "").replace(/[:\-–—]\s*$/, "").trim() || urlMatch[1],
+      url: urlMatch[1],
+    };
+  }
+
+  return { label: source };
+}
+
 export default function AssistantPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [reportBundle, setReportBundle] = useState<ReportBundle | null>(null);
@@ -124,7 +146,9 @@ export default function AssistantPage() {
       "**Next steps**",
       "**Risks**",
       "**Questions**",
+      "**Sources**",
       "Sources:",
+      "Sources",
     ];
 
     const parts: { [k: string]: string } = {};
@@ -182,8 +206,8 @@ export default function AssistantPage() {
     sections.next_steps = extractList(parts["**Next steps**"]);
     sections.risks = extractList(parts["**Risks**"]);
     sections.questions = extractList(parts["**Questions**"]);
-    if (parts["Sources:"]) {
-      sections.sources = extractList(parts["Sources:"]);
+    if (parts["**Sources**"] || parts["Sources:"] || parts["Sources"]) {
+      sections.sources = extractList(parts["**Sources**"] || parts["Sources:"] || parts["Sources"]);
     }
 
     return sections;
@@ -279,7 +303,28 @@ export default function AssistantPage() {
         {parsed.sources && parsed.sources.length > 0 ? (
           <div className={styles.sourcesWrap}>
             <span className={styles.sourcesLabel}>Sources</span>
-            <span className={styles.sourcesValue}>{parsed.sources.join(" · ")}</span>
+            <ul className={styles.sourcesList}>
+              {parsed.sources.map((source, index) => {
+                const parsedSource = parseSourceItem(source);
+
+                return (
+                  <li key={index} className={styles.sourceItem}>
+                    {parsedSource.url ? (
+                      <a
+                        className={styles.sourceLink}
+                        href={parsedSource.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {parsedSource.label}
+                      </a>
+                    ) : (
+                      <span className={styles.sourcesValue}>{parsedSource.label}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : null}
       </div>

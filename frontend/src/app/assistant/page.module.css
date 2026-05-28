@@ -304,6 +304,20 @@
   flex-wrap: wrap;
 }
 
+.sourcesList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sourceItem {
+  min-width: 0;
+}
+
 .sourcesLabel {
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -315,6 +329,19 @@
 .sourcesValue {
   font-size: 12px;
   color: #5b5550;
+}
+
+.sourceLink {
+  display: inline-block;
+  font-size: 12px;
+  color: #234c7a;
+  text-decoration: none;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.sourceLink:hover {
+  text-decoration: underline;
 }
 
 .fallbackMarkdown {

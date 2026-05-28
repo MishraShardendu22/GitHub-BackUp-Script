@@ -49,6 +49,8 @@ func PostChat(c *fiber.Ctx) error {
 Use only the stored database context below. Do not say you have no access if the facts are present. If a detail is missing, say what is missing and answer with the exact stored data you do have.
 Return a structured answer with these sections in order: Summary, Findings, Next steps, Risks, Questions. Keep it factual, concise, and directly grounded in the data.
 
+If web search is enabled, add a final Sources section with one source per line. Include a short label and the URL or markdown link for each web source you used.
+
 Current stored context:
 %s
 
