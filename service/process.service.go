@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	pushBatchSize   = 2
-	cloneWorkers    = 5
+	cloneWorkers     = 5
 	hashCheckWorkers = 10
 )
 
@@ -50,12 +49,10 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 		return
 	}
 
-	// Phase 0: Handle deleted repos in parallel
 	processDeletedRepos(repoNames, db)
 
 	util.Logger().Info("Starting repository backup")
 
-	// Start monitoring run
 	mon := monitor.Get()
 	start := time.Now()
 	if mon != nil {
@@ -63,14 +60,12 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 		mon.Log("info", fmt.Sprintf("Starting backup of %d repositories", len(repoNames)), "")
 	}
 
-	// Phase 1: Parallel hash checks to determine which repos need cloning
 	util.Logger().Info("Phase 1: Checking repository hashes",
 		zap.Int("total", len(repoNames)),
 		zap.Int("workers", hashCheckWorkers),
 	)
 	hashResults := parallelHashCheck(repoNames, db)
 
-	// Separate into repos that need cloning vs skipped
 	var toClone []repoHashResult
 	skippedCount := 0
 	for _, hr := range hashResults {
@@ -87,22 +82,95 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 	)
 
 	if len(toClone) == 0 {
+		if mon != nil {
+			durationMs := time.Since(start).Milliseconds()
+			mon.CompleteRun(0, 0, skippedCount, durationMs, "")
+			mon.Log("info", fmt.Sprintf("All %d repos up to date, nothing to clone", skippedCount), "")
+		}
 		printBackupSummary(repoNames, 0, skippedCount, nil)
 		return
 	}
 
-	// Phase 2: Parallel clone + archive (5 workers)
-	util.Logger().Info("Phase 2: Cloning and archiving repositories",
-		zap.Int("count", len(toClone)),
-		zap.Int("workers", cloneWorkers),
+	// Phase 2+3: Process in batches of 5 — clone+archive in parallel, then commit+push each one
+	util.Logger().Info("Phase 2+3: Clone, archive, commit, push in batches",
+		zap.Int("total", len(toClone)),
+		zap.Int("batch_size", cloneWorkers),
 	)
-	cloneResults := parallelCloneAndArchive(toClone)
 
-	// Phase 3: Serial commit + batch push (git operations on working tree must be serial)
-	util.Logger().Info("Phase 3: Committing and pushing backups")
-	successCount, failedRepos := serialCommitAndPush(cloneResults, db)
+	successCount := 0
+	var failedRepos []string
 
-	// Complete monitoring run
+	for batchStart := 0; batchStart < len(toClone); batchStart += cloneWorkers {
+		batchEnd := batchStart + cloneWorkers
+		if batchEnd > len(toClone) {
+			batchEnd = len(toClone)
+		}
+		batch := toClone[batchStart:batchEnd]
+
+		util.Logger().Info("Processing batch",
+			zap.Int("batch_start", batchStart+1),
+			zap.Int("batch_end", batchEnd),
+			zap.Int("total", len(toClone)),
+		)
+
+		// Clone + archive in parallel (5 at a time)
+		cloneResults := parallelCloneAndArchive(batch)
+
+		// Commit + push EACH repo individually (serial, one by one)
+		for _, res := range cloneResults {
+			if res.Err != nil {
+				recordFailure(db, res.FullName, res.Err)
+				failedRepos = append(failedRepos, res.FullName)
+				if mon != nil {
+					mon.LogRepoResult(res.FullName, "failed", res.CurrentHash, 0, 0, res.Err.Error())
+					mon.Log("error", "Backup failed: "+res.Err.Error(), res.FullName)
+					mon.UpdateProgress(successCount, len(failedRepos), skippedCount)
+				}
+				continue
+			}
+
+			// Stage the tarball
+			tarball := fmt.Sprintf("%s.tar.gz", res.RepoName)
+			commitMsg := helper.BuildCommitMessage(res.RepoName)
+			helper.StageAndCommitRepo(tarball, commitMsg)
+
+			// Push THIS repo immediately
+			if err := helper.PushBackupRepo(res.RepoName); err != nil {
+				util.Logger().Error("Failed to push repo",
+					zap.String("repository", res.FullName),
+					zap.Error(err),
+				)
+				failedRepos = append(failedRepos, res.FullName)
+				if mon != nil {
+					mon.LogRepoResult(res.FullName, "failed", res.CurrentHash, 0, 0, "push failed: "+err.Error())
+					mon.Log("error", "Push failed: "+err.Error(), res.FullName)
+					mon.UpdateProgress(successCount, len(failedRepos), skippedCount)
+				}
+				continue
+			}
+
+			// Update DB with new hash
+			if db != nil && res.CurrentHash != "" {
+				if err := database.UpsertRepo(db, res.RepoName, res.FullName, res.URL, res.CurrentHash); err != nil {
+					util.Logger().Warn("Failed to store repository hash",
+						zap.String("repository", res.FullName),
+						zap.Error(err),
+					)
+				}
+			}
+
+			successCount++
+			util.Logger().Info("✓ Backed up and pushed",
+				zap.String("repository", res.FullName),
+			)
+			if mon != nil {
+				mon.LogRepoResult(res.FullName, "completed", res.CurrentHash, 0, 0, "")
+				mon.Log("info", "Backup completed and pushed", res.FullName)
+				mon.UpdateProgress(successCount, len(failedRepos), skippedCount)
+			}
+		}
+	}
+
 	if mon != nil {
 		durationMs := time.Since(start).Milliseconds()
 		errMsg := ""
@@ -117,7 +185,6 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 	printBackupSummary(repoNames, successCount, skippedCount, failedRepos)
 }
 
-// parallelHashCheck runs git ls-remote + DB hash comparison concurrently
 func parallelHashCheck(repoNames []string, db *sql.DB) []repoHashResult {
 	results := make([]repoHashResult, len(repoNames))
 	var wg sync.WaitGroup
@@ -242,74 +309,6 @@ func parallelCloneAndArchive(repos []repoHashResult) []repoResult {
 
 	wg.Wait()
 	return results
-}
-
-// serialCommitAndPush handles git add/commit/push sequentially (git working tree is not concurrent-safe)
-func serialCommitAndPush(results []repoResult, db *sql.DB) (int, []string) {
-	successCount := 0
-	commitsSincePush := 0
-	var failedRepos []string
-
-	for _, res := range results {
-		mon := monitor.Get()
-
-		if res.Err != nil {
-			recordFailure(db, res.FullName, res.Err)
-			failedRepos = append(failedRepos, res.FullName)
-			if mon != nil {
-				mon.LogRepoResult(res.FullName, "failed", res.CurrentHash, 0, 0, res.Err.Error())
-				mon.Log("error", "Backup failed: "+res.Err.Error(), res.FullName)
-				mon.UpdateProgress(successCount, len(failedRepos), 0)
-			}
-			continue
-		}
-
-		// Stage and commit the tarball
-		commitMsg := helper.BuildCommitMessage(res.RepoName)
-		helper.StageAndCommitRepo(
-			fmt.Sprintf("%s.tar.gz", res.RepoName),
-			commitMsg,
-		)
-		commitsSincePush++
-
-		// Batch push
-		if commitsSincePush >= pushBatchSize {
-			if err := helper.PushBackupRepo("batch"); err != nil {
-				util.Logger().Error("Failed to push batch", zap.Error(err))
-			} else {
-				commitsSincePush = 0
-			}
-		}
-
-		// Update DB with new hash
-		if db != nil && res.CurrentHash != "" {
-			if err := database.UpsertRepo(db, res.RepoName, res.FullName, res.URL, res.CurrentHash); err != nil {
-				util.Logger().Warn("Failed to store repository hash",
-					zap.String("repository", res.FullName),
-					zap.Error(err),
-				)
-			}
-		}
-
-		successCount++
-		util.Logger().Info("Successfully backed up repository",
-			zap.String("repository", res.FullName),
-		)
-		if mon != nil {
-			mon.LogRepoResult(res.FullName, "completed", res.CurrentHash, 0, 0, "")
-			mon.Log("info", "Backup completed", res.FullName)
-			mon.UpdateProgress(successCount, len(failedRepos), 0)
-		}
-	}
-
-	// Final push for remaining commits
-	if commitsSincePush > 0 {
-		if err := helper.PushBackupRepo("final"); err != nil {
-			util.Logger().Error("Failed to push final batch", zap.Error(err))
-		}
-	}
-
-	return successCount, failedRepos
 }
 
 // processDeletedRepos cleans up repos that exist in DB but are no longer on GitHub — fully parallel
