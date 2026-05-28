@@ -396,9 +396,11 @@ func reportQuestions(run ReportRunSnapshot, analytics *ReportAnalyticsSnapshot, 
 }
 
 func buildAIInsights(ctx context.Context, bundle ReportBundle) []string {
+	addendum := fallbackAIAddendum(bundle)
+
 	apiKey := os.Getenv("MODEL_KEY")
 	if apiKey == "" {
-		return fallbackAIInsights(bundle)
+		return flattenAIAddendum(addendum)
 	}
 
 	model := os.Getenv("MODEL_NAME")
@@ -417,7 +419,6 @@ func buildAIInsights(ctx context.Context, bundle ReportBundle) []string {
 		"next_steps":   bundle.NextSteps,
 		"risks":        bundle.Risks,
 		"questions":    bundle.Questions,
-		"insights":     bundle.AIInsights,
 		"repositories": bundle.Repositories,
 		"failures":     bundle.Failures,
 	}
@@ -428,8 +429,8 @@ func buildAIInsights(ctx context.Context, bundle ReportBundle) []string {
 	requestBody := map[string]any{
 		"model": model,
 		"messages": []map[string]string{
-			{"role": "system", "content": "You write structured report addenda for a GitHub backup monitoring system. Return only JSON."},
-			{"role": "user", "content": fmt.Sprintf("Use the following report bundle data to produce a richer, factual report addendum. Return JSON with keys summary_detail, insights, and common_questions. summary_detail must be one paragraph. insights must be 4-6 concise bullets. common_questions must be 3-5 question-and-answer strings using the form 'Q: ... A: ...'. Keep the response grounded in the supplied data and suitable for inclusion in a PDF report.\n\n%s", mustJSON(payload))},
+			{"role": "system", "content": "You write enterprise DevOps backup reports. Return only valid JSON with factual statements grounded in the input."},
+			{"role": "user", "content": fmt.Sprintf("Use the following report bundle data to produce an executive addendum for a GitHub backup analytics report. Return JSON with exactly these keys:\n- executive_summary: string (single concise paragraph)\n- operational_insights: string[] (4-6 bullets)\n- risk_analysis: string[] (3-5 bullets)\n- recommendations: string[] (3-5 bullets)\n- common_review_questions: string[] (3-5 items in 'Q: ... A: ...' format)\n\nConstraints:\n- Keep content factual and anchored to provided numbers.\n- Do not invent unavailable data.\n- Keep each bullet/action concise and practical.\n\nInput:\n%s", mustJSON(payload))},
 		},
 		"response_format": map[string]string{"type": "json_object"},
 	}
@@ -444,7 +445,7 @@ func buildAIInsights(ctx context.Context, bundle ReportBundle) []string {
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return fallbackAIInsights(bundle)
+		return flattenAIAddendum(addendum)
 	}
 	defer resp.Body.Close()
 
@@ -457,48 +458,43 @@ func buildAIInsights(ctx context.Context, bundle ReportBundle) []string {
 		} `json:"choices"`
 	}
 	if err := json.Unmarshal(respBytes, &result); err != nil || len(result.Choices) == 0 {
-		return fallbackAIInsights(bundle)
+		return flattenAIAddendum(addendum)
 	}
 
-	content := strings.TrimSpace(result.Choices[0].Message.Content)
-	content = strings.Trim(content, "`")
+	content := sanitizeJSONContent(result.Choices[0].Message.Content)
 
-	var parsed struct {
-		SummaryDetail   string   `json:"summary_detail"`
-		Insights        []string `json:"insights"`
-		CommonQuestions []string `json:"common_questions"`
-	}
+	var parsed aiReportAddendum
 	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
-		return fallbackAIInsights(bundle)
+		return flattenAIAddendum(addendum)
 	}
 
-	insights := make([]string, 0, 1+len(parsed.Insights)+len(parsed.CommonQuestions))
-	if parsed.SummaryDetail != "" {
-		insights = append(insights, parsed.SummaryDetail)
+	parsed.ExecutiveSummary = strings.TrimSpace(parsed.ExecutiveSummary)
+	parsed.OperationalInsights = cleanInsightList(parsed.OperationalInsights)
+	parsed.RiskAnalysis = cleanInsightList(parsed.RiskAnalysis)
+	parsed.Recommendations = cleanInsightList(parsed.Recommendations)
+	parsed.CommonReviewQuestions = cleanInsightList(parsed.CommonReviewQuestions)
+
+	if parsed.ExecutiveSummary == "" {
+		parsed.ExecutiveSummary = addendum.ExecutiveSummary
 	}
-	insights = append(insights, parsed.Insights...)
-	insights = append(insights, parsed.CommonQuestions...)
-	if len(insights) == 0 {
-		return fallbackAIInsights(bundle)
+	if len(parsed.OperationalInsights) == 0 {
+		parsed.OperationalInsights = addendum.OperationalInsights
 	}
-	return insights
+	if len(parsed.RiskAnalysis) == 0 {
+		parsed.RiskAnalysis = addendum.RiskAnalysis
+	}
+	if len(parsed.Recommendations) == 0 {
+		parsed.Recommendations = addendum.Recommendations
+	}
+	if len(parsed.CommonReviewQuestions) == 0 {
+		parsed.CommonReviewQuestions = addendum.CommonReviewQuestions
+	}
+
+	return flattenAIAddendum(parsed)
 }
 
 func fallbackAIInsights(bundle ReportBundle) []string {
-	insights := []string{fmt.Sprintf("The latest run processed %d repositories with %d successes and %d failures.", bundle.Run.TotalRepos, bundle.Run.Successful, bundle.Run.Failed)}
-	if len(bundle.Repositories) > 0 {
-		insights = append(insights, fmt.Sprintf("The largest repository in the current snapshot is %s at %s.", bundle.Repositories[0].Name, bundle.Repositories[0].ArchiveSize))
-	}
-	if bundle.Analytics != nil {
-		insights = append(insights, fmt.Sprintf("The latest snapshot recorded %d tracked files and %d archive entries.", bundle.Analytics.TrackedFiles, bundle.Analytics.ArchiveCount))
-		if bundle.Analytics.LargestArchivePath != "" {
-			insights = append(insights, fmt.Sprintf("Review %s for growth pressure before the next retention window.", bundle.Analytics.LargestArchivePath))
-		}
-	}
-	if len(bundle.Questions) > 0 {
-		insights = append(insights, fmt.Sprintf("Common review questions: %s", strings.Join(bundle.Questions, " ")))
-	}
-	return insights
+	return flattenAIAddendum(fallbackAIAddendum(bundle))
 }
 
 func mustJSON(value any) string {
@@ -510,6 +506,8 @@ func mustJSON(value any) string {
 }
 
 func RenderReportHTML(bundle ReportBundle) string {
+	ai := parseAIInsights(bundle.AIInsights)
+
 	var b strings.Builder
 	b.WriteString(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>`)
 	b.WriteString(htmlEscape(bundle.Subject))
@@ -526,6 +524,18 @@ func RenderReportHTML(bundle ReportBundle) string {
 	b.WriteString(reportSectionHTML("Next steps", bundle.NextSteps))
 	b.WriteString(reportSectionHTML("Risks", bundle.Risks))
 	b.WriteString(reportSectionHTML("Questions", bundle.Questions))
+	if ai.hasAny() {
+		b.WriteString(`<div style="margin-top:18px;padding:16px;border:1px solid #e2ddd5;border-radius:14px;background:#fbfaf8;">`)
+		b.WriteString(`<div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9b9590;margin-bottom:10px;">AI addendum</div>`)
+		if ai.ExecutiveSummary != "" {
+			b.WriteString(`<div style="padding:12px 14px;border:1px solid #eae6df;border-radius:10px;background:#fff;margin-bottom:12px;line-height:1.7;">` + htmlEscape(ai.ExecutiveSummary) + `</div>`)
+		}
+		b.WriteString(reportInlineSectionHTML("Operational insights", ai.OperationalInsights))
+		b.WriteString(reportInlineSectionHTML("Risk analysis", ai.RiskAnalysis))
+		b.WriteString(reportInlineSectionHTML("Recommendations", ai.Recommendations))
+		b.WriteString(reportInlineSectionHTML("Common review questions", ai.CommonReviewQuestions))
+		b.WriteString(`</div>`)
+	}
 	if len(bundle.Repositories) > 0 {
 		b.WriteString(`<div style="margin-top:18px;"><div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9b9590;margin-bottom:8px;">Top repositories</div><table style="width:100%;border-collapse:collapse;">`)
 		b.WriteString(`<tr><th style="text-align:left;padding:10px 0;border-bottom:1px solid #eae6df;font-size:12px;color:#6b6560;">Repository</th><th style="text-align:left;padding:10px 0;border-bottom:1px solid #eae6df;font-size:12px;color:#6b6560;">Archive size</th><th style="text-align:left;padding:10px 0;border-bottom:1px solid #eae6df;font-size:12px;color:#6b6560;">Status</th></tr>`)
@@ -574,99 +584,37 @@ func reportSectionHTML(title string, items []string) string {
 	return b.String()
 }
 
-func RenderReportLaTeX(bundle ReportBundle) string {
+func reportInlineSectionHTML(title string, items []string) string {
+	if len(items) == 0 {
+		return ""
+	}
+
 	var b strings.Builder
-	b.WriteString(`\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
-\usepackage{cite}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{graphicx}
-\usepackage{textcomp}
-\usepackage{xcolor}
-\usepackage{array}
-\usepackage{booktabs}
-\begin{document}
-`)
-	b.WriteString(`\title{` + latexEscape(bundle.Subject) + `}
-`)
-	b.WriteString(`\author{\IEEEauthorblockN{GitHub Backup Monitor}}
-`)
-	b.WriteString(`\maketitle
-`)
-	b.WriteString(`\begin{abstract}
-` + latexEscape(bundle.Summary) + `
-\end{abstract}
-`)
-	b.WriteString(`\section{Overview}
-` + latexParagraph(bundle.Summary) + `
-`)
-	if len(bundle.AIInsights) > 0 {
-		b.WriteString(latexItemSection("AI Addendum", bundle.AIInsights))
+	b.WriteString(`<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#6b6560;margin-bottom:6px;">` + htmlEscape(title) + `</div>`)
+	b.WriteString(`<ul style="margin:0;padding-left:18px;color:#1a1a1a;line-height:1.65;">`)
+	for _, item := range items {
+		b.WriteString(`<li style="margin-bottom:6px;">` + htmlEscape(item) + `</li>`)
 	}
-	b.WriteString(`\section{Key Metrics}
-\begin{tabular}{p{0.28\linewidth}p{0.18\linewidth}p{0.42\linewidth}}
-\toprule
-Metric & Value & Detail \\
-\midrule
-`)
-	for _, metric := range bundle.Metrics {
-		b.WriteString(latexEscape(metric.Label) + ` & ` + latexEscape(metric.Value) + ` & ` + latexEscape(metric.Detail) + ` \\
-`)
-	}
-	b.WriteString(`\bottomrule
-\end{tabular}
-`)
-	b.WriteString(latexItemSection("Findings", bundle.Findings))
-	b.WriteString(latexItemSection("Next steps", bundle.NextSteps))
-	b.WriteString(latexItemSection("Risks", bundle.Risks))
-	b.WriteString(latexItemSection("Questions", bundle.Questions))
-	if len(bundle.Repositories) > 0 {
-		b.WriteString(`\section{Top Repositories}
-\begin{tabular}{p{0.44\linewidth}p{0.18\linewidth}p{0.14\linewidth}}
-\toprule
-Repository & Size & Status \\
-\midrule
-`)
-		for _, repo := range bundle.Repositories {
-			b.WriteString(latexEscape(repo.Name) + ` & ` + latexEscape(repo.ArchiveSize) + ` & ` + latexEscape(repo.Status) + ` \\
-`)
-		}
-		b.WriteString(`\bottomrule
-\end{tabular}
-`)
-	}
-	if len(bundle.Failures) > 0 {
-		b.WriteString(`\section{Recent Failures}
-\begin{itemize}
-`)
-		for _, failure := range bundle.Failures {
-			b.WriteString(`\item ` + latexEscape(fmt.Sprintf("%s: %s (%s)", failure.Repository, failure.Message, failure.CreatedAt.Format("01-02 15:04"))) + `
-`)
-		}
-		b.WriteString(`\end{itemize}
-`)
-	}
-	b.WriteString(`\end{document}
-`)
+	b.WriteString(`</ul></div>`)
 	return b.String()
 }
 
-func latexItemSection(title string, items []string) string {
+func RenderReportLaTeX(bundle ReportBundle) string {
+	theme := defaultReportTheme()
+	ai := parseAIInsights(bundle.AIInsights)
+
 	var b strings.Builder
-	b.WriteString(`\section{` + latexEscape(title) + `}
-\begin{itemize}
-`)
-	if len(items) == 0 {
-		b.WriteString(`\item No data available.
-`)
-	} else {
-		for _, item := range items {
-			b.WriteString(`\item ` + latexEscape(item) + `
-`)
-		}
-	}
-	b.WriteString(`\end{itemize}
-`)
+	b.WriteString(latexPreamble(theme, bundle))
+	b.WriteString(latexSummaryBox(bundle, theme))
+	b.WriteString(latexMetricsTable(bundle.Metrics, theme))
+	b.WriteString(latexItemPanel("Findings", bundle.Findings, "accentLight"))
+	b.WriteString(latexItemPanel("Next Steps", bundle.NextSteps, "neutralTint"))
+	b.WriteString(latexItemPanel("Risks", bundle.Risks, "riskLight"))
+	b.WriteString(latexItemPanel("Questions", bundle.Questions, "surfaceTint"))
+	b.WriteString(latexAISection(ai))
+	b.WriteString(latexRepositoryTable(bundle.Repositories))
+	b.WriteString(latexFailureTable(bundle.Failures))
+	b.WriteString("\\end{document}\n")
 	return b.String()
 }
 
@@ -691,7 +639,6 @@ func GenerateReportPDF(ctx context.Context, bundle ReportBundle) (string, error)
 	if err != nil {
 		compiler, err = findLatexCommand()
 		if err != nil {
-			// LaTeX not available; fall back to a simple PDF renderer using gofpdf
 			if pdfErr := generateSimplePDF(bundle, pdfPath); pdfErr != nil {
 				_ = os.RemoveAll(tempDir)
 				return "", fmt.Errorf("latex not found and fallback pdf generation failed: %w", pdfErr)
@@ -752,6 +699,8 @@ func latexEscape(text string) string {
 		"%", `\%`,
 		"^", `\^{}`,
 		"~", `\~{}`,
+		"\n", " ",
+		"\r", " ",
 	)
 	return replacer.Replace(text)
 }
@@ -789,50 +738,652 @@ func truncateForPDF(text string, maxRunes int) string {
 }
 
 func generateSimplePDF(bundle ReportBundle, outPath string) error {
+	theme := defaultReportTheme()
+	ai := parseAIInsights(bundle.AIInsights)
+
 	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(20, 20, 20)
+	pdf.SetMargins(14, 16, 14)
+	pdf.SetAutoPageBreak(true, 16)
+
+	primaryR, primaryG, primaryB := hexToRGB(theme.PrimaryHex)
+	accentR, accentG, accentB := hexToRGB(theme.AccentHex)
+	mutedR, mutedG, mutedB := hexToRGB(theme.MutedHex)
+	tableHeaderR, tableHeaderG, tableHeaderB := hexToRGB(theme.TableHeaderHex)
+	cardR, cardG, cardB := hexToRGB(theme.CardHex)
+
+	pdf.SetHeaderFunc(func() {
+		left, top, right, _ := pdf.GetMargins()
+		pdf.SetY(top - 10)
+		pdf.SetX(left)
+		pdf.SetFillColor(primaryR, primaryG, primaryB)
+		pdf.Rect(left, top-10, 210-left-right, 8, "F")
+		pdf.SetTextColor(255, 255, 255)
+		pdf.SetFont("Arial", "B", 10)
+		pdf.SetXY(left+2, top-8.3)
+		pdf.CellFormat(0, 5, "GitHub Backup Observability Report", "", 0, "L", false, 0, "")
+		pdf.SetTextColor(20, 20, 20)
+	})
+
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-12)
+		pdf.SetFont("Arial", "", 8)
+		pdf.SetTextColor(mutedR, mutedG, mutedB)
+		pageText := fmt.Sprintf("Generated %s  •  Page %d", bundle.GeneratedAt.Format("2006-01-02 15:04 UTC"), pdf.PageNo())
+		pdf.CellFormat(0, 5, pageText, "", 0, "C", false, 0, "")
+		pdf.SetTextColor(20, 20, 20)
+	})
+
 	pdf.AddPage()
-	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 8, bundle.Headline, "", 1, "", false, 0, "")
-	pdf.Ln(2)
-	pdf.SetFont("Arial", "", 11)
-	pdf.MultiCell(0, 6, bundle.Summary, "", "L", false)
-	pdf.Ln(4)
 
-	// Metrics
-	pdf.SetFont("Arial", "B", 12)
-	pdf.CellFormat(0, 7, "Key metrics", "", 1, "", false, 0, "")
+	pdf.SetFont("Arial", "B", 17)
+	pdf.SetTextColor(primaryR, primaryG, primaryB)
+	pdf.CellFormat(0, 8, truncateForPDF(bundle.Headline, 120), "", 1, "L", false, 0, "")
+	pdf.SetTextColor(20, 20, 20)
 	pdf.SetFont("Arial", "", 10)
-	for _, m := range bundle.Metrics {
-		line := fmt.Sprintf("%s: %s", m.Label, m.Value)
-		pdf.MultiCell(0, 6, line, "", "L", false)
-	}
-	pdf.Ln(3)
+	pdf.SetTextColor(mutedR, mutedG, mutedB)
+	pdf.CellFormat(0, 6, bundle.Subject, "", 1, "L", false, 0, "")
+	pdf.SetTextColor(20, 20, 20)
+	pdf.Ln(2)
 
-	// Sections helper
-	writeSection := func(title string, items []string) {
-		pdf.SetFont("Arial", "B", 12)
-		pdf.CellFormat(0, 7, title, "", 1, "", false, 0, "")
-		pdf.SetFont("Arial", "", 10)
-		if len(items) == 0 {
-			pdf.MultiCell(0, 6, "No items available.", "", "L", false)
-			pdf.Ln(2)
-			return
+	writePDFInfoBox(pdf, "Executive Summary", bundle.Summary, cardR, cardG, cardB)
+	writePDFMetricCards(pdf, bundle.Metrics, theme)
+	writePDFListSection(pdf, "Findings", bundle.Findings, accentR, accentG, accentB)
+	writePDFListSection(pdf, "Next Steps", bundle.NextSteps, primaryR, primaryG, primaryB)
+	writePDFListSection(pdf, "Risks", bundle.Risks, 178, 46, 46)
+	writePDFListSection(pdf, "Questions", bundle.Questions, 74, 74, 74)
+
+	if ai.hasAny() {
+		writePDFSectionHeading(pdf, "AI Addendum", primaryR, primaryG, primaryB)
+		if ai.ExecutiveSummary != "" {
+			writePDFInfoBox(pdf, "Executive Insight", ai.ExecutiveSummary, cardR, cardG, cardB)
 		}
-		for _, it := range items {
-			// bullet
-			pdf.MultiCell(0, 6, "- "+it, "", "L", false)
-		}
-		pdf.Ln(2)
+		writePDFListSection(pdf, "Operational Insights", ai.OperationalInsights, accentR, accentG, accentB)
+		writePDFListSection(pdf, "Risk Analysis", ai.RiskAnalysis, 178, 46, 46)
+		writePDFListSection(pdf, "Recommendations", ai.Recommendations, primaryR, primaryG, primaryB)
+		writePDFListSection(pdf, "Common Review Questions", ai.CommonReviewQuestions, 74, 74, 74)
 	}
 
-	writeSection("Findings", bundle.Findings)
-	writeSection("Next steps", bundle.NextSteps)
-	writeSection("Risks", bundle.Risks)
-	writeSection("Questions", bundle.Questions)
+	if len(bundle.Repositories) > 0 {
+		writePDFSectionHeading(pdf, "Top Repositories", primaryR, primaryG, primaryB)
+		headers := []string{"Repository", "Size", "Status", "Captured"}
+		widths := []float64{104, 24, 24, 30}
+		rows := make([][]string, 0, len(bundle.Repositories))
+		for _, repo := range bundle.Repositories {
+			rows = append(rows, []string{
+				truncateForPDF(repo.Name, 150),
+				repo.ArchiveSize,
+				strings.ToUpper(repo.Status),
+				repo.CreatedAt.Format("2006-01-02 15:04"),
+			})
+		}
+		writePDFTable(pdf, headers, rows, widths, tableHeaderR, tableHeaderG, tableHeaderB)
+	}
+
+	if len(bundle.Failures) > 0 {
+		writePDFSectionHeading(pdf, "Recent Failures", primaryR, primaryG, primaryB)
+		headers := []string{"Repository", "Error", "Time"}
+		widths := []float64{58, 102, 22}
+		rows := make([][]string, 0, len(bundle.Failures))
+		for _, failure := range bundle.Failures {
+			rows = append(rows, []string{
+				truncateForPDF(failure.Repository, 100),
+				truncateForPDF(failure.Message, 260),
+				failure.CreatedAt.Format("01-02 15:04"),
+			})
+		}
+		writePDFTable(pdf, headers, rows, widths, tableHeaderR, tableHeaderG, tableHeaderB)
+	}
 
 	if err := pdf.OutputFileAndClose(outPath); err != nil {
 		return err
 	}
 	return nil
+}
+
+type aiReportAddendum struct {
+	ExecutiveSummary      string   `json:"executive_summary"`
+	OperationalInsights   []string `json:"operational_insights"`
+	RiskAnalysis          []string `json:"risk_analysis"`
+	Recommendations       []string `json:"recommendations"`
+	CommonReviewQuestions []string `json:"common_review_questions"`
+}
+
+func (a aiReportAddendum) hasAny() bool {
+	return a.ExecutiveSummary != "" ||
+		len(a.OperationalInsights) > 0 ||
+		len(a.RiskAnalysis) > 0 ||
+		len(a.Recommendations) > 0 ||
+		len(a.CommonReviewQuestions) > 0
+}
+
+func fallbackAIAddendum(bundle ReportBundle) aiReportAddendum {
+	exec := fmt.Sprintf("The latest run processed %d repositories with %d successful, %d failed, and %d skipped results.", bundle.Run.TotalRepos, bundle.Run.Successful, bundle.Run.Failed, bundle.Run.Skipped)
+
+	operational := []string{}
+	if len(bundle.Repositories) > 0 {
+		operational = append(operational, fmt.Sprintf("Largest repository in this snapshot: %s (%s).", bundle.Repositories[0].Name, bundle.Repositories[0].ArchiveSize))
+	}
+	if bundle.Analytics != nil {
+		operational = append(operational, fmt.Sprintf("Latest analytics snapshot recorded %d tracked files and %d archives.", bundle.Analytics.TrackedFiles, bundle.Analytics.ArchiveCount))
+	}
+	if len(operational) == 0 {
+		operational = append(operational, "Stored metrics are limited; collect another run for richer trend analysis.")
+	}
+
+	riskAnalysis := append([]string{}, bundle.Risks...)
+	if len(riskAnalysis) == 0 {
+		riskAnalysis = []string{"No immediate backup risk is visible from the current stored data."}
+	}
+
+	recommendations := append([]string{}, bundle.NextSteps...)
+	if len(recommendations) == 0 {
+		recommendations = []string{"Schedule the next run and compare it against this baseline."}
+	}
+
+	reviewQuestions := append([]string{}, bundle.Questions...)
+	if len(reviewQuestions) == 0 {
+		reviewQuestions = []string{"Q: Should we alert on run degradation? A: Yes, if failed or skipped counts trend upward across runs."}
+	} else {
+		for i := range reviewQuestions {
+			if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(reviewQuestions[i])), "q:") {
+				reviewQuestions[i] = fmt.Sprintf("Q: %s A: Review with repository owners and retention policy owners.", strings.TrimSpace(reviewQuestions[i]))
+			}
+		}
+	}
+
+	return aiReportAddendum{
+		ExecutiveSummary:      exec,
+		OperationalInsights:   operational,
+		RiskAnalysis:          riskAnalysis,
+		Recommendations:       recommendations,
+		CommonReviewQuestions: reviewQuestions,
+	}
+}
+
+func flattenAIAddendum(addendum aiReportAddendum) []string {
+	insights := make([]string, 0, 1+len(addendum.OperationalInsights)+len(addendum.RiskAnalysis)+len(addendum.Recommendations)+len(addendum.CommonReviewQuestions))
+	if addendum.ExecutiveSummary != "" {
+		insights = append(insights, "executive_summary|"+strings.TrimSpace(addendum.ExecutiveSummary))
+	}
+	for _, insight := range addendum.OperationalInsights {
+		if t := strings.TrimSpace(insight); t != "" {
+			insights = append(insights, "operational_insight|"+t)
+		}
+	}
+	for _, risk := range addendum.RiskAnalysis {
+		if t := strings.TrimSpace(risk); t != "" {
+			insights = append(insights, "risk_analysis|"+t)
+		}
+	}
+	for _, recommendation := range addendum.Recommendations {
+		if t := strings.TrimSpace(recommendation); t != "" {
+			insights = append(insights, "recommendation|"+t)
+		}
+	}
+	for _, question := range addendum.CommonReviewQuestions {
+		if t := strings.TrimSpace(question); t != "" {
+			insights = append(insights, "review_question|"+t)
+		}
+	}
+	return insights
+}
+
+func parseAIInsights(insights []string) aiReportAddendum {
+	parsed := aiReportAddendum{}
+	for _, raw := range insights {
+		parts := strings.SplitN(raw, "|", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(strings.ToLower(parts[0]))
+			value := strings.TrimSpace(parts[1])
+			if value == "" {
+				continue
+			}
+			switch key {
+			case "executive_summary":
+				if parsed.ExecutiveSummary == "" {
+					parsed.ExecutiveSummary = value
+				}
+			case "operational_insight":
+				parsed.OperationalInsights = append(parsed.OperationalInsights, value)
+			case "risk_analysis":
+				parsed.RiskAnalysis = append(parsed.RiskAnalysis, value)
+			case "recommendation":
+				parsed.Recommendations = append(parsed.Recommendations, value)
+			case "review_question":
+				parsed.CommonReviewQuestions = append(parsed.CommonReviewQuestions, value)
+			default:
+				parsed.OperationalInsights = append(parsed.OperationalInsights, strings.TrimSpace(raw))
+			}
+			continue
+		}
+		if strings.TrimSpace(raw) != "" {
+			parsed.OperationalInsights = append(parsed.OperationalInsights, strings.TrimSpace(raw))
+		}
+	}
+	return parsed
+}
+
+func cleanInsightList(values []string) []string {
+	clean := make([]string, 0, len(values))
+	for _, value := range values {
+		text := strings.TrimSpace(value)
+		if text != "" {
+			clean = append(clean, text)
+		}
+	}
+	return clean
+}
+
+func sanitizeJSONContent(content string) string {
+	trimmed := strings.TrimSpace(content)
+	trimmed = strings.TrimPrefix(trimmed, "```json")
+	trimmed = strings.TrimPrefix(trimmed, "```")
+	trimmed = strings.TrimSuffix(trimmed, "```")
+	trimmed = strings.TrimSpace(trimmed)
+	return trimmed
+}
+
+type reportTheme struct {
+	BrandName      string
+	PrimaryHex     string
+	AccentHex      string
+	MutedHex       string
+	CardHex        string
+	SurfaceHex     string
+	TableHeaderHex string
+	RiskHex        string
+}
+
+func defaultReportTheme() reportTheme {
+	return reportTheme{
+		BrandName:      "GitHub Backup Observability",
+		PrimaryHex:     "1F3558",
+		AccentHex:      "2F6FA3",
+		MutedHex:       "667085",
+		CardHex:        "F8FAFC",
+		SurfaceHex:     "EEF2F7",
+		TableHeaderHex: "E6ECF5",
+		RiskHex:        "C0392B",
+	}
+}
+
+func latexPreamble(theme reportTheme, bundle ReportBundle) string {
+	var b strings.Builder
+	b.WriteString("\\documentclass[11pt]{article}\n")
+	b.WriteString("\\usepackage[a4paper,margin=0.85in]{geometry}\n")
+	b.WriteString("\\usepackage[table]{xcolor}\n")
+	b.WriteString("\\usepackage{tcolorbox}\n")
+	b.WriteString("\\usepackage{fancyhdr}\n")
+	b.WriteString("\\usepackage{tabularx}\n")
+	b.WriteString("\\usepackage{longtable}\n")
+	b.WriteString("\\usepackage{booktabs}\n")
+	b.WriteString("\\usepackage{enumitem}\n")
+	b.WriteString("\\usepackage[hidelinks]{hyperref}\n")
+	b.WriteString("\\usepackage{array}\n")
+	b.WriteString("\\usepackage{lastpage}\n")
+	b.WriteString("\\usepackage{setspace}\n")
+	b.WriteString("\\setlength{\\parindent}{0pt}\n")
+	b.WriteString("\\setlength{\\parskip}{6pt}\n")
+	b.WriteString("\\onehalfspacing\n")
+	b.WriteString("\\renewcommand{\\familydefault}{\\sfdefault}\n")
+	b.WriteString("\\definecolor{brandPrimary}{HTML}{" + theme.PrimaryHex + "}\n")
+	b.WriteString("\\definecolor{brandAccent}{HTML}{" + theme.AccentHex + "}\n")
+	b.WriteString("\\definecolor{brandMuted}{HTML}{" + theme.MutedHex + "}\n")
+	b.WriteString("\\definecolor{surfaceTint}{HTML}{" + theme.SurfaceHex + "}\n")
+	b.WriteString("\\definecolor{cardTint}{HTML}{" + theme.CardHex + "}\n")
+	b.WriteString("\\definecolor{riskTint}{HTML}{" + theme.RiskHex + "}\n")
+	b.WriteString("\\definecolor{tableHead}{HTML}{" + theme.TableHeaderHex + "}\n")
+	b.WriteString("\\newtcolorbox{reportbox}[2][]{colback=cardTint,colframe=brandAccent!55!black,boxrule=0.5pt,arc=2.2mm,top=1.6mm,bottom=1.6mm,left=1.6mm,right=1.6mm,title=\\textbf{#2},fonttitle=\\small\\bfseries,coltitle=brandPrimary,#1}\n")
+	b.WriteString("\\pagestyle{fancy}\n")
+	b.WriteString("\\fancyhf{}\n")
+	b.WriteString("\\fancyhead[L]{\\textcolor{brandPrimary}{\\textbf{" + latexEscape(theme.BrandName) + "}}}\n")
+	b.WriteString("\\fancyhead[R]{\\textcolor{brandMuted}{" + latexEscape(bundle.GeneratedAt.Format("2006-01-02 15:04 UTC")) + "}}\n")
+	b.WriteString("\\fancyfoot[L]{\\textcolor{brandMuted}{Generated by GitHub Backup Monitor}}\n")
+	b.WriteString("\\fancyfoot[R]{\\textcolor{brandMuted}{Page \\thepage/\\pageref{LastPage}}}\n")
+	b.WriteString("\\renewcommand{\\headrulewidth}{0.4pt}\n")
+	b.WriteString("\\renewcommand{\\footrulewidth}{0.4pt}\n")
+	b.WriteString("\\begin{document}\n")
+	b.WriteString("{\\LARGE\\textbf{" + latexEscape(bundle.Subject) + "}}\\\\[3pt]\n")
+	b.WriteString("{\\large\\textcolor{brandPrimary}{" + latexEscape(bundle.Headline) + "}}\\\\[8pt]\n")
+	b.WriteString("\\textcolor{brandMuted}{Report Type: " + latexEscape(strings.Title(bundle.ReportType)) + "}\\\\[6pt]\n")
+	b.WriteString("\\noindent\\textcolor{brandAccent}{\\rule{\\linewidth}{0.9pt}}\\vspace{6pt}\n")
+	return b.String()
+}
+
+func latexSummaryBox(bundle ReportBundle, theme reportTheme) string {
+	_ = theme
+	var b strings.Builder
+	b.WriteString("\\begin{reportbox}{Executive Summary}\n")
+	b.WriteString(latexParagraph(bundle.Summary) + "\n")
+	b.WriteString("\\end{reportbox}\n")
+	return b.String()
+}
+
+func latexMetricsTable(metrics []ReportMetric, theme reportTheme) string {
+	_ = theme
+	var b strings.Builder
+	b.WriteString("\\begin{reportbox}{Performance Metrics}\n")
+	b.WriteString("\\rowcolors{2}{surfaceTint}{white}\n")
+	b.WriteString("\\begin{tabularx}{\\linewidth}{>{\\raggedright\\arraybackslash}p{0.22\\linewidth} >{\\raggedright\\arraybackslash}p{0.22\\linewidth} X}\n")
+	b.WriteString("\\toprule\n")
+	b.WriteString("\\textbf{Metric} & \\textbf{Value} & \\textbf{Detail} \\\\ \n")
+	b.WriteString("\\midrule\n")
+	if len(metrics) == 0 {
+		b.WriteString("No metrics & - & No metric detail available. \\\\ \n")
+	} else {
+		for _, metric := range metrics {
+			detail := metric.Detail
+			if detail == "" {
+				detail = "-"
+			}
+			b.WriteString(latexEscape(metric.Label) + " & " + latexEscape(metric.Value) + " & " + latexEscape(detail) + " \\\\ \n")
+		}
+	}
+	b.WriteString("\\bottomrule\n")
+	b.WriteString("\\end{tabularx}\n")
+	b.WriteString("\\end{reportbox}\n")
+	return b.String()
+}
+
+func latexItemPanel(title string, items []string, bgColor string) string {
+	var b strings.Builder
+	b.WriteString("\\begin{reportbox}[colback=" + bgColor + "]{" + latexEscape(title) + "}\n")
+	b.WriteString("\\begin{itemize}[leftmargin=*,itemsep=4pt,topsep=3pt,parsep=0pt]\n")
+	if len(items) == 0 {
+		b.WriteString("\\item No data available.\n")
+	} else {
+		for _, item := range items {
+			b.WriteString("\\item " + latexEscape(item) + "\n")
+		}
+	}
+	b.WriteString("\\end{itemize}\n")
+	b.WriteString("\\end{reportbox}\n")
+	return b.String()
+}
+
+func latexAISection(ai aiReportAddendum) string {
+	if !ai.hasAny() {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("\\begin{reportbox}[colframe=brandPrimary,colback=surfaceTint]{AI Addendum}\n")
+	if ai.ExecutiveSummary != "" {
+		b.WriteString("\\textbf{Executive Summary}\\\\\n")
+		b.WriteString(latexEscape(ai.ExecutiveSummary) + "\\\\[4pt]\n")
+	}
+	b.WriteString(latexCompactList("Operational Insights", ai.OperationalInsights))
+	b.WriteString(latexCompactList("Risk Analysis", ai.RiskAnalysis))
+	b.WriteString(latexCompactList("Recommendations", ai.Recommendations))
+	b.WriteString(latexCompactList("Common Review Questions", ai.CommonReviewQuestions))
+	b.WriteString("\\end{reportbox}\n")
+	return b.String()
+}
+
+func latexCompactList(title string, items []string) string {
+	if len(items) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("\\textbf{" + latexEscape(title) + "}\\\\\n")
+	b.WriteString("\\begin{itemize}[leftmargin=*,itemsep=3pt,topsep=2pt,parsep=0pt]\n")
+	for _, item := range items {
+		b.WriteString("\\item " + latexEscape(item) + "\n")
+	}
+	b.WriteString("\\end{itemize}\n")
+	return b.String()
+}
+
+func latexRepositoryTable(repositories []ReportRepository) string {
+	if len(repositories) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("\\begin{reportbox}{Top Repositories}\n")
+	b.WriteString("\\rowcolors{2}{surfaceTint}{white}\n")
+	b.WriteString("\\begin{longtable}{>{\\raggedright\\arraybackslash}p{0.48\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth} >{\\raggedright\\arraybackslash}p{0.13\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth}}\n")
+	b.WriteString("\\toprule\n")
+	b.WriteString("\\rowcolor{tableHead}\\textbf{Repository} & \\textbf{Size} & \\textbf{Status} & \\textbf{Captured} \\\\ \n")
+	b.WriteString("\\midrule\n")
+	b.WriteString("\\endfirsthead\n")
+	b.WriteString("\\toprule\n")
+	b.WriteString("\\rowcolor{tableHead}\\textbf{Repository} & \\textbf{Size} & \\textbf{Status} & \\textbf{Captured} \\\\ \n")
+	b.WriteString("\\midrule\n")
+	b.WriteString("\\endhead\n")
+	for _, repo := range repositories {
+		b.WriteString(latexEscape(repo.Name) + " & " + latexEscape(repo.ArchiveSize) + " & " + latexEscape(strings.ToUpper(repo.Status)) + " & " + latexEscape(repo.CreatedAt.Format("2006-01-02 15:04")) + " \\\\ \n")
+	}
+	b.WriteString("\\bottomrule\n")
+	b.WriteString("\\end{longtable}\n")
+	b.WriteString("\\end{reportbox}\n")
+	return b.String()
+}
+
+func latexFailureTable(failures []ReportFailure) string {
+	if len(failures) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("\\begin{reportbox}[colframe=riskTint,colback=riskTint!5]{Recent Failures}\n")
+	b.WriteString("\\rowcolors{2}{surfaceTint}{white}\n")
+	b.WriteString("\\begin{longtable}{>{\\raggedright\\arraybackslash}p{0.26\\linewidth} X >{\\raggedright\\arraybackslash}p{0.16\\linewidth}}\n")
+	b.WriteString("\\toprule\n")
+	b.WriteString("\\rowcolor{tableHead}\\textbf{Repository} & \\textbf{Error Message} & \\textbf{Time} \\\\ \n")
+	b.WriteString("\\midrule\n")
+	b.WriteString("\\endfirsthead\n")
+	b.WriteString("\\toprule\n")
+	b.WriteString("\\rowcolor{tableHead}\\textbf{Repository} & \\textbf{Error Message} & \\textbf{Time} \\\\ \n")
+	b.WriteString("\\midrule\n")
+	b.WriteString("\\endhead\n")
+	for _, failure := range failures {
+		b.WriteString(latexEscape(failure.Repository) + " & " + latexEscape(failure.Message) + " & " + latexEscape(failure.CreatedAt.Format("01-02 15:04")) + " \\\\ \n")
+	}
+	b.WriteString("\\bottomrule\n")
+	b.WriteString("\\end{longtable}\n")
+	b.WriteString("\\end{reportbox}\n")
+	return b.String()
+}
+
+func hexToRGB(hex string) (int, int, int) {
+	value := strings.TrimSpace(strings.TrimPrefix(hex, "#"))
+	if len(value) != 6 {
+		return 34, 34, 34
+	}
+	var r, g, b int
+	_, err := fmt.Sscanf(value, "%02x%02x%02x", &r, &g, &b)
+	if err != nil {
+		return 34, 34, 34
+	}
+	return r, g, b
+}
+
+func ensurePDFSpace(pdf *gofpdf.Fpdf, requiredHeight float64) {
+	_, pageHeight := pdf.GetPageSize()
+	_, _, _, bottom := pdf.GetMargins()
+	if pdf.GetY()+requiredHeight > pageHeight-bottom {
+		pdf.AddPage()
+	}
+}
+
+func writePDFSectionHeading(pdf *gofpdf.Fpdf, title string, r, g, b int) {
+	ensurePDFSpace(pdf, 12)
+	pdf.Ln(2)
+	pdf.SetFont("Arial", "B", 12)
+	pdf.SetTextColor(r, g, b)
+	pdf.CellFormat(0, 7, title, "", 1, "L", false, 0, "")
+	pdf.SetDrawColor(r, g, b)
+	pdf.SetLineWidth(0.4)
+	x := pdf.GetX()
+	y := pdf.GetY()
+	pdf.Line(x, y, 196, y)
+	pdf.Ln(2)
+	pdf.SetTextColor(20, 20, 20)
+}
+
+func writePDFInfoBox(pdf *gofpdf.Fpdf, title, text string, fillR, fillG, fillB int) {
+	ensurePDFSpace(pdf, 28)
+	pdf.SetFont("Arial", "B", 11)
+	pdf.SetFillColor(fillR, fillG, fillB)
+	pdf.SetDrawColor(210, 219, 232)
+	x := pdf.GetX()
+	y := pdf.GetY()
+	width := 182.0
+	height := 8.0
+	pdf.Rect(x, y, width, height, "FD")
+	pdf.SetXY(x+2, y+1.4)
+	pdf.CellFormat(width-4, 5, title, "", 0, "L", false, 0, "")
+	pdf.SetXY(x, y+height)
+	pdf.SetFont("Arial", "", 10)
+	pdf.MultiCell(width, 5.5, text, "1", "L", false)
+	pdf.Ln(2)
+}
+
+func writePDFMetricCards(pdf *gofpdf.Fpdf, metrics []ReportMetric, theme reportTheme) {
+	if len(metrics) == 0 {
+		return
+	}
+
+	r, g, b := hexToRGBOrDefault(theme.AccentHex, 47, 111, 163)
+	writePDFSectionHeading(pdf, "Key Metrics", r, g, b)
+
+	cardWidth := 88.0
+	cardGap := 6.0
+	lineHeight := 4.8
+
+	cardR, cardG, cardB := hexToRGB(theme.CardHex)
+
+	for i, metric := range metrics {
+		if i%2 == 0 {
+			ensurePDFSpace(pdf, 32)
+		}
+
+		x := pdf.GetX()
+		y := pdf.GetY()
+		if i%2 == 1 {
+			x = x + cardWidth + cardGap
+		}
+
+		pdf.SetFillColor(cardR, cardG, cardB)
+		pdf.SetDrawColor(213, 221, 231)
+		pdf.Rect(x, y, cardWidth, 30, "FD")
+
+		pdf.SetXY(x+2, y+2)
+		pdf.SetFont("Arial", "B", 9)
+		pdf.SetTextColor(102, 112, 133)
+		pdf.CellFormat(cardWidth-4, 5, strings.ToUpper(metric.Label), "", 1, "L", false, 0, "")
+
+		pdf.SetXY(x+2, y+8)
+		pdf.SetFont("Arial", "B", 14)
+		pdf.SetTextColor(31, 53, 88)
+		pdf.MultiCell(cardWidth-4, lineHeight, truncateForPDF(metric.Value, 72), "", "L", false)
+
+		if metric.Detail != "" {
+			pdf.SetXY(x+2, y+20)
+			pdf.SetFont("Arial", "", 8.5)
+			pdf.SetTextColor(102, 112, 133)
+			pdf.MultiCell(cardWidth-4, 4.2, truncateForPDF(metric.Detail, 120), "", "L", false)
+		}
+
+		pdf.SetTextColor(20, 20, 20)
+
+		if i%2 == 1 || i == len(metrics)-1 {
+			pdf.SetXY(14, y+32)
+		}
+	}
+	if len(metrics)%2 == 0 {
+		pdf.Ln(1)
+	}
+}
+
+func writePDFListSection(pdf *gofpdf.Fpdf, title string, items []string, r, g, b int) {
+	writePDFSectionHeading(pdf, title, r, g, b)
+	pdf.SetFont("Arial", "", 10)
+	if len(items) == 0 {
+		ensurePDFSpace(pdf, 8)
+		pdf.SetTextColor(102, 112, 133)
+		pdf.MultiCell(0, 5.5, "No data available.", "", "L", false)
+		pdf.SetTextColor(20, 20, 20)
+		return
+	}
+
+	for _, item := range items {
+		ensurePDFSpace(pdf, 9)
+		pdf.SetX(18)
+		pdf.CellFormat(4, 5.5, "•", "", 0, "L", false, 0, "")
+		pdf.MultiCell(174, 5.5, truncateForPDF(item, 500), "", "L", false)
+	}
+	if len(items) > 0 {
+		pdf.Ln(1)
+	}
+}
+
+func writePDFTable(pdf *gofpdf.Fpdf, headers []string, rows [][]string, widths []float64, headerR, headerG, headerB int) {
+	if len(headers) == 0 || len(widths) != len(headers) {
+		return
+	}
+
+	lineHeight := 4.8
+
+	ensurePDFSpace(pdf, 10)
+	pdf.SetFont("Arial", "B", 9)
+	pdf.SetFillColor(headerR, headerG, headerB)
+	pdf.SetDrawColor(205, 214, 226)
+
+	startX := 14.0
+	pdf.SetX(startX)
+	for i, header := range headers {
+		pdf.CellFormat(widths[i], 7.2, strings.ToUpper(header), "1", 0, "L", true, 0, "")
+	}
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 9)
+	fill := false
+	for _, row := range rows {
+		ensurePDFSpace(pdf, 10)
+		height := pdfRowHeight(pdf, row, widths, lineHeight)
+		x := startX
+		y := pdf.GetY()
+
+		if fill {
+			pdf.SetFillColor(248, 250, 252)
+		} else {
+			pdf.SetFillColor(255, 255, 255)
+		}
+
+		for i, cell := range row {
+			pdf.Rect(x, y, widths[i], height, "FD")
+			pdf.SetXY(x+1, y+1)
+			pdf.MultiCell(widths[i]-2, lineHeight, cell, "", "L", false)
+			x += widths[i]
+		}
+		pdf.SetXY(startX, y+height)
+		fill = !fill
+	}
+	pdf.Ln(1)
+}
+
+func pdfRowHeight(pdf *gofpdf.Fpdf, values []string, widths []float64, lineHeight float64) float64 {
+	maxLines := 1
+	for i, value := range values {
+		lines := pdf.SplitLines([]byte(value), widths[i]-2)
+		if len(lines) > maxLines {
+			maxLines = len(lines)
+		}
+	}
+	return float64(maxLines)*lineHeight + 2
+}
+
+func hexToRGBOrDefault(hex string, defaultR, defaultG, defaultB int) (int, int, int) {
+	r, g, b := hexToRGB(hex)
+	if r == 34 && g == 34 && b == 34 {
+		return defaultR, defaultG, defaultB
+	}
+	return r, g, b
+}
+
+func writePDFSectionHeadingWithRGB(pdf *gofpdf.Fpdf, title string, rgb [3]int) {
+	writePDFSectionHeading(pdf, title, rgb[0], rgb[1], rgb[2])
 }
