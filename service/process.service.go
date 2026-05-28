@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -17,8 +18,9 @@ import (
 )
 
 const (
-	cloneWorkers     = 5
-	hashCheckWorkers = 10
+	cloneWorkers      = 5
+	hashCheckWorkers  = 10
+	maxGitHubBlobSize = 95 * 1024 * 1024
 )
 
 type repoResult struct {
@@ -131,6 +133,37 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 
 			// Stage the tarball
 			tarball := fmt.Sprintf("%s.tar.gz", res.RepoName)
+			archivePath := fmt.Sprintf("_Repos/%s", tarball)
+			info, err := os.Stat(archivePath)
+			if err != nil {
+				util.Logger().Warn("Failed to inspect archive size; skipping repository",
+					zap.String("repository", res.FullName),
+					zap.Error(err),
+				)
+				failedRepos = append(failedRepos, res.FullName)
+				if mon != nil {
+					mon.LogRepoResult(res.FullName, "failed", res.CurrentHash, 0, 0, err.Error())
+					mon.Log("error", "Archive inspection failed: "+err.Error(), res.FullName)
+					mon.UpdateProgress(successCount, len(failedRepos), skippedCount)
+				}
+				continue
+			}
+
+			if info.Size() > maxGitHubBlobSize {
+				util.Logger().Warn(
+					fmt.Sprintf("Skipping repo %s: archive exceeds GitHub blob limit (%d MB)",
+						res.FullName,
+						info.Size()/(1024*1024),
+					),
+				)
+				skippedCount++
+				if mon != nil {
+					mon.Log("warn", fmt.Sprintf("Skipping oversized archive for %s", res.FullName), res.FullName)
+					mon.UpdateProgress(successCount, len(failedRepos), skippedCount)
+				}
+				continue
+			}
+
 			commitMsg := helper.BuildCommitMessage(res.RepoName)
 			helper.StageAndCommitRepo(tarball, commitMsg)
 
@@ -393,7 +426,6 @@ func processDeletedRepos(currentRepoNames []string, db *sql.DB) {
 		}
 	}
 
-	// Single commit for all deletions
 	commitMsg := helper.SanitizeCommitMessage(fmt.Sprintf("Removed %d deleted repo(s) on %s",
 		deletedCount, time.Now().Format("2006-01-02 Monday 15:04:05")))
 	commitCmd := exec.Command("sh", "-c",
