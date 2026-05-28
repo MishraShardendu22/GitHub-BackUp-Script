@@ -47,9 +47,9 @@ func (h *Hub) Run() {
 	}
 }
 
-// StartPolling polls PostgreSQL for new logs and status, broadcasts to WebSocket clients
+// StartPolling polls PostgreSQL for new logs and broadcasts them to WebSocket clients.
 func (h *Hub) StartPolling() {
-	// Poll for live status every 2 seconds
+	// Poll for live logs every 2 seconds.
 	go func() {
 		var lastLogID int
 		for {
@@ -64,60 +64,6 @@ func (h *Hub) StartPolling() {
 			}
 
 			ctx := context.Background()
-
-			// Send current run status
-			var runID int
-			var status string
-			var totalRepos, successful, failed, skipped int
-			var startedAt time.Time
-
-			err := db.Pool.QueryRow(ctx,
-				`SELECT id, status, total_repos, successful, failed, skipped, started_at
-				 FROM backup_runs ORDER BY started_at DESC LIMIT 1`).Scan(
-				&runID, &status, &totalRepos, &successful, &failed, &skipped, &startedAt)
-
-			if err == nil {
-				statusMsg, _ := json.Marshal(map[string]interface{}{
-					"type":        "status",
-					"run_id":      runID,
-					"status":      status,
-					"total_repos": totalRepos,
-					"successful":  successful,
-					"failed":      failed,
-					"skipped":     skipped,
-					"started_at":  startedAt,
-				})
-				h.Broadcast(statusMsg)
-			}
-
-			var totalSizeBytes int64
-			var largestArchiveBytes int64
-			var largestRepository string
-			var repositoriesTracked int
-			var runsTracked int
-
-			err = db.Pool.QueryRow(ctx,
-				`SELECT
-					COALESCE(SUM(archive_size_bytes), 0),
-					COALESCE(MAX(archive_size_bytes), 0),
-					COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), ''),
-					COALESCE(COUNT(DISTINCT repo_full_name), 0),
-					COALESCE(COUNT(DISTINCT run_id), 0)
-				 FROM backup_results`).Scan(
-				&totalSizeBytes, &largestArchiveBytes, &largestRepository, &repositoriesTracked, &runsTracked)
-
-			if err == nil {
-				analyticsMsg, _ := json.Marshal(map[string]interface{}{
-					"type":                  "analytics",
-					"total_size_bytes":      totalSizeBytes,
-					"largest_archive_bytes": largestArchiveBytes,
-					"largest_repository":    largestRepository,
-					"repositories_tracked":  repositoriesTracked,
-					"runs_tracked":          runsTracked,
-					"sampled_at":            time.Now().UTC(),
-				})
-				h.Broadcast(analyticsMsg)
-			}
 
 			// Send new logs since last check
 			rows, err := db.Pool.Query(ctx,

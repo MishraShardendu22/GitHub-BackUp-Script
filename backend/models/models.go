@@ -66,11 +66,18 @@ type ReportHistory struct {
 type DashboardStats struct {
 	TotalRuns      int     `json:"total_runs"`
 	TotalRepos     int     `json:"total_repos"`
+	TotalSuccessful int    `json:"total_successful"`
 	SuccessRate    float64 `json:"success_rate"`
 	LastRunStatus  string  `json:"last_run_status"`
 	LastRunAt      *time.Time `json:"last_run_at"`
 	TotalFailed    int     `json:"total_failed"`
 	AvgDurationMs  int64   `json:"avg_duration_ms"`
+	TotalSkipped   int     `json:"total_skipped"`
+	DistinctRepos  int     `json:"distinct_repos"`
+	TotalLogs      int     `json:"total_logs"`
+	TotalSizeBytes int64   `json:"total_size_bytes"`
+	LargestArchiveBytes int64 `json:"largest_archive_bytes"`
+	LargestRepository   string `json:"largest_repository"`
 }
 
 type LiveStatus struct {

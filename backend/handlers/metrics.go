@@ -51,13 +51,33 @@ func GetMetrics(c *fiber.Ctx) error {
 		avgDuration = totalDuration / int64(len(runs))
 	}
 
+	var totalSizeBytes int64
+	var largestArchiveBytes int64
+	var largestRepository string
+	var distinctRepos int
+	var totalLogs int
+
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(SUM(archive_size_bytes), 0),
+		        COALESCE(MAX(archive_size_bytes), 0),
+		        COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), ''),
+		        COALESCE(COUNT(DISTINCT repo_full_name), 0)
+	   FROM backup_results`).Scan(&totalSizeBytes, &largestArchiveBytes, &largestRepository, &distinctRepos)
+
+	db.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM execution_logs`).Scan(&totalLogs)
+
 	return c.JSON(fiber.Map{
-		"runs":             runs,
-		"total_runs":       len(runs),
-		"avg_duration_ms":  avgDuration,
-		"total_successful": totalSuccess,
-		"total_failed":     totalFailed,
-		"total_skipped":    totalSkipped,
+		"runs":                 runs,
+		"total_runs":           len(runs),
+		"avg_duration_ms":      avgDuration,
+		"total_successful":     totalSuccess,
+		"total_failed":         totalFailed,
+		"total_skipped":        totalSkipped,
+		"distinct_repos":       distinctRepos,
+		"total_logs":           totalLogs,
+		"total_size_bytes":     totalSizeBytes,
+		"largest_archive_bytes": largestArchiveBytes,
+		"largest_repository":   largestRepository,
 	})
 }
 

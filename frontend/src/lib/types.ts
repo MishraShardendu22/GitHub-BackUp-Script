@@ -35,11 +35,18 @@ export interface ExecutionLog {
 export interface DashboardStats {
   total_runs: number;
   total_repos: number;
+  total_successful: number;
   success_rate: number;
   last_run_status: string;
   last_run_at: string | null;
   total_failed: number;
   avg_duration_ms: number;
+  total_skipped: number;
+  distinct_repos: number;
+  total_logs: number;
+  total_size_bytes: number;
+  largest_archive_bytes: number;
+  largest_repository: string;
 }
 
 export interface LiveStatus {
@@ -89,23 +96,10 @@ export interface MetricsData {
 }
 
 export interface WsMessage {
-  type: "log" | "status" | "analytics";
+	 type: "log";
   id?: number;
   level?: string;
   message?: string;
   repository?: string;
   timestamp?: string;
-  run_id?: number;
-  status?: string;
-  total_repos?: number;
-  successful?: number;
-  failed?: number;
-  skipped?: number;
-  started_at?: string;
-  total_size_bytes?: number;
-  largest_archive_bytes?: number;
-  largest_repository?: string;
-  repositories_tracked?: number;
-  runs_tracked?: number;
-  sampled_at?: string;
 }

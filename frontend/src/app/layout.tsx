@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable}`}>
       <body>
         <Header />
-        <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
+        <main style={{ maxWidth: 1380, margin: "0 auto", padding: "32px 28px 48px" }}>
           {children}
         </main>
       </body>

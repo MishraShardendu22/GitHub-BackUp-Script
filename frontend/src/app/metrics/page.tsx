@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, formatBytes } from "@/lib/utils";
 import type { MetricsData, BackupRun } from "@/lib/types";
 import {
   ResponsiveContainer,
@@ -39,16 +39,16 @@ export default function MetricsPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
-        <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+        <div style={{ maxWidth: 720 }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", marginBottom: 8 }}>
             ANALYTICS
           </div>
-          <h1 style={{ fontSize: 36, fontFamily: "var(--font-serif)", marginBottom: 8 }}>
+          <h1 style={{ fontSize: 42, fontFamily: "var(--font-serif)", marginBottom: 8 }}>
             Metrics
           </h1>
           <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            Backup performance trends and operational statistics.
+            Stored run trends, size totals, and performance over time.
           </p>
         </div>
         <div style={{ display: "flex", gap: 4, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 20, padding: 3 }}>
@@ -75,7 +75,7 @@ export default function MetricsPage() {
       </div>
 
       {/* Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 16, marginBottom: 40 }}>
         <div className="stat-card">
           <div className="stat-label">Total Runs</div>
           <div className="stat-value">{data?.total_runs ?? 0}</div>
@@ -91,6 +91,14 @@ export default function MetricsPage() {
         <div className="stat-card">
           <div className="stat-label">Failed</div>
           <div className="stat-value" style={{ color: "var(--danger)" }}>{data?.total_failed ?? 0}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Total Size</div>
+          <div className="stat-value">{formatBytes((data as any)?.total_size_bytes ?? 0)}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Logs Stored</div>
+          <div className="stat-value">{(data as any)?.total_logs ?? 0}</div>
         </div>
       </div>
 
