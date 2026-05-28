@@ -98,5 +98,3 @@ You can open these images locally or embed them in the repo documentation for ri
 
 **Contributing**
 Please follow the coding conventions already present in the repository. See `CONTRIBUTING.md` for a short guide.
-
-If you'd like, I can also generate a concise API reference and embed inline code references for each handler.
