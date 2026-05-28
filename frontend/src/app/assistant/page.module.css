@@ -308,13 +308,22 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  gap: 6px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
   flex: 1;
   min-width: 0;
 }
 
 .sourceItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f6f9fc;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #eef3f8;
   min-width: 0;
 }
 
@@ -364,12 +373,18 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  gap: 6px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .messageSourceItem {
-  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  background: #f6f9fc;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #eef3f8;
 }
 
 .messageSourceLink {
