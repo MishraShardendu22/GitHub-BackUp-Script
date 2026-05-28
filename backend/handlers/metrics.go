@@ -67,17 +67,17 @@ func GetMetrics(c *fiber.Ctx) error {
 	db.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM execution_logs`).Scan(&totalLogs)
 
 	return c.JSON(fiber.Map{
-		"runs":                 runs,
-		"total_runs":           len(runs),
-		"avg_duration_ms":      avgDuration,
-		"total_successful":     totalSuccess,
-		"total_failed":         totalFailed,
-		"total_skipped":        totalSkipped,
-		"distinct_repos":       distinctRepos,
-		"total_logs":           totalLogs,
-		"total_size_bytes":     totalSizeBytes,
+		"runs":                  runs,
+		"total_runs":            len(runs),
+		"avg_duration_ms":       avgDuration,
+		"total_successful":      totalSuccess,
+		"total_failed":          totalFailed,
+		"total_skipped":         totalSkipped,
+		"distinct_repos":        distinctRepos,
+		"total_logs":            totalLogs,
+		"total_size_bytes":      totalSizeBytes,
 		"largest_archive_bytes": largestArchiveBytes,
-		"largest_repository":   largestRepository,
+		"largest_repository":    largestRepository,
 	})
 }
 
