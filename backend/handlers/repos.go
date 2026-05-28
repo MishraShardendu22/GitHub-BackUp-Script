@@ -9,12 +9,14 @@ import (
 
 func GetRepos(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(),
-		`SELECT DISTINCT repo_full_name, status, commit_hash, archive_size_bytes, created_at
-		 FROM backup_results
-		 WHERE id IN (
-		     SELECT MAX(id) FROM backup_results GROUP BY repo_full_name
-		 )
-		 ORDER BY repo_full_name`)
+		`SELECT repo_full_name, status, commit_hash, archive_size_bytes, created_at
+		 FROM (
+		     SELECT DISTINCT ON (repo_full_name)
+		         repo_full_name, status, commit_hash, archive_size_bytes, created_at
+		     FROM backup_results
+		     ORDER BY repo_full_name, archive_size_bytes DESC, created_at DESC
+		 ) ranked_repos
+		 ORDER BY archive_size_bytes DESC, created_at DESC`)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

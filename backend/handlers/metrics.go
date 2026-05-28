@@ -15,6 +15,10 @@ func GetMetrics(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		_ = err
+	}
+
 	rows, err := db.Pool.Query(ctx,
 		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms
 		 FROM backup_runs
@@ -71,6 +75,13 @@ func GetMetrics(c *fiber.Ctx) error {
 		        COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), ''),
 		        COALESCE(COUNT(DISTINCT repo_full_name), 0)
 	   FROM backup_results`).Scan(&totalSizeBytes, &largestArchiveBytes, &largestRepository, &distinctRepos)
+	if totalSizeBytes == 0 {
+		_ = db.Pool.QueryRow(ctx,
+			`SELECT COALESCE(SUM(total_archive_size_bytes), 0),
+		           COALESCE(MAX(largest_archive_size_bytes), 0),
+		           COALESCE((SELECT largest_archive_path FROM analytics_snapshots ORDER BY captured_at DESC LIMIT 1), '')
+		     FROM analytics_snapshots`).Scan(&totalSizeBytes, &largestArchiveBytes, &largestRepository)
+	}
 
 	db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM execution_logs`).Scan(&totalLogs)
 

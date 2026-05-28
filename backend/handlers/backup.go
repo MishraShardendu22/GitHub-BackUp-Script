@@ -12,8 +12,12 @@ import (
 func GetBackupRuns(c *fiber.Ctx) error {
 	limit := c.QueryInt("limit", 20)
 	offset := c.QueryInt("offset", 0)
+	ctx := context.Background()
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		_ = err
+	}
 
-	rows, err := db.Pool.Query(context.Background(),
+	rows, err := db.Pool.Query(ctx,
 		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms, error_message
 		 FROM backup_runs ORDER BY started_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -77,8 +81,13 @@ func GetBackupRun(c *fiber.Ctx) error {
 }
 
 func GetLatestBackup(c *fiber.Ctx) error {
+	ctx := context.Background()
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		_ = err
+	}
+
 	var r models.BackupRun
-	err := db.Pool.QueryRow(context.Background(),
+	err := db.Pool.QueryRow(ctx,
 		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms, error_message
 		 FROM backup_runs ORDER BY started_at DESC LIMIT 1`).Scan(
 		&r.ID, &r.Status, &r.StartedAt, &r.CompletedAt, &r.TotalRepos,
@@ -90,36 +99,41 @@ func GetLatestBackup(c *fiber.Ctx) error {
 }
 
 func GetDashboardStats(c *fiber.Ctx) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		_ = err
+	}
 
 	var stats models.DashboardStats
 
 	// Total runs
 	db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM backup_runs`).Scan(&stats.TotalRuns)
 
-	// Total successful repositories across completed runs
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(successful), 0) FROM backup_runs WHERE status = 'completed'`).Scan(&stats.TotalSuccessful)
+	// Aggregate all stored runs; skips are tracked separately and are not treated as failures.
+	var totalSuccess, totalFailed, totalSkipped int
+	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(successful), 0), COALESCE(SUM(failed), 0), COALESCE(SUM(skipped), 0) FROM backup_runs`).Scan(&totalSuccess, &totalFailed, &totalSkipped)
+	stats.TotalSuccessful = totalSuccess
+	stats.TotalFailed = totalFailed
+	stats.TotalSkipped = totalSkipped
 
-	// Success rate
-	var totalRepos, successRepos int
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(total_repos), 0), COALESCE(SUM(successful), 0) FROM backup_runs WHERE status = 'completed'`).Scan(&totalRepos, &successRepos)
-	if totalRepos > 0 {
-		stats.SuccessRate = float64(successRepos) / float64(totalRepos) * 100
+	// Success rate excludes skipped entries from the denominator.
+	if totalSuccess+totalFailed > 0 {
+		stats.SuccessRate = float64(totalSuccess) / float64(totalSuccess+totalFailed) * 100
 	}
-	stats.TotalRepos = totalRepos
 
-	// Total skipped repositories across all runs
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(skipped), 0) FROM backup_runs`).Scan(&stats.TotalSkipped)
+	// Total repositories processed across all runs.
+	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(total_repos), 0) FROM backup_runs`).Scan(&stats.TotalRepos)
 
 	// Last run
 	db.Pool.QueryRow(ctx, `SELECT status, started_at FROM backup_runs ORDER BY started_at DESC LIMIT 1`).Scan(&stats.LastRunStatus, &stats.LastRunAt)
 
-	// Total failed
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(failed), 0) FROM backup_runs`).Scan(&stats.TotalFailed)
-
-	// Average duration
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(duration_ms), 0) FROM backup_runs WHERE status = 'completed'`).Scan(&stats.AvgDurationMs)
+	// Average duration across all stored runs, falling back to any positive values.
+	db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(NULLIF(duration_ms, 0)), 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
+	if stats.AvgDurationMs == 0 {
+		db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(duration_ms), 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
+	}
 
 	// Repository totals from backup_results and execution logs
 	db.Pool.QueryRow(ctx, `SELECT COALESCE(COUNT(DISTINCT repo_full_name), 0) FROM backup_results`).Scan(&stats.DistinctRepos)
@@ -128,6 +142,14 @@ func GetDashboardStats(c *fiber.Ctx) error {
 
 	latestAnalytics, _ := loadLatestAnalytics(ctx)
 	stats.LatestAnalytics = latestAnalytics
+	if stats.DistinctRepos == 0 && latestAnalytics != nil {
+		stats.DistinctRepos = latestAnalytics.TrackedFiles
+	}
+	if stats.TotalSizeBytes == 0 && latestAnalytics != nil {
+		stats.TotalSizeBytes = latestAnalytics.TotalArchiveSizeBytes
+		stats.LargestArchiveBytes = latestAnalytics.LargestArchiveSizeBytes
+		stats.LargestRepository = latestAnalytics.LargestArchivePath
+	}
 
 	return c.JSON(stats)
 }

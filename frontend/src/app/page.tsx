@@ -44,14 +44,27 @@ export default async function DashboardPage() {
   ]);
 
   const latestRun = runs.length > 0 ? runs[0] : null;
+  const latestAnalytics = stats?.latest_analytics ?? null;
   const totalSize =
-    stats?.total_size_bytes ??
+    (stats?.total_size_bytes && stats.total_size_bytes > 0
+      ? stats.total_size_bytes
+      : null) ??
+    (latestAnalytics?.total_archive_size_bytes && latestAnalytics.total_archive_size_bytes > 0
+      ? latestAnalytics.total_archive_size_bytes
+      : null) ??
     repos.reduce((a, r) => a + (r.archive_size_bytes || 0), 0);
   const failureCount = stats?.total_failed ?? 0;
   const totalSkipped = stats?.total_skipped ?? 0;
-  const totalLogs = stats?.total_logs ?? 0;
-  const distinctRepos = stats?.distinct_repos ?? repos.length;
-  const latestAnalytics = stats?.latest_analytics ?? null;
+  const totalLogs =
+    (stats?.total_logs && stats.total_logs > 0 ? stats.total_logs : null) ?? 0;
+  const distinctRepos =
+    (stats?.distinct_repos && stats.distinct_repos > 0
+      ? stats.distinct_repos
+      : null) ??
+    (latestAnalytics?.tracked_files && latestAnalytics.tracked_files > 0
+      ? latestAnalytics.tracked_files
+      : null) ??
+    repos.length;
 
   const topRepos = [...repos]
     .sort((a, b) => b.archive_size_bytes - a.archive_size_bytes)
@@ -209,7 +222,9 @@ export default async function DashboardPage() {
         <div className="stat-card">
           <div className="stat-label">Success rate</div>
           <div className="stat-value">
-            {stats?.success_rate ? `${stats.success_rate.toFixed(0)}%` : "—"}
+            {stats?.success_rate && stats.success_rate > 0
+              ? `${stats.success_rate.toFixed(0)}%`
+              : "—"}
           </div>
         </div>
         <div className="stat-card">
@@ -228,116 +243,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.1fr) minmax(320px, 0.9fr)",
-          gap: 24,
-          marginBottom: 28,
-        }}
-      >
-        <div className="card" style={{ padding: 24 }}>
-          <div className="section-title">Run summary</div>
-          <div className="section-desc">
-            Stored totals from backup_runs, including skipped repositories and
-            average duration.
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: 14,
-            }}
-          >
-            <div className="card-flat">
-              <div className="stat-label">Avg duration</div>
-              <div className="stat-value" style={{ fontSize: 22 }}>
-                {stats?.avg_duration_ms
-                  ? formatDuration(stats.avg_duration_ms)
-                  : "—"}
-              </div>
-            </div>
-            <div className="card-flat">
-              <div className="stat-label">Successful</div>
-              <div
-                className="stat-value"
-                style={{ fontSize: 22, color: "var(--success)" }}
-              >
-                {stats?.total_successful ?? 0}
-              </div>
-            </div>
-            <div className="card-flat">
-              <div className="stat-label">Failed</div>
-              <div
-                className="stat-value"
-                style={{ fontSize: 22, color: "var(--danger)" }}
-              >
-                {failureCount}
-              </div>
-            </div>
-            <div className="card-flat">
-              <div className="stat-label">Skipped</div>
-              <div className="stat-value" style={{ fontSize: 22 }}>
-                {totalSkipped}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 24 }}>
-          <div className="section-title">Storage profile</div>
-          <div className="section-desc">
-            Largest repositories by archive size, based on backup_results.
-          </div>
-          {topRepos.length === 0 ? (
-            <div
-              style={{
-                color: "var(--text-muted)",
-                fontSize: 13,
-                padding: "20px 0",
-              }}
-            >
-              No repository snapshots yet
-            </div>
-          ) : (
-            topRepos.map((repo, i) => {
-              const pct =
-                maxSize > 0 ? (repo.archive_size_bytes / maxSize) * 100 : 0;
-              const colors = [
-                "#c0392b",
-                "#d4a017",
-                "#27ae60",
-                "#2980b9",
-                "#8e44ad",
-                "#7f8c8d",
-              ];
-              return (
-                <div
-                  key={repo.full_name}
-                  className="bar-row"
-                  style={{ padding: "8px 0" }}
-                >
-                  <div className="bar-label" style={{ minWidth: 220 }}>
-                    {repo.full_name}
-                  </div>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill"
-                      style={{
-                        width: `${pct}%`,
-                        background: colors[i % colors.length],
-                      }}
-                    />
-                  </div>
-                  <div className="bar-value">
-                    {formatBytes(repo.archive_size_bytes)}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
 
       <div className="card" style={{ padding: 24, marginBottom: 28 }}>
         <div className="section-title">Git snapshot</div>

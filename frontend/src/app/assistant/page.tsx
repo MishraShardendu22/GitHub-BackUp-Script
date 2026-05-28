@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, Conversation, DashboardStats } from "@/lib/types";
+import { ReportPreview } from "@/components/dashboard/report-preview";
+import { deleteConversation, getLatestReport } from "@/lib/api";
+import type {
+  ChatMessage,
+  Conversation,
+  DashboardStats,
+  ReportBundle,
+} from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -23,6 +30,8 @@ export default function AssistantPage() {
   const [loading, setLoading] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
   const [reportStatus, setReportStatus] = useState<string | null>(null);
+  const [reportPreview, setReportPreview] = useState<ReportBundle | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +39,12 @@ export default function AssistantPage() {
     fetch(`${API}/api/ai/conversations`, { cache: "no-store" })
       .then((response) => response.json())
       .then(setConversations)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getLatestReport()
+      .then(setReportPreview)
       .catch(() => {});
   }, []);
 
@@ -69,14 +84,68 @@ export default function AssistantPage() {
     setMessages([]);
     setInput("");
     setReportStatus(null);
+    setReportPreview(null);
     focusComposer();
   }
+
   async function refreshConversations() {
     const response = await fetch(`${API}/api/ai/conversations`, {
       cache: "no-store",
     });
     if (response.ok) {
       setConversations(await response.json());
+    }
+  }
+
+  async function removeConversation(id: number) {
+    try {
+      await deleteConversation(id);
+      setConversations((previous) => previous.filter((conversation) => conversation.id !== id));
+      if (activeConversationId === id) {
+        startNewChat();
+      }
+    } catch {
+      setReportStatus("Could not delete the conversation right now.");
+    }
+  }
+
+  async function generateReportPreview() {
+    setReportLoading(true);
+    setReportStatus("Generating latest report preview...");
+
+    try {
+      const report = await getLatestReport();
+      setReportPreview(report);
+      setReportStatus("Latest report preview is ready.");
+    } catch {
+      setReportStatus("Could not generate the report preview right now.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
+  async function sendLatestReport() {
+    setReportStatus("Sending latest report...");
+
+    try {
+      const response = await fetch(`${API}/api/reports/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report_type: "latest" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("report request failed");
+      }
+
+      const payload = (await response.json()) as { report?: ReportBundle };
+      if (payload.report) {
+        setReportPreview(payload.report);
+      }
+
+      setReportStatus("Latest report sent with the PDF attachment.");
+    } catch {
+      setReportStatus("Could not send the report right now.");
     }
   }
 
@@ -148,25 +217,6 @@ export default function AssistantPage() {
       ]);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function sendReport() {
-    setReportStatus("Sending latest report...");
-    try {
-      const response = await fetch(`${API}/api/reports/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ report_type: "latest" }),
-      });
-
-      if (!response.ok) {
-        throw new Error("report request failed");
-      }
-
-      setReportStatus("Latest report queued for email delivery.");
-    } catch {
-      setReportStatus("Could not send the report right now.");
     }
   }
 
@@ -303,10 +353,17 @@ export default function AssistantPage() {
               conversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 return (
-                  <button
+                  <div
                     key={conversation.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setActiveConversationId(conversation.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setActiveConversationId(conversation.id);
+                      }
+                    }}
                     className="card"
                     style={{
                       textAlign: "left",
@@ -329,7 +386,20 @@ export default function AssistantPage() {
                         { month: "short", day: "numeric" },
                       )}
                     </div>
-                  </button>
+                    <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeConversation(conversation.id);
+                        }}
+                        style={{ padding: "4px 8px", fontSize: 11 }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 );
               })
             )}
@@ -398,16 +468,17 @@ export default function AssistantPage() {
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={startNewChat}
+                onClick={generateReportPreview}
+                disabled={reportLoading}
               >
-                New chat
+                {reportLoading ? "Generating..." : "Generate report"}
               </button>
               <button
                 type="button"
                 className="btn btn-danger"
-                onClick={sendReport}
+                onClick={sendLatestReport}
               >
-                Send latest report
+                Send email
               </button>
             </div>
           </div>
@@ -557,6 +628,12 @@ export default function AssistantPage() {
             ) : null}
             <div ref={messagesEndRef} />
           </div>
+
+          {reportPreview ? (
+            <div style={{ padding: "0 24px 24px" }}>
+              <ReportPreview report={reportPreview} />
+            </div>
+          ) : null}
 
           <div
             style={{

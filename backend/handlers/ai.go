@@ -47,6 +47,9 @@ func PostChat(c *fiber.Ctx) error {
 		convID, req.Message, req.WebSearch)
 
 	// Build context from DB
+	if _, err := db.FinalizeStaleRunningRuns(context.Background(), 30*time.Minute); err != nil {
+		// keep going; context is still useful even if the cleanup fails
+	}
 	dbContext := buildDBContext()
 
 	// Call OpenRouter
@@ -63,13 +66,13 @@ func PostChat(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "MODEL_KEY not configured"})
 	}
 
-	systemPrompt := fmt.Sprintf(`You are an AI assistant for a GitHub backup monitoring system. 
-You help users understand their backup status, analyze failures, and provide insights.
+	systemPrompt := fmt.Sprintf(`You are an AI assistant for a GitHub backup monitoring system.
+Use only the stored database context below. Do not say you have no access if the facts are present. If a detail is missing, say what is missing and answer with the exact stored data you do have.
 
-Here is the current system context:
+Current stored context:
 %s
 
-Answer questions based on this data. Be concise and helpful.`, dbContext)
+When answering, prefer concrete values from the database. Keep responses concise, factual, and useful.`, dbContext)
 
 	messages := []map[string]string{
 		{"role": "system", "content": systemPrompt},
@@ -208,10 +211,43 @@ func buildDBContext() string {
 	ctx := context.Background()
 	var sb strings.Builder
 
+	_, _ = db.FinalizeStaleRunningRuns(ctx, 30*time.Minute)
+
+	var latestRunID int
+	var latestRunStatus string
+	var latestStartedAt time.Time
+	var latestTotalRepos, latestSuccessful, latestFailed, latestSkipped int
+	var latestDuration int64
+	if err := db.Pool.QueryRow(ctx, `SELECT id, status, started_at, total_repos, successful, failed, skipped, duration_ms FROM backup_runs ORDER BY started_at DESC LIMIT 1`).Scan(&latestRunID, &latestRunStatus, &latestStartedAt, &latestTotalRepos, &latestSuccessful, &latestFailed, &latestSkipped, &latestDuration); err == nil {
+		sb.WriteString(fmt.Sprintf("Latest run: #%d status=%s started=%s total=%d success=%d failed=%d skipped=%d duration=%s\n", latestRunID, latestRunStatus, latestStartedAt.Format("2006-01-02 15:04"), latestTotalRepos, latestSuccessful, latestFailed, latestSkipped, time.Duration(latestDuration)*time.Millisecond))
+	}
+
 	// Recent backup stats
 	var totalRuns, totalSuccess, totalFailed int
 	db.Pool.QueryRow(ctx, `SELECT COUNT(*), COALESCE(SUM(successful),0), COALESCE(SUM(failed),0) FROM backup_runs`).Scan(&totalRuns, &totalSuccess, &totalFailed)
 	sb.WriteString(fmt.Sprintf("Total backup runs: %d, Total successful repos: %d, Total failed: %d\n", totalRuns, totalSuccess, totalFailed))
+
+	var totalSizeBytes, largestArchiveBytes int64
+	var largestRepository string
+	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(archive_size_bytes),0), COALESCE(MAX(archive_size_bytes),0), COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), '') FROM backup_results`).Scan(&totalSizeBytes, &largestArchiveBytes, &largestRepository)
+	if totalSizeBytes == 0 {
+		_ = db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(total_archive_size_bytes),0), COALESCE(MAX(largest_archive_size_bytes),0), COALESCE((SELECT largest_archive_path FROM analytics_snapshots ORDER BY captured_at DESC LIMIT 1), '') FROM analytics_snapshots`).Scan(&totalSizeBytes, &largestArchiveBytes, &largestRepository)
+	}
+	sb.WriteString(fmt.Sprintf("Total archive size: %s, Largest archive: %s, Largest repository/path: %s\n", formatBytesHuman(totalSizeBytes), formatBytesHuman(largestArchiveBytes), largestRepository))
+
+	var latestAnalytics struct {
+		TrackedFiles    int
+		TotalCommits    int
+		BranchCount     int
+		TagCount        int
+		ArchiveCount    int
+		AvgBlobSize     int64
+		LargestBlobPath string
+		LargestBlobSize int64
+	}
+	if err := db.Pool.QueryRow(ctx, `SELECT tracked_files, total_commits, branch_count, tag_count, archive_count, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes FROM analytics_snapshots ORDER BY captured_at DESC LIMIT 1`).Scan(&latestAnalytics.TrackedFiles, &latestAnalytics.TotalCommits, &latestAnalytics.BranchCount, &latestAnalytics.TagCount, &latestAnalytics.ArchiveCount, &latestAnalytics.AvgBlobSize, &latestAnalytics.LargestBlobPath, &latestAnalytics.LargestBlobSize); err == nil {
+		sb.WriteString(fmt.Sprintf("Latest analytics: tracked_files=%d commits=%d branches=%d tags=%d archives=%d avg_blob=%s largest_blob=%s (%s)\n", latestAnalytics.TrackedFiles, latestAnalytics.TotalCommits, latestAnalytics.BranchCount, latestAnalytics.TagCount, latestAnalytics.ArchiveCount, formatBytesHuman(latestAnalytics.AvgBlobSize), formatBytesHuman(latestAnalytics.LargestBlobSize), latestAnalytics.LargestBlobPath))
+	}
 
 	// Last 5 runs
 	rows, _ := db.Pool.Query(ctx, `SELECT status, started_at, total_repos, successful, failed, duration_ms FROM backup_runs ORDER BY started_at DESC LIMIT 5`)
@@ -247,5 +283,32 @@ func buildDBContext() string {
 		}
 	}
 
+	// Recent repositories and sizes
+	repoRows, _ := db.Pool.Query(ctx, `SELECT repo_full_name, status, commit_hash, archive_size_bytes, created_at FROM backup_results ORDER BY created_at DESC LIMIT 10`)
+	if repoRows != nil {
+		sb.WriteString("\nRecent repository results:\n")
+		for repoRows.Next() {
+			var repo, status, commitHash string
+			var archiveSize int64
+			var createdAt time.Time
+			repoRows.Scan(&repo, &status, &commitHash, &archiveSize, &createdAt)
+			sb.WriteString(fmt.Sprintf("- %s: %s archive=%s commit=%s at %s\n", repo, status, formatBytesHuman(archiveSize), commitHash, createdAt.Format("2006-01-02 15:04")))
+		}
+		repoRows.Close()
+	}
+
 	return sb.String()
+}
+
+func formatBytesHuman(bytesValue int64) string {
+	if bytesValue < 1024 {
+		return fmt.Sprintf("%d B", bytesValue)
+	}
+	if bytesValue < 1024*1024 {
+		return fmt.Sprintf("%.1f KB", float64(bytesValue)/1024)
+	}
+	if bytesValue < 1024*1024*1024 {
+		return fmt.Sprintf("%.1f MB", float64(bytesValue)/(1024*1024))
+	}
+	return fmt.Sprintf("%.1f GB", float64(bytesValue)/(1024*1024*1024))
 }

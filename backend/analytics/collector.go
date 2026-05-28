@@ -47,6 +47,10 @@ func Refresh(ctx context.Context) error {
 		return fmt.Errorf("postgres pool is not ready")
 	}
 
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		util.Logger().Warn("Failed to finalize stale run", zap.Error(err))
+	}
+
 	repoDir, err := resolveRepoDir()
 	if err != nil {
 		if strings.Contains(err.Error(), "analytics repo not found") {

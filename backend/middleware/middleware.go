@@ -8,7 +8,7 @@ import (
 
 func SetupCORS() fiber.Handler {
 	return cors.New(cors.Config{
-		AllowOrigins:     "https://github.mishrashardendu22.is-a.dev",
+		AllowOrigins:     "https://github.mishrashardendu22.is-a.dev,http://localhost:3000",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Authorization",
 		AllowCredentials: true,

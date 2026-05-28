@@ -34,6 +34,8 @@ func Setup(app *fiber.App) {
 	api.Delete("/ai/conversations/:id", handlers.DeleteConversation)
 
 	// Reports
+	api.Get("/reports/latest", handlers.GetLatestReport)
+	api.Post("/reports/latest", handlers.GetLatestReport)
 	api.Post("/reports/send", handlers.SendReport)
 	api.Get("/reports/history", handlers.GetReportHistory)
 

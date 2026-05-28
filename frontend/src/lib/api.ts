@@ -67,6 +67,12 @@ export const deleteConversation = (id: number) =>
   fetchAPI<{ deleted: boolean }>(`/api/ai/conversations/${id}`, { method: "DELETE" });
 
 // Reports
+export const getLatestReport = (reportType = "latest") =>
+  fetchAPI<import("./types").ReportBundle>("/api/reports/latest", {
+    method: "POST",
+    body: JSON.stringify({ report_type: reportType }),
+  });
+
 export const sendReport = (reportType: string) =>
   fetchAPI<{ sent: boolean; subject: string; to: string }>("/api/reports/send", {
     method: "POST",

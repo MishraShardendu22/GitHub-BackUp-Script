@@ -12,6 +12,10 @@ func GetSystemHealth(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		_ = err
+	}
+
 	dbOk := true
 	if err := db.Pool.Ping(ctx); err != nil {
 		dbOk = false
@@ -36,6 +40,9 @@ func GetSystemHealth(c *fiber.Ctx) error {
 
 func GetLiveStatus(c *fiber.Ctx) error {
 	ctx := context.Background()
+	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
+		_ = err
+	}
 
 	var status struct {
 		ID         int       `json:"id"`

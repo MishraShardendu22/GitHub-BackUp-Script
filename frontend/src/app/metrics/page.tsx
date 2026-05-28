@@ -139,12 +139,6 @@ export default function MetricsPage() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Failed</div>
-          <div className="stat-value" style={{ color: "var(--danger)" }}>
-            {data?.total_failed ?? 0}
-          </div>
-        </div>
-        <div className="stat-card">
           <div className="stat-label">Total Size</div>
           <div className="stat-value">
             {formatBytes(data?.total_size_bytes ?? 0)}
@@ -188,8 +182,10 @@ export default function MetricsPage() {
           <div className="stat-value">{latestAnalytics?.branch_count ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Tags</div>
-          <div className="stat-value">{latestAnalytics?.tag_count ?? 0}</div>
+          <div className="stat-label">Failed</div>
+          <div className="stat-value" style={{ color: "var(--danger)" }}>
+            {data?.total_failed ?? 0}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Tracked files</div>
