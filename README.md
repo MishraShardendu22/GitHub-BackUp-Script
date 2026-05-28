@@ -94,7 +94,5 @@ UI screenshots are included in the `Images/` folder. Quick references:
 - AI assistant / risk assessment: [ai results page](Images/ai-results-page.webp)
 - Tailscale / tunnel & server console: [tailscale tunneling](Images/tailscale-tunneling.webp)
 
-You can open these images locally or embed them in the repo documentation for richer visual context.
-
 **Contributing**
 Please follow the coding conventions already present in the repository. See `CONTRIBUTING.md` for a short guide.
