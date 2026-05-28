@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/MishraShardendu22/github-backup/backend/db"
 	"github.com/MishraShardendu22/github-backup/backend/models"
@@ -11,8 +12,10 @@ import (
 
 func GetMetrics(c *fiber.Ctx) error {
 	days := c.QueryInt("days", 30)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	rows, err := db.Pool.Query(context.Background(),
+	rows, err := db.Pool.Query(ctx,
 		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms
 		 FROM backup_runs
 		 WHERE started_at >= NOW() - MAKE_INTERVAL(days => $1)
@@ -56,15 +59,20 @@ func GetMetrics(c *fiber.Ctx) error {
 	var largestRepository string
 	var distinctRepos int
 	var totalLogs int
+	var latestAnalytics *models.RepoAnalyticsSnapshot
 
-	db.Pool.QueryRow(context.Background(),
+	if snapshot, err := loadLatestAnalytics(ctx); err == nil {
+		latestAnalytics = snapshot
+	}
+
+	db.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(archive_size_bytes), 0),
 		        COALESCE(MAX(archive_size_bytes), 0),
 		        COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), ''),
 		        COALESCE(COUNT(DISTINCT repo_full_name), 0)
 	   FROM backup_results`).Scan(&totalSizeBytes, &largestArchiveBytes, &largestRepository, &distinctRepos)
 
-	db.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM execution_logs`).Scan(&totalLogs)
+	db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM execution_logs`).Scan(&totalLogs)
 
 	return c.JSON(fiber.Map{
 		"runs":                  runs,
@@ -78,6 +86,7 @@ func GetMetrics(c *fiber.Ctx) error {
 		"total_size_bytes":      totalSizeBytes,
 		"largest_archive_bytes": largestArchiveBytes,
 		"largest_repository":    largestRepository,
+		"latest_analytics":      latestAnalytics,
 	})
 }
 

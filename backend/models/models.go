@@ -62,22 +62,45 @@ type ReportHistory struct {
 	SentAt       time.Time `json:"sent_at"`
 }
 
+type RepoAnalyticsSnapshot struct {
+	ID                      int        `json:"id"`
+	RunID                   *int       `json:"run_id"`
+	CapturedAt              time.Time  `json:"captured_at"`
+	HeadCommit              string     `json:"head_commit"`
+	HeadCommitMessage       string     `json:"head_commit_message"`
+	HeadCommitAt            *time.Time `json:"head_commit_at"`
+	TotalCommits            int        `json:"total_commits"`
+	BranchCount             int        `json:"branch_count"`
+	TagCount                int        `json:"tag_count"`
+	TrackedFiles            int        `json:"tracked_files"`
+	TotalBlobSizeBytes      int64      `json:"total_blob_size_bytes"`
+	AvgBlobSizeBytes        int64      `json:"avg_blob_size_bytes"`
+	LargestBlobPath         string     `json:"largest_blob_path"`
+	LargestBlobSizeBytes    int64      `json:"largest_blob_size_bytes"`
+	ArchiveCount            int        `json:"archive_count"`
+	TotalArchiveSizeBytes   int64      `json:"total_archive_size_bytes"`
+	AvgArchiveSizeBytes     int64      `json:"avg_archive_size_bytes"`
+	LargestArchivePath      string     `json:"largest_archive_path"`
+	LargestArchiveSizeBytes int64      `json:"largest_archive_size_bytes"`
+}
+
 // API response types
 type DashboardStats struct {
-	TotalRuns           int        `json:"total_runs"`
-	TotalRepos          int        `json:"total_repos"`
-	TotalSuccessful     int        `json:"total_successful"`
-	SuccessRate         float64    `json:"success_rate"`
-	LastRunStatus       string     `json:"last_run_status"`
-	LastRunAt           *time.Time `json:"last_run_at"`
-	TotalFailed         int        `json:"total_failed"`
-	AvgDurationMs       int64      `json:"avg_duration_ms"`
-	TotalSkipped        int        `json:"total_skipped"`
-	DistinctRepos       int        `json:"distinct_repos"`
-	TotalLogs           int        `json:"total_logs"`
-	TotalSizeBytes      int64      `json:"total_size_bytes"`
-	LargestArchiveBytes int64      `json:"largest_archive_bytes"`
-	LargestRepository   string     `json:"largest_repository"`
+	TotalRuns           int                    `json:"total_runs"`
+	TotalRepos          int                    `json:"total_repos"`
+	TotalSuccessful     int                    `json:"total_successful"`
+	SuccessRate         float64                `json:"success_rate"`
+	LastRunStatus       string                 `json:"last_run_status"`
+	LastRunAt           *time.Time             `json:"last_run_at"`
+	TotalFailed         int                    `json:"total_failed"`
+	AvgDurationMs       int64                  `json:"avg_duration_ms"`
+	TotalSkipped        int                    `json:"total_skipped"`
+	DistinctRepos       int                    `json:"distinct_repos"`
+	TotalLogs           int                    `json:"total_logs"`
+	TotalSizeBytes      int64                  `json:"total_size_bytes"`
+	LargestArchiveBytes int64                  `json:"largest_archive_bytes"`
+	LargestRepository   string                 `json:"largest_repository"`
+	LatestAnalytics     *RepoAnalyticsSnapshot `json:"latest_analytics"`
 }
 
 type LiveStatus struct {

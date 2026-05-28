@@ -37,6 +37,31 @@ CREATE TABLE IF NOT EXISTS execution_logs (
 CREATE INDEX IF NOT EXISTS idx_execution_logs_run ON execution_logs(run_id);
 CREATE INDEX IF NOT EXISTS idx_execution_logs_time ON execution_logs(created_at);
 
+-- Git-derived analytics snapshots captured by the backend while the worker runs
+CREATE TABLE IF NOT EXISTS analytics_snapshots (
+    id SERIAL PRIMARY KEY,
+    run_id INT REFERENCES backup_runs(id) ON DELETE SET NULL,
+    captured_at TIMESTAMPTZ DEFAULT NOW(),
+    head_commit TEXT DEFAULT '',
+    head_commit_message TEXT DEFAULT '',
+    head_commit_at TIMESTAMPTZ,
+    total_commits INT DEFAULT 0,
+    branch_count INT DEFAULT 0,
+    tag_count INT DEFAULT 0,
+    tracked_files INT DEFAULT 0,
+    total_blob_size_bytes BIGINT DEFAULT 0,
+    avg_blob_size_bytes BIGINT DEFAULT 0,
+    largest_blob_path TEXT DEFAULT '',
+    largest_blob_size_bytes BIGINT DEFAULT 0,
+    archive_count INT DEFAULT 0,
+    total_archive_size_bytes BIGINT DEFAULT 0,
+    avg_archive_size_bytes BIGINT DEFAULT 0,
+    largest_archive_path TEXT DEFAULT '',
+    largest_archive_size_bytes BIGINT DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_time ON analytics_snapshots(captured_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_run ON analytics_snapshots(run_id);
+
 -- AI conversations
 CREATE TABLE IF NOT EXISTS ai_conversations (
     id SERIAL PRIMARY KEY,

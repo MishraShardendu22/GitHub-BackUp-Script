@@ -23,6 +23,28 @@ export interface BackupResult {
   created_at: string;
 }
 
+export interface RepoAnalyticsSnapshot {
+  id: number;
+  run_id: number | null;
+  captured_at: string;
+  head_commit: string;
+  head_commit_message: string;
+  head_commit_at: string | null;
+  total_commits: number;
+  branch_count: number;
+  tag_count: number;
+  tracked_files: number;
+  total_blob_size_bytes: number;
+  avg_blob_size_bytes: number;
+  largest_blob_path: string;
+  largest_blob_size_bytes: number;
+  archive_count: number;
+  total_archive_size_bytes: number;
+  avg_archive_size_bytes: number;
+  largest_archive_path: string;
+  largest_archive_size_bytes: number;
+}
+
 export interface ExecutionLog {
   id: number;
   run_id: number | null;
@@ -47,6 +69,7 @@ export interface DashboardStats {
   total_size_bytes: number;
   largest_archive_bytes: number;
   largest_repository: string;
+  latest_analytics: RepoAnalyticsSnapshot | null;
 }
 
 export interface LiveStatus {
@@ -93,10 +116,16 @@ export interface MetricsData {
   total_successful: number;
   total_failed: number;
   total_skipped: number;
+  distinct_repos: number;
+  total_logs: number;
+  total_size_bytes: number;
+  largest_archive_bytes: number;
+  largest_repository: string;
+  latest_analytics: RepoAnalyticsSnapshot | null;
 }
 
 export interface WsMessage {
-	 type: "log";
+  type: "log";
   id?: number;
   level?: string;
   message?: string;
