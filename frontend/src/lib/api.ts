@@ -74,7 +74,7 @@ export const getLatestReport = (reportType = "latest") =>
   });
 
 export const sendReport = (reportType: string) =>
-  fetchAPI<{ sent: boolean; subject: string; to: string }>("/api/reports/send", {
+  fetchAPI<{ sent: boolean; subject: string; to: string; report?: import("./types").ReportBundle }>("/api/reports/send", {
     method: "POST",
     body: JSON.stringify({ report_type: reportType }),
   });

@@ -11,14 +11,12 @@ import (
 	"time"
 
 	"github.com/MishraShardendu22/github-backup/backend/db"
-	"github.com/MishraShardendu22/github-backup/backend/models"
 	"github.com/gofiber/fiber/v2"
 )
 
 type ChatRequest struct {
-	ConversationID int    `json:"conversation_id"`
-	Message        string `json:"message"`
-	WebSearch      bool   `json:"web_search"`
+	Message   string `json:"message"`
+	WebSearch bool   `json:"web_search"`
 }
 
 func PostChat(c *fiber.Ctx) error {
@@ -26,25 +24,6 @@ func PostChat(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
-
-	// Create conversation if needed
-	convID := req.ConversationID
-	if convID == 0 {
-		title := req.Message
-		if len(title) > 60 {
-			title = title[:60] + "..."
-		}
-		err := db.Pool.QueryRow(context.Background(),
-			`INSERT INTO ai_conversations (title) VALUES ($1) RETURNING id`, title).Scan(&convID)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "failed to create conversation"})
-		}
-	}
-
-	// Save user message
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO ai_messages (conversation_id, role, content, web_search) VALUES ($1, 'user', $2, $3)`,
-		convID, req.Message, req.WebSearch)
 
 	// Build context from DB
 	if _, err := db.FinalizeStaleRunningRuns(context.Background(), 30*time.Minute); err != nil {
@@ -68,6 +47,7 @@ func PostChat(c *fiber.Ctx) error {
 
 	systemPrompt := fmt.Sprintf(`You are an AI assistant for a GitHub backup monitoring system.
 Use only the stored database context below. Do not say you have no access if the facts are present. If a detail is missing, say what is missing and answer with the exact stored data you do have.
+Return a structured answer with these sections in order: Summary, Findings, Next steps, Risks, Questions. Keep it factual, concise, and directly grounded in the data.
 
 Current stored context:
 %s
@@ -77,22 +57,6 @@ When answering, prefer concrete values from the database. Keep responses concise
 	messages := []map[string]string{
 		{"role": "system", "content": systemPrompt},
 		{"role": "user", "content": req.Message},
-	}
-
-	// Load conversation history (last 10 messages)
-	historyRows, _ := db.Pool.Query(context.Background(),
-		`SELECT role, content FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 10`, convID)
-	if historyRows != nil {
-		var history []map[string]string
-		for historyRows.Next() {
-			var role, content string
-			historyRows.Scan(&role, &content)
-			history = append([]map[string]string{{"role": role, "content": content}}, history...)
-		}
-		historyRows.Close()
-		if len(history) > 1 {
-			messages = append(messages[:1], history...)
-		}
 	}
 
 	body := map[string]interface{}{
@@ -135,13 +99,8 @@ When answering, prefer concrete values from the database. Keep responses concise
 	aiContent := result.Choices[0].Message.Content
 	tokens := result.Usage.TotalTokens
 
-	// Save assistant message
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO ai_messages (conversation_id, role, content, tokens_used, web_search) VALUES ($1, 'assistant', $2, $3, $4)`,
-		convID, aiContent, tokens, req.WebSearch)
-
 	return c.JSON(fiber.Map{
-		"conversation_id": convID,
+		"conversation_id": 0,
 		"message":         aiContent,
 		"tokens_used":     tokens,
 		"web_search":      req.WebSearch,
@@ -150,60 +109,14 @@ When answering, prefer concrete values from the database. Keep responses concise
 }
 
 func GetConversations(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(),
-		`SELECT id, title, created_at FROM ai_conversations ORDER BY created_at DESC LIMIT 50`)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-	defer rows.Close()
-
-	var convs []models.Conversation
-	for rows.Next() {
-		var conv models.Conversation
-		if err := rows.Scan(&conv.ID, &conv.Title, &conv.CreatedAt); err != nil {
-			continue
-		}
-		convs = append(convs, conv)
-	}
-
-	if convs == nil {
-		convs = []models.Conversation{}
-	}
-	return c.JSON(convs)
+	return c.JSON([]fiber.Map{})
 }
 
 func GetConversation(c *fiber.Ctx) error {
-	id := c.Params("id")
-
-	rows, err := db.Pool.Query(context.Background(),
-		`SELECT id, conversation_id, role, content, tokens_used, web_search, created_at
-		 FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at`, id)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-	defer rows.Close()
-
-	var messages []models.ChatMessage
-	for rows.Next() {
-		var m models.ChatMessage
-		if err := rows.Scan(&m.ID, &m.ConversationID, &m.Role, &m.Content, &m.TokensUsed, &m.WebSearch, &m.CreatedAt); err != nil {
-			continue
-		}
-		messages = append(messages, m)
-	}
-
-	if messages == nil {
-		messages = []models.ChatMessage{}
-	}
-	return c.JSON(messages)
+	return c.JSON([]fiber.Map{})
 }
 
 func DeleteConversation(c *fiber.Ctx) error {
-	id := c.Params("id")
-	_, err := db.Pool.Exec(context.Background(), `DELETE FROM ai_conversations WHERE id = $1`, id)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
 	return c.JSON(fiber.Map{"deleted": true})
 }
 

@@ -1,66 +1,44 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ReportPreview } from "@/components/dashboard/report-preview";
-import { deleteConversation, getLatestReport } from "@/lib/api";
-import type {
-  ChatMessage,
-  Conversation,
-  DashboardStats,
-  ReportBundle,
-} from "@/lib/types";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { getDashboardStats, getLatestReport, postChat, sendReport } from "@/lib/api";
+import { formatBytes, formatDate, formatDuration } from "@/lib/utils";
+import type { ChatMessage, DashboardStats, ReportBundle } from "@/lib/types";
+import styles from "./page.module.css";
 
 const starterQuestions = [
-  "Which repositories show unusual growth this week?",
-  "Summarize the latest backup failures and likely causes.",
-  "What retention risks should we address this quarter?",
-  "Which repos should we prioritize for cleanup or archival?",
-  "What monitoring gaps are most urgent to close?",
+  "Summarize the latest run in plain English.",
+  "What are the most important findings from the latest snapshot?",
+  "Are there any archive growth risks I should know about?",
+  "What should I email right now?",
+  "Use web search for extra context on this run.",
 ];
 
+type ParsedReport = {
+  summary?: string;
+  findings?: string[];
+  next_steps?: string[];
+  risks?: string[];
+  questions?: string[];
+  sources?: string[];
+};
+
 export default function AssistantPage() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<
-    number | null
-  >(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [reportBundle, setReportBundle] = useState<ReportBundle | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
-  const [reportStatus, setReportStatus] = useState<string | null>(null);
-  const [reportPreview, setReportPreview] = useState<ReportBundle | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportStatus, setReportStatus] = useState<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/ai/conversations`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then(setConversations)
-      .catch(() => {});
+    getDashboardStats().then(setStats).catch(() => {});
+    getLatestReport().then(setReportBundle).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    getLatestReport()
-      .then(setReportPreview)
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!activeConversationId) {
-      setMessages([]);
-      return;
-    }
-
-    fetch(`${API}/api/ai/conversations/${activeConversationId}`, {
-      cache: "no-store",
-    })
-      .then((response) => response.json())
-      .then(setMessages)
-      .catch(() => {});
-  }, [activeConversationId]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -79,78 +57,278 @@ export default function AssistantPage() {
     focusComposer();
   }
 
-  function startNewChat() {
-    setActiveConversationId(null);
-    setMessages([]);
-    setInput("");
-    setReportStatus(null);
-    setReportPreview(null);
-    focusComposer();
+  function escapeHtml(str: string) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;");
   }
 
-  async function refreshConversations() {
-    const response = await fetch(`${API}/api/ai/conversations`, {
-      cache: "no-store",
-    });
-    if (response.ok) {
-      setConversations(await response.json());
-    }
-  }
+  function convertMarkdownToHtml(text: string) {
+    if (!text) return "";
 
-  async function removeConversation(id: number) {
-    try {
-      await deleteConversation(id);
-      setConversations((previous) => previous.filter((conversation) => conversation.id !== id));
-      if (activeConversationId === id) {
-        startNewChat();
+    let escaped = escapeHtml(text);
+    escaped = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+    const lines = escaped.split(/\r?\n/);
+    let out = "";
+    let inList = false;
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (line.match(/^\-\s+/)) {
+        if (!inList) {
+          out += '<ul style="margin:6px 0 6px 18px;padding:0">';
+          inList = true;
+        }
+        out += "<li>" + line.replace(/^\-\s+/, "") + "</li>";
+      } else {
+        if (inList) {
+          out += "</ul>";
+          inList = false;
+        }
+        if (line === "") {
+          out += "<br/>";
+        } else {
+          out += '<p style="margin:6px 0;line-height:1.6">' + line + "</p>";
+        }
       }
-    } catch {
-      setReportStatus("Could not delete the conversation right now.");
     }
+
+    if (inList) out += "</ul>";
+    return out;
   }
 
-  async function generateReportPreview() {
+  function parseStructuredReport(text: string): ParsedReport | null {
+    if (!text) return null;
+
+    const lower = text.toLowerCase();
+    if (
+      !(
+        lower.includes("**summary**") ||
+        lower.includes("findings") ||
+        lower.includes("next steps") ||
+        lower.includes("risks") ||
+        lower.includes("questions")
+      )
+    ) {
+      return null;
+    }
+
+    const sections: ParsedReport = {};
+    const norm = text.replace(/\r/g, "");
+    const markers = [
+      "**Summary**",
+      "**Findings**",
+      "**Next steps**",
+      "**Risks**",
+      "**Questions**",
+      "Sources:",
+    ];
+
+    const parts: { [k: string]: string } = {};
+    let lastMarker = "__start__";
+    parts[lastMarker] = "";
+
+    for (const line of norm.split("\n")) {
+      const trimmed = line.trim();
+      const marker = markers.find((mk) => trimmed.startsWith(mk));
+
+      if (marker) {
+        lastMarker = marker;
+        parts[lastMarker] = trimmed.replace(marker, "").trim();
+        continue;
+      }
+
+      parts[lastMarker] =
+        (parts[lastMarker] || "") +
+        (parts[lastMarker] === "" ? "" : "\n") +
+        line;
+    }
+
+    function cleanInlineMarkdown(value: string) {
+      return value
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/__(.+?)__/g, "$1")
+        .replace(/`(.+?)`/g, "$1")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function extractList(s?: string) {
+      if (!s) return [] as string[];
+      const out: string[] = [];
+      for (const line of s.split("\n")) {
+        const t = line.trim();
+        if (t === "") continue;
+
+        const normalized = cleanInlineMarkdown(
+          t
+            .replace(/^[\-\*•]\s+/, "")
+            .replace(/^\d+[\.)]\s+/, "")
+        );
+
+        if (normalized) {
+          out.push(normalized);
+        }
+      }
+      return out;
+    }
+
+    const sum = parts["**Summary**"] || parts["__start__"] || "";
+    sections.summary = sum.trim();
+    sections.findings = extractList(parts["**Findings**"]);
+    sections.next_steps = extractList(parts["**Next steps**"]);
+    sections.risks = extractList(parts["**Risks**"]);
+    sections.questions = extractList(parts["**Questions**"]);
+    if (parts["Sources:"]) {
+      sections.sources = extractList(parts["Sources:"]);
+    }
+
+    return sections;
+  }
+
+  function ReportCard({ text }: { text: string }) {
+    const parsed = parseStructuredReport(text);
+    if (!parsed) {
+      return (
+        <div
+          className={styles.fallbackMarkdown}
+          dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(text) }}
+        />
+      );
+    }
+
+    const rawSummary = parsed.summary ?? "";
+    const firstLine = rawSummary.split(/\r?\n/)[0] ?? "";
+    const restSummary = rawSummary.split(/\r?\n/).slice(1).join("\n").trim();
+
+    return (
+      <div className={styles.reportFrame}>
+        <div className={styles.reportTop}>
+          <p className={styles.reportPromptTitle}>
+            Which repositories show unusual growth this week?
+          </p>
+          <h3 className={styles.reportTitle}>{firstLine || "Assessment"}</h3>
+          {restSummary ? <p className={styles.reportSummary}>{restSummary}</p> : null}
+        </div>
+
+        <div className={styles.reportGrid}>
+          <div className={styles.reportCol}>
+            <div className={styles.reportColTitle}>Findings</div>
+            {parsed.findings && parsed.findings.length > 0 ? (
+              <ul className={styles.reportList}>
+                {parsed.findings.map((f, i) => (
+                  <li key={i} className={styles.reportListItem}>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.reportMuted}>No findings</p>
+            )}
+          </div>
+
+          <div className={styles.reportCol}>
+            <div className={styles.reportColTitle}>Next Steps</div>
+            {parsed.next_steps && parsed.next_steps.length > 0 ? (
+              <ul className={styles.reportList}>
+                {parsed.next_steps.map((f, i) => (
+                  <li key={i} className={styles.reportListItem}>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.reportMuted}>No suggestions</p>
+            )}
+          </div>
+
+          <div className={styles.reportCol}>
+            <div className={styles.reportColTitle}>Risks</div>
+            {parsed.risks && parsed.risks.length > 0 ? (
+              <ul className={styles.reportList}>
+                {parsed.risks.map((f, i) => (
+                  <li key={i} className={styles.reportListItem}>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.reportMuted}>No risks</p>
+            )}
+          </div>
+
+          <div className={styles.reportCol}>
+            <div className={styles.reportColTitle}>Questions</div>
+            {parsed.questions && parsed.questions.length > 0 ? (
+              <ul className={styles.reportList}>
+                {parsed.questions.map((f, i) => (
+                  <li key={i} className={styles.reportListItem}>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.reportMuted}>No questions</p>
+            )}
+          </div>
+        </div>
+
+        {parsed.sources && parsed.sources.length > 0 ? (
+          <div className={styles.sourcesWrap}>
+            <span className={styles.sourcesLabel}>Sources</span>
+            <span className={styles.sourcesValue}>{parsed.sources.join(" · ")}</span>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  async function refreshReport() {
     setReportLoading(true);
-    setReportStatus("Generating latest report preview...");
+    setReportStatus("Generating the latest PDF preview and refreshing the report...");
 
     try {
-      const report = await getLatestReport();
-      setReportPreview(report);
+      const [nextStats, nextReport] = await Promise.all([
+        getDashboardStats(),
+        getLatestReport(),
+      ]);
+      setStats(nextStats);
+      setReportBundle(nextReport);
       setReportStatus("Latest report preview is ready.");
     } catch {
-      setReportStatus("Could not generate the report preview right now.");
+      setReportStatus("Could not refresh the report preview right now.");
     } finally {
       setReportLoading(false);
     }
   }
 
   async function sendLatestReport() {
-    setReportStatus("Sending latest report...");
+    setReportLoading(true);
+    setReportStatus("Generating the PDF and sending the email...");
 
     try {
-      const response = await fetch(`${API}/api/reports/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ report_type: "latest" }),
-      });
+      const payload = await sendReport("latest");
 
-      if (!response.ok) {
-        throw new Error("report request failed");
-      }
-
-      const payload = (await response.json()) as { report?: ReportBundle };
       if (payload.report) {
-        setReportPreview(payload.report);
+        setReportBundle(payload.report);
+      } else {
+        await refreshReport();
       }
 
-      setReportStatus("Latest report sent with the PDF attachment.");
+      setReportStatus(`PDF generated and sent to ${payload.to}.`);
     } catch {
-      setReportStatus("Could not send the report right now.");
+      setReportStatus("Could not generate and send the PDF right now.");
+    } finally {
+      setReportLoading(false);
     }
   }
 
   async function sendMessage(text?: string) {
     const messageText = (text ?? input).trim();
+
     if (!messageText || loading) {
       return;
     }
@@ -163,7 +341,7 @@ export default function AssistantPage() {
       ...previous,
       {
         id: Date.now(),
-        conversation_id: activeConversationId ?? 0,
+        conversation_id: 0,
         role: "user",
         content: messageText,
         tokens_used: 0,
@@ -173,31 +351,17 @@ export default function AssistantPage() {
     ]);
 
     try {
-      const response = await fetch(`${API}/api/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: messageText,
-          conversation_id: activeConversationId ?? 0,
-          web_search: webSearch,
-        }),
-      });
-      const data = await response.json();
-
-      if (!activeConversationId && data.conversation_id) {
-        setActiveConversationId(data.conversation_id);
-        await refreshConversations();
-      }
+      const response = await postChat(messageText, undefined, webSearch);
 
       setMessages((previous) => [
         ...previous,
         {
           id: Date.now() + 1,
-          conversation_id: data.conversation_id,
+          conversation_id: response.conversation_id,
           role: "assistant",
-          content: data.message,
-          tokens_used: data.tokens_used,
-          web_search: data.web_search,
+          content: response.message,
+          tokens_used: response.tokens_used,
+          web_search: response.web_search,
           created_at: new Date().toISOString(),
         },
       ]);
@@ -206,7 +370,7 @@ export default function AssistantPage() {
         ...previous,
         {
           id: Date.now() + 1,
-          conversation_id: activeConversationId ?? 0,
+          conversation_id: 0,
           role: "assistant",
           content:
             "The AI service is unavailable right now. Check that the backend is running and try again.",
@@ -220,613 +384,168 @@ export default function AssistantPage() {
     }
   }
 
-  const activeConversation = conversations.find(
-    (conversation) => conversation.id === activeConversationId,
-  );
+  const reportHeadline = reportBundle?.headline ?? "Waiting for the latest report";
+  const reportSummary =
+    reportBundle?.summary ??
+    "Generate the PDF to see the current run summary here.";
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "320px minmax(0, 1fr)",
-        gap: 24,
-        alignItems: "start",
-      }}
-    >
-      <aside
-        className="card"
-        style={{
-          padding: 24,
-          position: "sticky",
-          top: 24,
-          display: "grid",
-          gap: 20,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              color: "var(--text-muted)",
-              marginBottom: 8,
-            }}
-          >
-            AI ASSISTANT
+    <div className={styles.pageWrap}>
+      <section className={styles.assessmentShell}>
+        <div className={styles.heroRow}>
+          <div>
+            <p className={styles.kicker}>Assessment Studio</p>
+            <h1 className={styles.pageTitle}>Backup Risk Assessment</h1>
+            <p className={styles.pageSubtitle}>
+              Ask direct questions about your latest run and get an executive-style
+              assessment with findings, next steps, and risks.
+            </p>
           </div>
-          <h1 style={{ fontSize: 36, lineHeight: 1, marginBottom: 10 }}>
-            Backup analyst
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: "var(--text-secondary)",
-              lineHeight: 1.7,
-            }}
-          >
-            Ask about backup runs, failures, repository growth, and the latest
-            snapshot data. Suggestions stay in the composer until you send them.
-          </p>
-        </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 12,
-          }}
-        >
-          <div className="stat-card" style={{ padding: 16 }}>
-            <div className="stat-label">Chats</div>
-            <div className="stat-value" style={{ fontSize: 24 }}>
-              {conversations.length}
-            </div>
-          </div>
-          <div className="stat-card" style={{ padding: 16 }}>
-            <div className="stat-label">Mode</div>
-            <div className="stat-value" style={{ fontSize: 18 }}>
-              {webSearch ? "Web + DB" : "DB only"}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
-            <div className="section-title" style={{ marginBottom: 0 }}>
-              Quick prompts
-            </div>
+          <div className={styles.headerMeta}>
+            <span className={styles.statusPill}>
+              {stats?.last_run_status ?? "No run yet"}
+            </span>
             <button
               type="button"
-              className="btn btn-ghost"
-              onClick={startNewChat}
+              className="btn btn-primary"
+              onClick={sendLatestReport}
+              disabled={reportLoading}
             >
-              New chat
+              {reportLoading ? "Working..." : "Generate PDF & Email"}
             </button>
           </div>
-          <div style={{ display: "grid", gap: 8 }}>
-            {starterQuestions.slice(0, 3).map((question) => (
-              <button
-                key={question}
-                type="button"
-                className="pill"
-                onClick={() => draftPrompt(question)}
-                style={{
-                  justifyContent: "flex-start",
-                  whiteSpace: "normal",
-                  textAlign: "left",
-                }}
-              >
-                {question}
-              </button>
-            ))}
+        </div>
+
+        <div className={styles.composerWrap}>
+          <textarea
+            ref={composerRef}
+            className={styles.composer}
+            placeholder="Ask a question (e.g. 'Which repositories show unusual growth this week?')"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void sendMessage();
+              }
+            }}
+            disabled={loading}
+          />
+
+          <div className={styles.composerActions}>
+            <label className={styles.webSearchLabel}>
+              <input
+                type="checkbox"
+                checked={webSearch}
+                onChange={(e) => setWebSearch(e.target.checked)}
+              />
+              Use web search
+            </label>
+
+            <button
+              type="button"
+              className={styles.sendBtn}
+              onClick={() => void sendMessage()}
+              disabled={loading || !input.trim()}
+            >
+              {loading ? "Generating..." : "Send Question"}
+            </button>
           </div>
         </div>
 
-        <div>
-          <div className="section-title">Conversation list</div>
-          <div className="section-desc">
-            Switch between previous sessions or start a fresh thread.
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gap: 8,
-              maxHeight: 340,
-              overflow: "auto",
-              paddingRight: 4,
-            }}
-          >
-            {conversations.length === 0 ? (
-              <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                No saved conversations yet.
-              </div>
-            ) : (
-              conversations.map((conversation) => {
-                const isActive = conversation.id === activeConversationId;
-                return (
-                  <div
-                    key={conversation.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setActiveConversationId(conversation.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        setActiveConversationId(conversation.id);
-                      }
-                    }}
-                    className="card"
-                    style={{
-                      textAlign: "left",
-                      padding: 14,
-                      borderColor: isActive ? "var(--text)" : "var(--border)",
-                      background: isActive
-                        ? "var(--bg-hover)"
-                        : "var(--bg-card)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div
-                      style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}
-                    >
-                      {conversation.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                      {new Date(conversation.created_at).toLocaleDateString(
-                        "en-US",
-                        { month: "short", day: "numeric" },
-                      )}
-                    </div>
-                    <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          removeConversation(conversation.id);
-                        }}
-                        style={{ padding: "4px 8px", fontSize: 11 }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+        <p className={styles.promptHint}>
+          Premade questions are shown first so you can jump straight into the
+          most common backup-review flows.
+        </p>
+
+        <div className={styles.premadeGrid}>
+          {starterQuestions.map((question) => (
+            <button
+              key={question}
+              type="button"
+              className={styles.premadeBtn}
+              onClick={() => draftPrompt(question)}
+            >
+              {question}
+            </button>
+          ))}
         </div>
-      </aside>
 
-      <main style={{ display: "grid", gap: 24 }}>
-        <section
-          className="card"
-          style={{
-            padding: 0,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 760,
-          }}
-        >
-          <div
-            style={{
-              padding: 24,
-              borderBottom: "1px solid var(--border-light)",
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 16,
-              alignItems: "start",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                  color: "var(--text-muted)",
-                  marginBottom: 6,
-                }}
-              >
-                AI Workspace
-              </div>
-              <h2 style={{ fontSize: 30, lineHeight: 1, marginBottom: 8 }}>
-                {activeConversation?.title ?? "New conversation"}
-              </h2>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "var(--text-secondary)",
-                  maxWidth: 720,
-                }}
-              >
-                The assistant reads from the backup database and can optionally
-                search the web. Questions remain in the composer until you send
-                them.
-              </p>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={generateReportPreview}
-                disabled={reportLoading}
-              >
-                {reportLoading ? "Generating..." : "Generate report"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={sendLatestReport}
-              >
-                Send email
-              </button>
-            </div>
-          </div>
+        {reportStatus ? <p className={styles.reportStatus}>{reportStatus}</p> : null}
 
-          {reportStatus ? (
-            <div
-              style={{
-                padding: "14px 24px 0",
-                color: "var(--text-secondary)",
-                fontSize: 13,
-              }}
-            >
-              {reportStatus}
-            </div>
-          ) : null}
+        {messages.length > 0 ? (
+          <div className={styles.chatFeed}>
+            {messages.map((message) => {
+              const isUser = message.role === "user";
 
-          <div
-            style={{
-              flex: 1,
-              overflow: "auto",
-              padding: 24,
-              display: "grid",
-              gap: 16,
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.7), rgba(247,245,240,0.85))",
-            }}
-          >
-            {messages.length === 0 ? (
-              <div
-                style={{
-                  display: "grid",
-                  placeItems: "center",
-                  minHeight: 420,
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ maxWidth: 640 }}>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: "var(--text-muted)",
-                      marginBottom: 12,
-                    }}
-                  >
-                    Start with a structured prompt or write your own.
+              return (
+                <article
+                  key={message.id}
+                  className={isUser ? styles.userBubbleWrap : styles.assistantWrap}
+                >
+                  <div className={styles.msgHeader}>
+                    {isUser ? "You" : "Assistant"}
+                    {message.role === "assistant" && message.web_search
+                      ? " · web search"
+                      : ""}
                   </div>
-                  <h3 style={{ fontSize: 30, marginBottom: 10 }}>
-                    Ask for facts, not guesses.
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      color: "var(--text-secondary)",
-                      lineHeight: 1.8,
-                      marginBottom: 20,
-                    }}
-                  >
-                    The assistant will answer from the persisted backup data,
-                    current run metrics, and the latest repository snapshot.
-                  </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 8,
-                      justifyContent: "center",
-                    }}
-                  >
-                    {starterQuestions.map((question) => (
-                      <button
-                        key={question}
-                        type="button"
-                        className="pill"
-                        onClick={() => draftPrompt(question)}
-                      >
-                        {question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              messages.map((message) => {
-                const isUser = message.role === "user";
-                return (
-                  <article
-                    key={message.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: isUser ? "flex-end" : "flex-start",
-                    }}
-                  >
-                    <div
-                      style={{
-                        maxWidth: "min(780px, 92%)",
-                        display: "grid",
-                        gap: 6,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                          color: isUser ? "var(--text)" : "var(--text-muted)",
-                        }}
-                      >
-                        {isUser ? "You" : "Assistant"}
-                      </div>
-                      <div
-                        style={{
-                          padding: "16px 18px",
-                          borderRadius: 18,
-                          border: "1px solid var(--border)",
-                          background: isUser ? "var(--text)" : "var(--bg-card)",
-                          color: isUser ? "#fff" : "var(--text)",
-                          boxShadow: isUser
-                            ? "0 8px 24px rgba(26, 26, 26, 0.08)"
-                            : "none",
-                          whiteSpace: "pre-wrap",
-                          lineHeight: 1.8,
-                        }}
-                      >
-                        {message.content}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                        {new Date(message.created_at).toLocaleTimeString(
-                          "en-US",
-                          { hour: "2-digit", minute: "2-digit" },
-                        )}
-                        {message.role === "assistant" && message.tokens_used > 0
-                          ? ` · ${message.tokens_used} tokens${message.web_search ? " · web search" : ""}`
-                          : ""}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
-            )}
 
-            {loading ? (
-              <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Thinking through the latest data...
-              </div>
-            ) : null}
+                  <div className={isUser ? styles.userBubble : styles.assistantBubble}>
+                    {message.role === "assistant" ? (
+                      <ReportCard text={message.content} />
+                    ) : (
+                      <p className={styles.userText}>{message.content}</p>
+                    )}
+                  </div>
+
+                  <div className={styles.msgMeta}>
+                    {formatDate(message.created_at)}
+                    {message.role === "assistant" && message.tokens_used > 0
+                      ? ` · ${message.tokens_used} tokens`
+                      : ""}
+                  </div>
+                </article>
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
+        ) : (
+          <section className={styles.previewCard}>
+            <p className={styles.previewKicker}>Latest Report Preview</p>
+            <h2 className={styles.previewHeadline}>{reportHeadline}</h2>
+            <p className={styles.previewSummary}>{reportSummary}</p>
 
-          {reportPreview ? (
-            <div style={{ padding: "0 24px 24px" }}>
-              <ReportPreview report={reportPreview} />
+            <div className={styles.previewStats}>
+              <div className={styles.previewStatItem}>
+                <span>Total Repositories</span>
+                <strong>{stats?.total_repos ?? 0}</strong>
+              </div>
+              <div className={styles.previewStatItem}>
+                <span>Total Size</span>
+                <strong>{formatBytes(stats?.total_size_bytes ?? 0)}</strong>
+              </div>
+              <div className={styles.previewStatItem}>
+                <span>Avg Duration</span>
+                <strong>{formatDuration(stats?.avg_duration_ms ?? 0)}</strong>
+              </div>
             </div>
-          ) : null}
+          </section>
+        )}
 
-          <div
-            style={{
-              borderTop: "1px solid var(--border-light)",
-              padding: 20,
-              background: "var(--bg-card)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
-              {starterQuestions.slice(0, 3).map((question) => (
-                <button
-                  key={question}
-                  type="button"
-                  className="pill"
-                  onClick={() => draftPrompt(question)}
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
+        {loading ? (
+          <p className={styles.loadingState}>Thinking through the latest data...</p>
+        ) : null}
 
-            <textarea
-              ref={composerRef}
-              className="textarea"
-              placeholder="Ask about backup failures, repository growth, or the latest metrics."
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  sendMessage();
-                }
-              }}
-              disabled={loading}
-              style={{ minHeight: 118, resize: "vertical", marginBottom: 12 }}
-            />
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 16,
-                flexWrap: "wrap",
-              }}
-            >
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 13,
-                  color: "var(--text-secondary)",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={webSearch}
-                  onChange={(event) => setWebSearch(event.target.checked)}
-                  style={{ accentColor: "var(--text)" }}
-                />
-                Use web search
-              </label>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => sendMessage()}
-                disabled={loading || !input.trim()}
-              >
-                {loading ? "Generating..." : "Send message"}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <RepositoryHealth />
-      </main>
+        <button
+          type="button"
+          className={styles.focusJump}
+          onClick={focusComposer}
+          aria-label="Focus question input"
+        >
+          Ask another question
+        </button>
+      </section>
     </div>
-  );
-}
-
-function RepositoryHealth() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-
-  useEffect(() => {
-    fetch(`${API}/api/dashboard/stats`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then(setStats)
-      .catch(() => {});
-  }, []);
-
-  const latestAnalytics = stats?.latest_analytics ?? null;
-
-  return (
-    <section className="card" style={{ padding: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "start",
-          gap: 16,
-          flexWrap: "wrap",
-          marginBottom: 18,
-        }}
-      >
-        <div>
-          <div className="section-title">Repository health</div>
-          <div className="section-desc" style={{ marginBottom: 0 }}>
-            Facts pulled from the dashboard totals and the latest stored
-            snapshot.
-          </div>
-        </div>
-        <div className="pill" style={{ cursor: "default" }}>
-          {stats?.last_run_status ?? "No run yet"}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 16,
-          marginBottom: 16,
-        }}
-      >
-        <div className="stat-card">
-          <div className="stat-label">Repositories</div>
-          <div className="stat-value">{stats?.total_repos ?? 0}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Successful backups</div>
-          <div className="stat-value" style={{ color: "var(--success)" }}>
-            {stats?.total_successful ?? 0}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Failures</div>
-          <div className="stat-value" style={{ color: "var(--danger)" }}>
-            {stats?.total_failed ?? 0}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Latest commits</div>
-          <div className="stat-value">
-            {latestAnalytics?.total_commits ?? 0}
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: 16,
-        }}
-      >
-        <div className="card-flat">
-          <div className="stat-label">Latest blob path</div>
-          <div
-            className="stat-value"
-            style={{
-              fontSize: 20,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {latestAnalytics?.largest_blob_path ?? "—"}
-          </div>
-        </div>
-        <div className="card-flat">
-          <div className="stat-label">Largest blob size</div>
-          <div className="stat-value" style={{ fontSize: 20 }}>
-            {latestAnalytics
-              ? `${(latestAnalytics.largest_blob_size_bytes / 1024 / 1024).toFixed(1)} MB`
-              : "—"}
-          </div>
-        </div>
-        <div className="card-flat">
-          <div className="stat-label">Tracked files</div>
-          <div className="stat-value" style={{ fontSize: 20 }}>
-            {latestAnalytics?.tracked_files ?? 0}
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }

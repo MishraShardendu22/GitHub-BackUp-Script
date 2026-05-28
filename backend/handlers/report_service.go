@@ -1,10 +1,14 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,6 +78,7 @@ type ReportBundle struct {
 	Subject      string                   `json:"subject"`
 	Headline     string                   `json:"headline"`
 	Summary      string                   `json:"summary"`
+	AIInsights   []string                 `json:"ai_insights,omitempty"`
 	Metrics      []ReportMetric           `json:"metrics"`
 	Findings     []string                 `json:"findings"`
 	NextSteps    []string                 `json:"next_steps"`
@@ -133,6 +138,7 @@ func BuildReportBundle(ctx context.Context, reportType string) (ReportBundle, er
 	bundle.NextSteps = reportNextSteps(run, analytics, repositories, failures)
 	bundle.Risks = reportRisks(run, analytics, repositories, failures)
 	bundle.Questions = reportQuestions(run, analytics, repositories, failures)
+	bundle.AIInsights = buildAIInsights(ctx, bundle)
 
 	return bundle, nil
 }
@@ -292,11 +298,18 @@ func reportSummary(run ReportRunSnapshot, analytics *ReportAnalyticsSnapshot, re
 }
 
 func reportMetrics(stats reportStats, run ReportRunSnapshot, analytics *ReportAnalyticsSnapshot, repositories []ReportRepository) []ReportMetric {
+	archiveSize := stats.TotalSizeBytes
+	largestArchive := stats.LargestArchive
+	if analytics != nil {
+		archiveSize = analytics.TotalArchiveSizeBytes
+		largestArchive = analytics.LargestArchiveSizeBytes
+	}
+
 	metrics := []ReportMetric{
 		{Label: "Runs", Value: fmt.Sprintf("%d", stats.TotalRuns), Detail: "Stored backup runs"},
 		{Label: "Repos", Value: fmt.Sprintf("%d", stats.TotalRepos), Detail: fmt.Sprintf("%d distinct repositories", stats.DistinctRepos)},
 		{Label: "Success", Value: fmt.Sprintf("%d", run.Successful), Detail: fmt.Sprintf("%d skipped / %d failed", run.Skipped, run.Failed)},
-		{Label: "Archive", Value: formatBytes(stats.TotalSizeBytes), Detail: fmt.Sprintf("Largest: %s", formatBytes(stats.LargestArchive))},
+		{Label: "Archive", Value: formatBytes(archiveSize), Detail: fmt.Sprintf("Largest: %s", formatBytes(largestArchive))},
 	}
 
 	if analytics != nil {
@@ -380,6 +393,120 @@ func reportQuestions(run ReportRunSnapshot, analytics *ReportAnalyticsSnapshot, 
 		questions = append(questions, "Do we want to compare the next run against this baseline automatically?")
 	}
 	return questions
+}
+
+func buildAIInsights(ctx context.Context, bundle ReportBundle) []string {
+	apiKey := os.Getenv("MODEL_KEY")
+	if apiKey == "" {
+		return fallbackAIInsights(bundle)
+	}
+
+	model := os.Getenv("MODEL_NAME")
+	if model == "" {
+		model = "google/gemini-2.5-flash"
+	}
+	if !strings.Contains(model, ":online") {
+		model += ":online"
+	}
+
+	payload := map[string]any{
+		"run":          bundle.Run,
+		"summary":      bundle.Summary,
+		"metrics":      bundle.Metrics,
+		"findings":     bundle.Findings,
+		"next_steps":   bundle.NextSteps,
+		"risks":        bundle.Risks,
+		"questions":    bundle.Questions,
+		"insights":     bundle.AIInsights,
+		"repositories": bundle.Repositories,
+		"failures":     bundle.Failures,
+	}
+	if bundle.Analytics != nil {
+		payload["analytics"] = bundle.Analytics
+	}
+
+	requestBody := map[string]any{
+		"model": model,
+		"messages": []map[string]string{
+			{"role": "system", "content": "You write structured report addenda for a GitHub backup monitoring system. Return only JSON."},
+			{"role": "user", "content": fmt.Sprintf("Use the following report bundle data to produce a richer, factual report addendum. Return JSON with keys summary_detail, insights, and common_questions. summary_detail must be one paragraph. insights must be 4-6 concise bullets. common_questions must be 3-5 question-and-answer strings using the form 'Q: ... A: ...'. Keep the response grounded in the supplied data and suitable for inclusion in a PDF report.\n\n%s", mustJSON(payload))},
+		},
+		"response_format": map[string]string{"type": "json_object"},
+	}
+
+	bodyJSON, _ := json.Marshal(requestBody)
+	httpReq, _ := http.NewRequestWithContext(ctx, "POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader(bodyJSON))
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	httpReq.Header.Set("HTTP-Referer", os.Getenv("OPENROUTER_SITE_URL"))
+	httpReq.Header.Set("X-Title", "GitHub Backup Monitor")
+
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return fallbackAIInsights(bundle)
+	}
+	defer resp.Body.Close()
+
+	respBytes, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(respBytes, &result); err != nil || len(result.Choices) == 0 {
+		return fallbackAIInsights(bundle)
+	}
+
+	content := strings.TrimSpace(result.Choices[0].Message.Content)
+	content = strings.Trim(content, "`")
+
+	var parsed struct {
+		SummaryDetail   string   `json:"summary_detail"`
+		Insights        []string `json:"insights"`
+		CommonQuestions []string `json:"common_questions"`
+	}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		return fallbackAIInsights(bundle)
+	}
+
+	insights := make([]string, 0, 1+len(parsed.Insights)+len(parsed.CommonQuestions))
+	if parsed.SummaryDetail != "" {
+		insights = append(insights, parsed.SummaryDetail)
+	}
+	insights = append(insights, parsed.Insights...)
+	insights = append(insights, parsed.CommonQuestions...)
+	if len(insights) == 0 {
+		return fallbackAIInsights(bundle)
+	}
+	return insights
+}
+
+func fallbackAIInsights(bundle ReportBundle) []string {
+	insights := []string{fmt.Sprintf("The latest run processed %d repositories with %d successes and %d failures.", bundle.Run.TotalRepos, bundle.Run.Successful, bundle.Run.Failed)}
+	if len(bundle.Repositories) > 0 {
+		insights = append(insights, fmt.Sprintf("The largest repository in the current snapshot is %s at %s.", bundle.Repositories[0].Name, bundle.Repositories[0].ArchiveSize))
+	}
+	if bundle.Analytics != nil {
+		insights = append(insights, fmt.Sprintf("The latest snapshot recorded %d tracked files and %d archive entries.", bundle.Analytics.TrackedFiles, bundle.Analytics.ArchiveCount))
+		if bundle.Analytics.LargestArchivePath != "" {
+			insights = append(insights, fmt.Sprintf("Review %s for growth pressure before the next retention window.", bundle.Analytics.LargestArchivePath))
+		}
+	}
+	if len(bundle.Questions) > 0 {
+		insights = append(insights, fmt.Sprintf("Common review questions: %s", strings.Join(bundle.Questions, " ")))
+	}
+	return insights
+}
+
+func mustJSON(value any) string {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
 }
 
 func RenderReportHTML(bundle ReportBundle) string {
@@ -473,6 +600,9 @@ func RenderReportLaTeX(bundle ReportBundle) string {
 	b.WriteString(`\section{Overview}
 ` + latexParagraph(bundle.Summary) + `
 `)
+	if len(bundle.AIInsights) > 0 {
+		b.WriteString(latexItemSection("AI Addendum", bundle.AIInsights))
+	}
 	b.WriteString(`\section{Key Metrics}
 \begin{tabular}{p{0.28\linewidth}p{0.18\linewidth}p{0.42\linewidth}}
 \toprule
@@ -551,113 +681,49 @@ func GenerateReportPDF(ctx context.Context, bundle ReportBundle) (string, error)
 	}
 
 	pdfPath := filepath.Join(tempDir, "report.pdf")
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(14, 14, 14)
-	pdf.SetAutoPageBreak(true, 14)
-	pdf.SetTitle(bundle.Subject, false)
-	pdf.SetAuthor("GitHub Backup Monitor", false)
-	pdf.AddPage()
-
-	writeTitle := func(text string) {
-		pdf.SetFont("Helvetica", "B", 18)
-		pdf.MultiCell(0, 9, text, "", "L", false)
-		pdf.Ln(1)
+	texPath := filepath.Join(tempDir, "report.tex")
+	if err := os.WriteFile(texPath, []byte(RenderReportLaTeX(bundle)), 0o600); err != nil {
+		_ = os.RemoveAll(tempDir)
+		return "", err
 	}
 
-	writeLabel := func(text string) {
-		pdf.SetFont("Helvetica", "B", 10)
-		pdf.SetTextColor(107, 101, 96)
-		pdf.CellFormat(0, 6, strings.ToUpper(text), "", 1, "L", false, 0, "")
-		pdf.SetTextColor(26, 26, 26)
-	}
-
-	writeBullets := func(items []string) {
-		pdf.SetFont("Helvetica", "", 10.5)
-		for _, item := range items {
-			pdf.MultiCell(0, 5.5, "• "+item, "", "L", false)
-			pdf.Ln(0.5)
+	compiler, err := exec.LookPath("pdflatex")
+	if err != nil {
+		compiler, err = findLatexCommand()
+		if err != nil {
+			// LaTeX not available; fall back to a simple PDF renderer using gofpdf
+			if pdfErr := generateSimplePDF(bundle, pdfPath); pdfErr != nil {
+				_ = os.RemoveAll(tempDir)
+				return "", fmt.Errorf("latex not found and fallback pdf generation failed: %w", pdfErr)
+			}
+			return pdfPath, nil
 		}
 	}
 
-	writeTitle(bundle.Subject)
-	pdf.SetFont("Helvetica", "", 11)
-	pdf.MultiCell(0, 6, bundle.Summary, "", "L", false)
-	pdf.Ln(2)
-
-	writeLabel("Key metrics")
-	pdf.SetFont("Helvetica", "", 10.5)
-	for _, metric := range bundle.Metrics {
-		line := metric.Label + ": " + metric.Value
-		if metric.Detail != "" {
-			line += " - " + metric.Detail
-		}
-		pdf.MultiCell(0, 5.5, line, "", "L", false)
+	if err := runLatexCompile(ctx, compiler, tempDir); err != nil {
+		_ = os.RemoveAll(tempDir)
+		return "", err
 	}
-	pdf.Ln(1)
-
-	if len(bundle.Findings) > 0 {
-		writeLabel("Findings")
-		writeBullets(bundle.Findings)
-		pdf.Ln(1)
-	}
-	if len(bundle.NextSteps) > 0 {
-		writeLabel("Next steps")
-		writeBullets(bundle.NextSteps)
-		pdf.Ln(1)
-	}
-	if len(bundle.Risks) > 0 {
-		writeLabel("Risks")
-		writeBullets(bundle.Risks)
-		pdf.Ln(1)
-	}
-	if len(bundle.Questions) > 0 {
-		writeLabel("Questions")
-		writeBullets(bundle.Questions)
-		pdf.Ln(1)
-	}
-
-	if len(bundle.Repositories) > 0 {
-		writeLabel("Top repositories")
-		pdf.SetFont("Helvetica", "B", 9)
-		pdf.CellFormat(95, 6, "Repository", "1", 0, "L", false, 0, "")
-		pdf.CellFormat(35, 6, "Size", "1", 0, "L", false, 0, "")
-		pdf.CellFormat(50, 6, "Status", "1", 1, "L", false, 0, "")
-		pdf.SetFont("Helvetica", "", 9)
-		for _, repo := range bundle.Repositories {
-			pdf.CellFormat(95, 6, truncateForPDF(repo.Name, 48), "1", 0, "L", false, 0, "")
-			pdf.CellFormat(35, 6, repo.ArchiveSize, "1", 0, "L", false, 0, "")
-			pdf.CellFormat(50, 6, repo.Status, "1", 1, "L", false, 0, "")
-		}
-		pdf.Ln(1)
-	}
-
-	if len(bundle.Failures) > 0 {
-		writeLabel("Recent failures")
-		pdf.SetFont("Helvetica", "B", 9)
-		pdf.CellFormat(55, 6, "Repository", "1", 0, "L", false, 0, "")
-		pdf.CellFormat(95, 6, "Error", "1", 0, "L", false, 0, "")
-		pdf.CellFormat(30, 6, "Time", "1", 1, "L", false, 0, "")
-		pdf.SetFont("Helvetica", "", 9)
-		for _, failure := range bundle.Failures {
-			pdf.CellFormat(55, 6, truncateForPDF(failure.Repository, 28), "1", 0, "L", false, 0, "")
-			pdf.CellFormat(95, 6, truncateForPDF(failure.Message, 52), "1", 0, "L", false, 0, "")
-			pdf.CellFormat(30, 6, failure.CreatedAt.Format("01-02 15:04"), "1", 1, "L", false, 0, "")
-		}
-	}
-
-	pdf.SetFooterFunc(func() {
-		pdf.SetY(-12)
-		pdf.SetFont("Helvetica", "I", 8)
-		pdf.SetTextColor(150, 150, 150)
-		pdf.CellFormat(0, 8, "Generated from stored backup data", "", 0, "L", false, 0, "")
-	})
-
-	if err := pdf.OutputFileAndClose(pdfPath); err != nil {
+	if err := runLatexCompile(ctx, compiler, tempDir); err != nil {
 		_ = os.RemoveAll(tempDir)
 		return "", err
 	}
 
 	return pdfPath, nil
+}
+
+func runLatexCompile(ctx context.Context, compiler string, dir string) error {
+	args := []string{"-interaction=nonstopmode", "-halt-on-error", "report.tex"}
+	if strings.HasSuffix(filepath.Base(compiler), "latexmk") {
+		args = []string{"-pdf", "-interaction=nonstopmode", "-halt-on-error", "report.tex"}
+	}
+	cmd := exec.CommandContext(ctx, compiler, args...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("latex compile failed: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func findLatexCommand() (string, error) {
@@ -720,4 +786,53 @@ func truncateForPDF(text string, maxRunes int) string {
 		return string(runes[:maxRunes])
 	}
 	return string(runes[:maxRunes-3]) + "..."
+}
+
+func generateSimplePDF(bundle ReportBundle, outPath string) error {
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(20, 20, 20)
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 16)
+	pdf.CellFormat(0, 8, bundle.Headline, "", 1, "", false, 0, "")
+	pdf.Ln(2)
+	pdf.SetFont("Arial", "", 11)
+	pdf.MultiCell(0, 6, bundle.Summary, "", "L", false)
+	pdf.Ln(4)
+
+	// Metrics
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(0, 7, "Key metrics", "", 1, "", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	for _, m := range bundle.Metrics {
+		line := fmt.Sprintf("%s: %s", m.Label, m.Value)
+		pdf.MultiCell(0, 6, line, "", "L", false)
+	}
+	pdf.Ln(3)
+
+	// Sections helper
+	writeSection := func(title string, items []string) {
+		pdf.SetFont("Arial", "B", 12)
+		pdf.CellFormat(0, 7, title, "", 1, "", false, 0, "")
+		pdf.SetFont("Arial", "", 10)
+		if len(items) == 0 {
+			pdf.MultiCell(0, 6, "No items available.", "", "L", false)
+			pdf.Ln(2)
+			return
+		}
+		for _, it := range items {
+			// bullet
+			pdf.MultiCell(0, 6, "- "+it, "", "L", false)
+		}
+		pdf.Ln(2)
+	}
+
+	writeSection("Findings", bundle.Findings)
+	writeSection("Next steps", bundle.NextSteps)
+	writeSection("Risks", bundle.Risks)
+	writeSection("Questions", bundle.Questions)
+
+	if err := pdf.OutputFileAndClose(outPath); err != nil {
+		return err
+	}
+	return nil
 }

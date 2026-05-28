@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MishraShardendu22/github-backup/backend/db"
@@ -43,7 +44,6 @@ func SendReport(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	body := RenderReportHTML(bundle)
 	pdfPath, err := GenerateReportPDF(context.Background(), bundle)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to generate pdf: " + err.Error()})
@@ -63,7 +63,7 @@ func SendReport(c *fiber.Ctx) error {
 	m.SetHeader("From", from)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", bundle.Subject)
-	m.SetBody("text/html", body)
+	m.SetBody("text/plain", renderReportEmailText(bundle))
 	m.Attach(pdfPath, gomail.Rename(bundle.Subject+".pdf"))
 
 	d := gomail.NewDialer(smtpHost, smtpPort, smtpUser, smtpPass)
@@ -79,6 +79,28 @@ func SendReport(c *fiber.Ctx) error {
 		req.ReportType, to, bundle.Subject)
 
 	return c.JSON(fiber.Map{"sent": true, "subject": bundle.Subject, "to": to, "report": bundle})
+}
+
+func renderReportEmailText(bundle ReportBundle) string {
+	var b strings.Builder
+	b.WriteString(bundle.Subject)
+	b.WriteString("\n\n")
+	b.WriteString(bundle.Summary)
+	b.WriteString("\n\nKey metrics:\n")
+	for _, metric := range bundle.Metrics {
+		b.WriteString("- ")
+		b.WriteString(metric.Label)
+		b.WriteString(": ")
+		b.WriteString(metric.Value)
+		if metric.Detail != "" {
+			b.WriteString(" (")
+			b.WriteString(metric.Detail)
+			b.WriteString(")")
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("\nOpen the attached PDF for the full LaTeX report.")
+	return b.String()
 }
 
 func GetLatestReport(c *fiber.Ctx) error {

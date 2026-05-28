@@ -160,6 +160,7 @@ export interface ReportBundle {
   subject: string;
   headline: string;
   summary: string;
+  ai_insights?: string[];
   metrics: ReportMetric[];
   findings: string[];
   next_steps: string[];
