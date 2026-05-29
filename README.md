@@ -87,12 +87,13 @@ Notes:
 **Screenshots and UI**
 UI screenshots are included in the `Images/` folder. Quick references:
 
-- Overview page: [main overview page](Images/main-overview-page.webp)
-- Backups / history detail: [backup detail page](Images/backup-detail-page.webp)
-- Metrics: [metrics page](Images/metrics-page.webp)
-- Live logs (websocket): [live websocket logs feed](Images/live-websocket-logs-feed.webp)
-- AI assistant / risk assessment: [ai results page](Images/ai-results-page.webp)
-- Tailscale / tunnel & server console: [tailscale tunneling](Images/tailscale-tunneling.webp)
+- Overview page: [main overview page](https://res.cloudinary.com/dkxw15and/image/upload/v1780047783/image-upload-app/rsuxybpd0actmninvj88.webp)
+- Backups / history detail: [backup detail page](https://res.cloudinary.com/dkxw15and/image/upload/v1780047783/image-upload-app/jwc21gmydgfsszmkf7gp.webp)
+- Metrics: [metrics page](https://res.cloudinary.com/dkxw15and/image/upload/v1780047783/image-upload-app/cetzwjhsihehjfajnsjd.webp)
+- Live logs (websocket): [live websocket logs feed](https://res.cloudinary.com/dkxw15and/image/upload/v1780047783/image-upload-app/g1kenharzgn55a5f6u32.webp)
+- AI assistant / risk assessment: [ai results page](https://res.cloudinary.com/dkxw15and/image/upload/v1780047784/image-upload-app/ndhctttlg1nen9okbc98.webp)
+- Tailscale / tunnel & server console: [tailscale tunneling](https://res.cloudinary.com/dkxw15and/image/upload/v1780047963/image-upload-app/joue7txmzahi5zfooex5.png)
+- Service and Timer details: [Details](https://res.cloudinary.com/dkxw15and/image/upload/v1780047608/image-upload-app/v4gtqqkjsv5cwrlxmtsj.png)
 
 **Contributing**
 Please follow the coding conventions already present in the repository. See `CONTRIBUTING.md` for a short guide.
