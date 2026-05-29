@@ -49,6 +49,10 @@ func main() {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
 	// Routes
 	routes.Setup(app)
 
