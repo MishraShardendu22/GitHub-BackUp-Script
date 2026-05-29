@@ -94,6 +94,7 @@ UI screenshots are included in the `Images/` folder. Quick references:
 - AI assistant / risk assessment: [ai results page](https://res.cloudinary.com/dkxw15and/image/upload/v1780047784/image-upload-app/ndhctttlg1nen9okbc98.webp)
 - Tailscale / tunnel & server console: [tailscale tunneling](https://res.cloudinary.com/dkxw15and/image/upload/v1780047963/image-upload-app/joue7txmzahi5zfooex5.png)
 - Service and Timer details: [Details](https://res.cloudinary.com/dkxw15and/image/upload/v1780047608/image-upload-app/v4gtqqkjsv5cwrlxmtsj.png)
+- SSH Multiplexing and Config Management for multiple github accounts: [SSH Management](https://res.cloudinary.com/dkxw15and/image/upload/v1780048238/image-upload-app/e6uagcp9nue0prxzkpdm.png)
 
 **Contributing**
 Please follow the coding conventions already present in the repository. See `CONTRIBUTING.md` for a short guide.
