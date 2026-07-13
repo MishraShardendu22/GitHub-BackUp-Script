@@ -11,7 +11,7 @@ import (
 func Setup(app *fiber.App) {
 	api := app.Group("/api")
 	api.Use(middleware.RateLimitDefault())
-	
+
 	// backup handler
 	api.Get("/backups", handlers.GetBackupRuns)
 	api.Get("/backups/latest", handlers.GetLatestBackup)
@@ -62,5 +62,5 @@ func Setup(app *fiber.App) {
 	- /abc/ws/live
 	- /api/ws/live
 	- /foo/bar/ws
-	
+
 */

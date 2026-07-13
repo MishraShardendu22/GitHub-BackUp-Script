@@ -11,6 +11,7 @@ import (
 )
 
 // This is not a comment this is why migrations work
+//
 //go:embed schema.sql
 var migrationSQL string
 

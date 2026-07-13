@@ -8,11 +8,12 @@ import (
 
 /*
 Get all the details of the repo whose full name is given
-*/ 
+*/
 const selectRepoSQL = `
 	SELECT id, name, full_name, clone_url, latest_commit_hash, last_backed_up_at, created_at, updated_at
 	FROM repos WHERE full_name = ?
 `
+
 func GetRepo(db *sql.DB, fullName string) (model.RepoRecord, bool, error) {
 	var r model.RepoRecord
 	err := db.QueryRow(selectRepoSQL, fullName).Scan(
@@ -33,7 +34,7 @@ func GetRepo(db *sql.DB, fullName string) (model.RepoRecord, bool, error) {
 /*
 Upsert basically, Insert if does not exist, update if exist.
 exluded is a special SQL keyword available inside "ON CONFLICT ... DO UPDATE"
-*/ 
+*/
 const upsertRepoSQL = `
 	INSERT INTO repos (name, full_name, clone_url, latest_commit_hash, last_backed_up_at, updated_at)
 	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -44,6 +45,7 @@ const upsertRepoSQL = `
 		last_backed_up_at = CURRENT_TIMESTAMP,
 		updated_at = CURRENT_TIMESTAMP;
 `
+
 func UpsertRepo(db *sql.DB, name, fullName, cloneURL, hash string) error {
 	if fullName == "" || hash == "" {
 		return nil
@@ -53,14 +55,14 @@ func UpsertRepo(db *sql.DB, name, fullName, cloneURL, hash string) error {
 	return err
 }
 
-
 /*
-get all repos quite straight forward 
+get all repos quite straight forward
 */
 const selectAllReposSQL = `
 	SELECT id, name, full_name, clone_url, latest_commit_hash, last_backed_up_at, created_at, updated_at
 	FROM repos ORDER BY id
 `
+
 func GetAllReposFromDB(db *sql.DB) ([]model.RepoRecord, error) {
 	rows, err := db.Query(selectAllReposSQL)
 	if err != nil {
@@ -94,6 +96,7 @@ delete repos whose name is given
 const deleteRepoSQL = `
 	DELETE FROM repos WHERE full_name = ?
 `
+
 func DeleteRepo(db *sql.DB, fullName string) error {
 	_, err := db.Exec(deleteRepoSQL, fullName)
 	return err
@@ -105,7 +108,7 @@ Get repo stats
 2. COUNT(CASE WHEN last_backed_up_at IS NOT NULL THEN 1 END) = Count the repos successfully backed up
 3. (SELECT COUNT(DISTINCT repository_name) FROM failed_logs) = Count the repos that failed
 4. MAX(updated_at) = Last updated time basically
-*/ 
+*/
 const repoStatsSQL = `
 	SELECT
 		COUNT(1),
@@ -114,6 +117,7 @@ const repoStatsSQL = `
 		MAX(updated_at)
 	FROM repos
 `
+
 func GetRepoStats(db *sql.DB) (model.RepoStats, error) {
 	var s model.RepoStats
 	err := db.QueryRow(repoStatsSQL).Scan(

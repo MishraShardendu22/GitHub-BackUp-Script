@@ -15,7 +15,7 @@ there details and other related data.
 
 No route to add or edit in backend cause only verified user should add,
 added them in python backend
-*/ 
+*/
 
 // GetBackupFixes returns all fixes ordered by created_at DESC.
 func GetBackupFixes(c *fiber.Ctx) error {

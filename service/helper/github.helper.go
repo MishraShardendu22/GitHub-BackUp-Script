@@ -43,7 +43,7 @@ and unmarshal the JSON response into the target struct.
 // 	return nil
 // }
 
-// // CountGitHubItems counts the total number of items (commits, branches, tags) in a GitHub repository 
+// // CountGitHubItems counts the total number of items (commits, branches, tags) in a GitHub repository
 // // by paginating through the API results.
 // func CountGitHubItems(endpoint string, token string) (int, error) {
 // 	total := 0

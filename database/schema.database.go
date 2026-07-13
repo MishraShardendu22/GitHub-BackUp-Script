@@ -2,13 +2,13 @@ package database
 
 import "database/sql"
 
-/* 
-	Create failure logs table 
+/*
+	Create failure logs table
 	Simply to show failure what happened
 	Expires after 7 days because there will be a new run so old logs would be irrelevant in my use case.
 	Store hash during clone, if same latest hash, don't clone nothing changed, else clone the new one remove old, update hash.
-*/ 
-	
+*/
+
 const createLogsTableSQL = `
 CREATE TABLE IF NOT EXISTS failed_logs (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +30,7 @@ const reposTableSQL = `
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 `
+
 func InitSchema(db *sql.DB) error {
 	statements := []string{createLogsTableSQL, reposTableSQL}
 	for _, statement := range statements {
@@ -46,6 +47,7 @@ const cleanupFailedLogsSQL = `
 	DELETE FROM failed_logs
 	WHERE expires_at <= datetime('now')
 `
+
 func CleanupExpired(db *sql.DB) error {
 	statements := []string{cleanupFailedLogsSQL}
 	for _, statement := range statements {
@@ -57,7 +59,7 @@ func CleanupExpired(db *sql.DB) error {
 	return nil
 }
 
-// Legacy Code - 
+// Legacy Code -
 // One time Schema Cleanup migration
 // Not used now, remove old table once.
 // func MigrateSchema(db *sql.DB) error {
