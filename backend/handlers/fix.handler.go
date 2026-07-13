@@ -42,18 +42,30 @@ func GetBackupFixes(c *fiber.Ctx) error {
 	}
 
 	// Fetch run mappings for each fix
-	for i := range fixes {
-		runRows, err := db.Pool.Query(ctx, "SELECT run_id FROM backup_run_fixes WHERE fix_id = $1", fixes[i].ID)
+	if len(fixes) > 0 {
+		fixIDs := make([]int, len(fixes))
+		for i := range fixes {
+			fixIDs[i] = fixes[i].ID
+		}
+
+		runFixesMap := make(map[int][]int)
+		rfRows, err := db.Pool.Query(ctx, "SELECT fix_id, run_id FROM backup_run_fixes WHERE fix_id = ANY($1)", fixIDs)
 		if err == nil {
-			var runs []int
-			for runRows.Next() {
-				var runID int
-				if err := runRows.Scan(&runID); err == nil {
-					runs = append(runs, runID)
+			for rfRows.Next() {
+				var fixID, runID int
+				if err := rfRows.Scan(&fixID, &runID); err == nil {
+					runFixesMap[fixID] = append(runFixesMap[fixID], runID)
 				}
 			}
-			runRows.Close()
-			fixes[i].AffectedRuns = runs
+			rfRows.Close()
+		}
+
+		for i := range fixes {
+			if runs, ok := runFixesMap[fixes[i].ID]; ok {
+				fixes[i].AffectedRuns = runs
+			} else {
+				fixes[i].AffectedRuns = []int{}
+			}
 		}
 	}
 
@@ -125,18 +137,30 @@ func GetBackupRunFixes(c *fiber.Ctx) error {
 	}
 
 	// Fetch run mappings for each fix
-	for i := range fixes {
-		runRows, err := db.Pool.Query(ctx, "SELECT run_id FROM backup_run_fixes WHERE fix_id = $1", fixes[i].ID)
+	if len(fixes) > 0 {
+		fixIDs := make([]int, len(fixes))
+		for i := range fixes {
+			fixIDs[i] = fixes[i].ID
+		}
+
+		runFixesMap := make(map[int][]int)
+		rfRows, err := db.Pool.Query(ctx, "SELECT fix_id, run_id FROM backup_run_fixes WHERE fix_id = ANY($1)", fixIDs)
 		if err == nil {
-			var runs []int
-			for runRows.Next() {
-				var runID int
-				if err := runRows.Scan(&runID); err == nil {
-					runs = append(runs, runID)
+			for rfRows.Next() {
+				var fixID, runID int
+				if err := rfRows.Scan(&fixID, &runID); err == nil {
+					runFixesMap[fixID] = append(runFixesMap[fixID], runID)
 				}
 			}
-			runRows.Close()
-			fixes[i].AffectedRuns = runs
+			rfRows.Close()
+		}
+
+		for i := range fixes {
+			if runs, ok := runFixesMap[fixes[i].ID]; ok {
+				fixes[i].AffectedRuns = runs
+			} else {
+				fixes[i].AffectedRuns = []int{}
+			}
 		}
 	}
 
