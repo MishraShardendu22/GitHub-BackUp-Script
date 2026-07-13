@@ -61,8 +61,8 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	// This accounts for recovered failures in subsequent runs
 	// _ = db.Pool.QueryRow(ctx, `
 	// 	SELECT COALESCE(AVG(
-	// 		CASE 
-	// 			WHEN (successful + failed) > 0 
+	// 		CASE
+	// 			WHEN (successful + failed) > 0
 	// 			THEN (successful::float / (successful + failed) * 100)
 	// 			ELSE 0
 	// 		END
@@ -75,7 +75,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	// Query to get average duration of runs
 	// Note: AVG() returns NUMERIC in PostgreSQL, must cast to BIGINT for int64 scan
 	if stats.AvgDurationMs == 0 {
-		_ = db.Pool.QueryRow( ctx, `SELECT COALESCE(AVG(duration_ms)::BIGINT, 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
+		_ = db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(duration_ms)::BIGINT, 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
 	}
 
 	// Query to get status of last run
@@ -162,8 +162,6 @@ func loadLatestAnalytics(ctx context.Context) (*models.RepoAnalyticsSnapshot, er
 	return &snapshot, nil
 }
 
-
-
 /*
 Older version was having lots of queries from same table which was in efficient
 func GetDashboardStats(c *fiber.Ctx) error {
@@ -238,4 +236,4 @@ func GetDashboardStats(c *fiber.Ctx) error {
 
 	return c.JSON(stats)
 }
-*/ 
+*/

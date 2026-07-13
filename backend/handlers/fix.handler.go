@@ -15,7 +15,7 @@ there details and other related data.
 
 No route to add or edit in backend cause only verified user should add,
 added them in python backend
-*/ 
+*/
 
 // GetBackupFixes returns all fixes ordered by created_at DESC.
 func GetBackupFixes(c *fiber.Ctx) error {
@@ -41,19 +41,27 @@ func GetBackupFixes(c *fiber.Ctx) error {
 		fixes = []models.BackupFix{}
 	}
 
-	// Fetch run mappings for each fix
-	for i := range fixes {
-		runRows, err := db.Pool.Query(ctx, "SELECT run_id FROM backup_run_fixes WHERE fix_id = $1", fixes[i].ID)
+	// Fetch run mappings for all fixes at once
+	if len(fixes) > 0 {
+		var fixIDs []int
+		for _, f := range fixes {
+			fixIDs = append(fixIDs, f.ID)
+		}
+
+		runRows, err := db.Pool.Query(ctx, "SELECT fix_id, run_id FROM backup_run_fixes WHERE fix_id = ANY($1)", fixIDs)
 		if err == nil {
-			var runs []int
+			runMappings := make(map[int][]int)
 			for runRows.Next() {
-				var runID int
-				if err := runRows.Scan(&runID); err == nil {
-					runs = append(runs, runID)
+				var fixID, runID int
+				if err := runRows.Scan(&fixID, &runID); err == nil {
+					runMappings[fixID] = append(runMappings[fixID], runID)
 				}
 			}
 			runRows.Close()
-			fixes[i].AffectedRuns = runs
+
+			for i := range fixes {
+				fixes[i].AffectedRuns = runMappings[fixes[i].ID]
+			}
 		}
 	}
 
@@ -124,19 +132,27 @@ func GetBackupRunFixes(c *fiber.Ctx) error {
 		fixes = []models.BackupFix{}
 	}
 
-	// Fetch run mappings for each fix
-	for i := range fixes {
-		runRows, err := db.Pool.Query(ctx, "SELECT run_id FROM backup_run_fixes WHERE fix_id = $1", fixes[i].ID)
+	// Fetch run mappings for all fixes at once
+	if len(fixes) > 0 {
+		var fixIDs []int
+		for _, f := range fixes {
+			fixIDs = append(fixIDs, f.ID)
+		}
+
+		runRows, err := db.Pool.Query(ctx, "SELECT fix_id, run_id FROM backup_run_fixes WHERE fix_id = ANY($1)", fixIDs)
 		if err == nil {
-			var runs []int
+			runMappings := make(map[int][]int)
 			for runRows.Next() {
-				var runID int
-				if err := runRows.Scan(&runID); err == nil {
-					runs = append(runs, runID)
+				var fixID, runID int
+				if err := runRows.Scan(&fixID, &runID); err == nil {
+					runMappings[fixID] = append(runMappings[fixID], runID)
 				}
 			}
 			runRows.Close()
-			fixes[i].AffectedRuns = runs
+
+			for i := range fixes {
+				fixes[i].AffectedRuns = runMappings[fixes[i].ID]
+			}
 		}
 	}
 

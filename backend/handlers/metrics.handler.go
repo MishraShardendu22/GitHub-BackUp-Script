@@ -234,7 +234,7 @@ func GetLogs(c *fiber.Ctx) error {
 
 	countQuery := `SELECT COUNT(*) FROM execution_logs WHERE 1=1`
 	query := `SELECT id, run_id, level, message, repository, created_at FROM execution_logs WHERE 1=1`
-	
+
 	args := []interface{}{}
 	argIdx := 1
 

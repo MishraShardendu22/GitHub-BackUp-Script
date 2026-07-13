@@ -3,31 +3,34 @@ package websocket
 import (
 	"context"
 	"encoding/json"
-	"sync"
-	"time"
 	"github.com/MishraShardendu22/github-backup/backend/db"
 	ws "github.com/gofiber/websocket/v2"
+	"sync"
+	"time"
 )
 
 /*
 Hub - create a hub, to manage active web socket connections
-	- clients are the users (basically browser)
-	- mu is lock to prevent concurrent access to clients
 
-	// not being used
-	- broadcast is a buffered channel for message broadcast
+  - clients are the users (basically browser)
+
+  - mu is lock to prevent concurrent access to clients
+
+    // not being used
+
+  - broadcast is a buffered channel for message broadcast
 
 Register - add a client
 Unregister - remove a client
 Broadcast - send message to all connected channels
 */
 type Hub struct {
-	clients   map[*ws.Conn]bool
-	mu        sync.RWMutex
+	clients map[*ws.Conn]bool
+	mu      sync.RWMutex
 }
 
 var DefaultHub = &Hub{
-	clients:   make(map[*ws.Conn]bool),
+	clients: make(map[*ws.Conn]bool),
 }
 
 // create a client and mark it as true
@@ -71,11 +74,11 @@ func HandleWebSocket(c *ws.Conn) {
 		// we are ignoring message type and payload (data they send) cause we dont need it
 		// we only care about connection existing
 		// messageType
-			// - ws.TextMessage
-			// - ws.BinaryMessage
-			// - ws.CloseMessage
-			// - ws.PingMessage
-			// - ws.PongMessage
+		// - ws.TextMessage
+		// - ws.BinaryMessage
+		// - ws.CloseMessage
+		// - ws.PingMessage
+		// - ws.PongMessage
 
 		if err != nil {
 			break
