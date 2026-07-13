@@ -34,8 +34,28 @@ interface NavNode {
   representativeIcon?: React.ComponentType<LucideProps>;
 }
 
+const GitHubIcon = ({ size = 16, ...props }: LucideProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden="true"
+    focusable="false"
+    {...props}
+  >
+    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8" />
+  </svg>
+);
+
 // Tree structure for standard sections
 const treeData: NavNode[] = [
+  {
+    label: "View the Codebase",
+    href: "https://github.com/MishraShardendu22/github-backup-automation-system",
+    icon: GitHubIcon,
+  },
   {
     label: "Dashboard",
     href: "/",
@@ -179,6 +199,48 @@ export default function Sidebar({
     return node.children.some((child) => isActive(child.href));
   };
 
+  const isExternalLink = (href?: string) => !!href && /^https?:\/\//.test(href);
+
+  const renderNavLink = (node: NavNode, className: string, extraStyle?: React.CSSProperties, iconSize = 18) => {
+    const Icon = node.icon;
+    const content = (
+      <>
+        <span className="tree-node-icon">
+          <Icon size={iconSize} />
+        </span>
+        <span className="tree-node-label">{node.label}</span>
+      </>
+    );
+
+    if (isExternalLink(node.href)) {
+      return (
+        <a
+          key={node.label}
+          href={node.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={className}
+          style={extraStyle}
+          onClick={onCloseMobile}
+        >
+          {content}
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        key={node.label}
+        href={node.href || "/"}
+        className={className}
+        style={extraStyle}
+        onClick={onCloseMobile}
+      >
+        {content}
+      </Link>
+    );
+  };
+
   // Create a new session and navigate to AI page
   const handleNewChat = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -294,8 +356,8 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Navigation tree */}
         <nav className="tree-nav">
+          
           {treeData.map((node) => {
             const hasChildren = node.children && node.children.length > 0;
             const nodeActive = hasChildren
@@ -309,14 +371,27 @@ export default function Sidebar({
               const mainHref = node.href || node.children?.[0]?.href || "/";
               return (
                 <div key={node.label} className="sidebar-tooltip-wrapper">
-                  <Link
-                    href={mainHref}
-                    className={`tree-node ${nodeActive ? "active" : ""}`}
-                    style={{ justifyContent: "center", padding: "10px 0" }}
-                    onClick={onCloseMobile}
-                  >
-                    <RepIcon size={20} />
-                  </Link>
+                  {isExternalLink(node.href) ? (
+                    <a
+                      href={node.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`tree-node ${nodeActive ? "active" : ""}`}
+                      style={{ justifyContent: "center", padding: "10px 0" }}
+                      onClick={onCloseMobile}
+                    >
+                      <RepIcon size={20} />
+                    </a>
+                  ) : (
+                    <Link
+                      href={mainHref}
+                      className={`tree-node ${nodeActive ? "active" : ""}`}
+                      style={{ justifyContent: "center", padding: "10px 0" }}
+                      onClick={onCloseMobile}
+                    >
+                      <RepIcon size={20} />
+                    </Link>
+                  )}
                   <span className="sidebar-tooltip">
                     {node.label}
                     {hasChildren &&
@@ -398,19 +473,11 @@ export default function Sidebar({
             }
 
             // Expanded direct leaf layout
-            return (
-              <Link
-                key={node.label}
-                href={node.href || "/"}
-                className={`tree-node ${nodeActive ? "active" : ""}`}
-                style={{ paddingLeft: "26px" }}
-                onClick={onCloseMobile}
-              >
-                <span className="tree-node-icon">
-                  <Icon size={18} />
-                </span>
-                <span className="tree-node-label">{node.label}</span>
-              </Link>
+            return renderNavLink(
+              node,
+              `tree-node ${nodeActive ? "active" : ""}`,
+              { paddingLeft: "26px" },
+              18,
             );
           })}
 
