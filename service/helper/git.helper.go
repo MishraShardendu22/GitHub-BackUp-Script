@@ -172,15 +172,32 @@ git diff --staged --quiet
 */
 func StageAndCommitRepo(repoName string, commitMsg string) error {
 	operation := fmt.Sprintf("Commit %s", repoName)
+
+	// Add the repository contents to the index
+	err := retryCommand(func() *exec.Cmd {
+		cmd := exec.Command("git", "add", repoName)
+		cmd.Dir = "_Repos"
+		return cmd
+	}, fmt.Sprintf("Add %s", repoName), 2*time.Minute)
+	if err != nil {
+		return err
+	}
+
+	// Check if there are staged changes
+	diffCmd := exec.Command("git", "diff", "--staged", "--quiet")
+	diffCmd.Dir = "_Repos"
+	err = diffCmd.Run()
+	if err == nil {
+		// Exit code 0 means no changes
+		util.Logger().Info("No changes to commit", zap.String("repo", repoName))
+		return nil
+	}
+
 	// Use retryCommand to handle transient/local locking issues and give multiple attempts
 	return retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c",
-			fmt.Sprintf("cd _Repos && git add '%s' && "+
-				"if git diff --staged --quiet; then "+
-				"  echo 'no changes'; "+
-				"else "+
-				"  git commit -m '%s' -s; "+
-				"fi", repoName, commitMsg))
+		cmd := exec.Command("git", "commit", "-m", commitMsg, "-s")
+		cmd.Dir = "_Repos"
+		return cmd
 	}, operation, 2*time.Minute)
 }
 
