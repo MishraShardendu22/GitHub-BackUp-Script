@@ -434,8 +434,8 @@ func processDeletedRepos(currentRepoNames []string, db *sql.DB) {
 	// Serial: git rm + commit for all deleted repos (git operations must be serial)
 	for _, dbRepo := range toDelete {
 		repoName := helper.ExtractRepoName(dbRepo.FullName)
-		removeCmd := exec.Command("sh", "-c",
-			fmt.Sprintf("cd _Repos && git rm -f '%s.tar.gz' 2>/dev/null || true", repoName))
+		removeCmd := exec.Command("git", "rm", "--ignore-unmatch", "-f", fmt.Sprintf("%s.tar.gz", repoName))
+		removeCmd.Dir = "_Repos"
 		if out, err := removeCmd.CombinedOutput(); err != nil {
 			util.Logger().Warn("Failed to git rm deleted repo archive",
 				zap.String("repository", dbRepo.FullName),
@@ -448,11 +448,16 @@ func processDeletedRepos(currentRepoNames []string, db *sql.DB) {
 	commitMsg := helper.SanitizeCommitMessage(fmt.Sprintf("Removed %d deleted repo(s) on %s",
 		deletedCount, time.Now().Format("2006-01-02 Monday 15:04:05")))
 
-	commitCmd := exec.Command("sh", "-c",
-		fmt.Sprintf("cd _Repos && git diff --staged --quiet || git commit -m '%s' -s", commitMsg))
+	diffCmd := exec.Command("git", "diff", "--staged", "--quiet")
+	diffCmd.Dir = "_Repos"
 
-	if _, err := commitCmd.CombinedOutput(); err != nil {
-		util.Logger().Warn("Failed to commit deleted repo removals", zap.Error(err))
+	if err := diffCmd.Run(); err != nil {
+		// diff --staged --quiet returns exit status 1 if there were differences
+		commitCmd := exec.Command("git", "commit", "-m", commitMsg, "-s")
+		commitCmd.Dir = "_Repos"
+		if _, err := commitCmd.CombinedOutput(); err != nil {
+			util.Logger().Warn("Failed to commit deleted repo removals", zap.Error(err))
+		}
 	}
 
 	if deletedCount > 0 {
