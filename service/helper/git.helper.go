@@ -130,9 +130,18 @@ Shallow clone the working tree (non-bare)
 then remove the .git directory so only the latest code remains
 */
 func CloneRepo(url string, repoName string) error {
-	return retryCommand(func() *exec.Cmd {
-		return exec.Command("sh", "-c", fmt.Sprintf("cd _Repos && git clone --depth=1 '%s' '%s' && rm -rf '%s/.git'", url, repoName, repoName))
+	err := retryCommand(func() *exec.Cmd {
+		cmd := exec.Command("git", "clone", "--depth=1", url, repoName)
+		cmd.Dir = "_Repos"
+		return cmd
 	}, fmt.Sprintf("Clone %s", repoName), cloneTimeout)
+
+	if err != nil {
+		return err
+	}
+
+	gitDirPath := fmt.Sprintf("_Repos/%s/.git", repoName)
+	return os.RemoveAll(gitDirPath)
 }
 
 /*
@@ -209,7 +218,7 @@ func PushBackupRepo(label string) error {
 /*
 Initialisation script, usually runs only the first time
 
-Reason for adding - git config commit.gpgsign false
+# Reason for adding - git config commit.gpgsign false
 
 My global Git config had (my fedora machine's global config basically):
 - commit.gpgsign=true
@@ -222,6 +231,7 @@ When I ran the program manually, I was in an interactive terminal, so GPG could 
 When systemd ran the program, there was no interactive terminal (TTY).
 
 GPG tried to sign the commit but couldn't interact with a terminal, so it failed with:
+
 	gpg: signing failed: Inappropriate ioctl for device
 	fatal: failed to write commit object
 	Since the commit failed, the backup process stopped and never pushed the backup.
@@ -231,7 +241,6 @@ git config commit.gpgsign false (manually for this isntance and initiated in bui
 
 Repository Git configuration overrides the global configuration.
 Now Git no longer attempts GPG signing for that repository, so commits work both manually and when run by systemd.
-
 */
 func buildInitScript(backupRepoPath string) string {
 	return fmt.Sprintf(`cd _Repos && \
