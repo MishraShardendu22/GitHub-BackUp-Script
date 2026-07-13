@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,8 +11,13 @@ import (
 )
 
 func SetupCORS() fiber.Handler {
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "http://localhost:3000"
+	}
+
 	return cors.New(cors.Config{
-		AllowOrigins:     "https://github.mishrashardendu22.is-a.dev,http://localhost:3000",
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Authorization",
 		AllowCredentials: true,
