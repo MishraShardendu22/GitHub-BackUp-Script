@@ -99,25 +99,3 @@ func DeleteRepo(db *sql.DB, fullName string) error {
 	return err
 }
 
-/*
-Get repo stats
-1. COUNT(1) = Count all rows in the repos table (basically totall discovered repos)
-2. COUNT(CASE WHEN last_backed_up_at IS NOT NULL THEN 1 END) = Count the repos successfully backed up
-3. (SELECT COUNT(DISTINCT repository_name) FROM failed_logs) = Count the repos that failed
-4. MAX(updated_at) = Last updated time basically
-*/ 
-const repoStatsSQL = `
-	SELECT
-		COUNT(1),
-		COUNT(CASE WHEN last_backed_up_at IS NOT NULL THEN 1 END),
-		(SELECT COUNT(DISTINCT repository_name) FROM failed_logs),
-		MAX(updated_at)
-	FROM repos
-`
-func GetRepoStats(db *sql.DB) (model.RepoStats, error) {
-	var s model.RepoStats
-	err := db.QueryRow(repoStatsSQL).Scan(
-		&s.TotalRepos, &s.BackedUpRepos, &s.FailedRepos, &s.LastRunAt,
-	)
-	return s, err
-}

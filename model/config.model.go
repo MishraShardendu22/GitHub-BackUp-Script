@@ -73,14 +73,6 @@ type RepoRecord struct {
 	ID int
 }
 
-type RepoStats struct {
-	LastRunAt sql.NullTime
-
-	TotalRepos    int
-	BackedUpRepos int
-	FailedRepos   int
-}
-
 type RepoResult struct {
 	FullName    string
 	RepoName    string
