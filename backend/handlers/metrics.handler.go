@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"context"
-	"strconv"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -234,24 +235,24 @@ func GetLogs(c *fiber.Ctx) error {
 
 	countQuery := `SELECT COUNT(*) FROM execution_logs WHERE 1=1`
 	query := `SELECT id, run_id, level, message, repository, created_at FROM execution_logs WHERE 1=1`
-	
+
 	args := []interface{}{}
-	argIdx := 1
+	var conditions []string
 
 	if level != "" {
-		filter := ` AND level = $` + itoa(argIdx)
-		countQuery += filter
-		query += filter
 		args = append(args, level)
-		argIdx++
+		conditions = append(conditions, fmt.Sprintf("level = $%d", len(args)))
 	}
 
 	if runID != "" {
-		filter := ` AND run_id = $` + itoa(argIdx)
+		args = append(args, runID)
+		conditions = append(conditions, fmt.Sprintf("run_id = $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		filter := " AND " + strings.Join(conditions, " AND ")
 		countQuery += filter
 		query += filter
-		args = append(args, runID)
-		argIdx++
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -272,7 +273,7 @@ func GetLogs(c *fiber.Ctx) error {
 	}
 
 	// add pagination to base query
-	query += ` ORDER BY created_at DESC LIMIT $` + itoa(argIdx) + ` OFFSET $` + itoa(argIdx+1)
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, limit, offset)
 
 	rows, err := db.Pool.Query(ctx, query, args...)
@@ -303,8 +304,4 @@ func GetLogs(c *fiber.Ctx) error {
 			TotalPages: totalPages,
 		},
 	})
-}
-
-func itoa(i int) string {
-	return strconv.Itoa(i)
 }
