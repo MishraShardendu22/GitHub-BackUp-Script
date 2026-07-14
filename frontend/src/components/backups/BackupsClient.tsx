@@ -1,107 +1,183 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  RefreshCw,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
-import { backupService } from "@/services/backup.service";
-import { formatDate, formatDuration } from "@/lib/utils";
+import { useEffect, useState } from "react";
 import { PaginationBar } from "@/components/analytics/pagination-bar";
-import type { BackupRun, BackupFix } from "@/types";
+import { useAIContext } from "@/components/layout/AIContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { formatDate, formatDuration } from "@/lib/utils";
+import { backupService } from "@/services/backup.service";
+import type { BackupFix, BackupRun } from "@/types";
 
-interface BackupsClientProps {
-  initialData: {
-    data: BackupRun[];
-    pagination: {
-      page: number;
-      limit: number;
-      total_items: number;
-      total_pages: number;
-    };
+interface InitialData {
+  data: BackupRun[];
+  pagination: {
+    page: number;
+    limit: number;
+    total_items: number;
+    total_pages: number;
   };
 }
 
-export default function BackupsClient({ initialData }: BackupsClientProps) {
-  const [runs, setRuns] = useState<BackupRun[]>(initialData.data);
-  const [pagination, setPagination] = useState(initialData.pagination);
-  const [currentPage, setCurrentPage] = useState(initialData.pagination.page);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export default function BackupsClient({
+  initialData,
+}: {
+  initialData: InitialData;
+}) {
+  const { data: runs, pagination } = initialData;
+  const { isAuthenticated, auth } = useAIContext();
 
-  // Modal states
+  const [fixesMap, setFixesMap] = useState<Record<number, BackupFix>>({});
+  const [loadingFixes, setLoadingFixes] = useState(true);
+
+  // Edit/View Fix Modal State
   const [activeFix, setActiveFix] = useState<BackupFix | null>(null);
-  const [createFixForRun, setCreateFixForRun] = useState<BackupRun | null>(null);
-
-  // Form states for Create Fix
-  const [formTitle, setFormTitle] = useState("");
-  const [formDesc, setFormDesc] = useState("");
-  const [formCommit, setFormCommit] = useState("");
-  const [formAuthor, setFormAuthor] = useState("");
-  const [formAffected, setFormAffected] = useState<number[]>([]);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Edit Fix states
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingFix, setIsEditingFix] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editCommit, setEditCommit] = useState("");
   const [editAuthor, setEditAuthor] = useState("");
   const [editAffected, setEditAffected] = useState<number[]>([]);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
-  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("agent_token");
+  // Create Fix Modal State
+  const [createFixForRun, setCreateFixForRun] = useState<BackupRun | null>(
+    null,
+  );
+  const [formTitle, setFormTitle] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formCommit, setFormCommit] = useState("");
+  const [formAuthor, setFormAuthor] = useState("");
+  const [formAffected, setFormAffected] = useState<number[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  // Fetch runs on page change
-  const fetchPage = async (page: number) => {
-    setLoading(true);
-    setErrorMessage(null);
+  const otherFailedRuns = runs.filter(
+    (r) =>
+      r.status === "failed" && r.id !== createFixForRun?.id && !fixesMap[r.id],
+  );
+
+  const fetchFixes = async () => {
     try {
-      const result = await backupService.getRuns(page, pagination.limit);
-      setRuns(result.data);
-      setPagination(result.pagination);
-      setCurrentPage(page);
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to load backups");
+      setLoadingFixes(true);
+      const res = await backupService.getFixes();
+      const newMap: Record<number, BackupFix> = {};
+      if (Array.isArray(res)) {
+        for (const fix of res) {
+          if (Array.isArray(fix.affected_runs)) {
+            for (const runId of fix.affected_runs) {
+              newMap[runId] = fix;
+            }
+          }
+        }
+      }
+      setFixesMap(newMap);
+    } catch (e) {
+      console.error("Failed to load backup fixes", e);
     } finally {
-      setLoading(false);
+      setLoadingFixes(false);
     }
   };
 
   useEffect(() => {
-    // Sync with initial page in case props change
-    setRuns(initialData.data);
-    setPagination(initialData.pagination);
-    setCurrentPage(initialData.pagination.page);
-  }, [initialData]);
+    fetchFixes();
+  }, [fetchFixes]);
 
-  // Open Create Fix form modal
-  const openCreateFix = (run: BackupRun) => {
+  // Open "View Fix"
+  const handleOpenFix = (fix: BackupFix) => {
+    setActiveFix(fix);
+    setIsEditingFix(false);
+    setEditTitle(fix.title);
+    setEditDesc(fix.description || "");
+    setEditCommit(fix.commit_hash || "");
+    setEditAuthor(fix.author || "");
+    setEditAffected(fix.affected_runs || []);
+    setEditError("");
+  };
+
+  const handleUpdateFix = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeFix) return;
+    setSubmittingEdit(true);
+    setEditError("");
+    try {
+      await backupService.updateFix(activeFix.id, {
+        title: editTitle,
+        description: editDesc,
+        commitHash: editCommit,
+        author: editAuthor,
+        affectedRuns: editAffected,
+      });
+      await fetchFixes();
+      setIsEditingFix(false);
+      setActiveFix(null);
+    } catch (err: any) {
+      setEditError(err.message || "Failed to update fix");
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  // Open "Create Fix"
+  const handleOpenCreateFix = (run: BackupRun) => {
     setCreateFixForRun(run);
     setFormTitle("");
     setFormDesc("");
     setFormCommit("");
-    setFormAuthor("Shardendu Mishra"); // Default author based on context
+    setFormAuthor(auth?.username || "");
     setFormAffected([run.id]);
-    setSubmitError(null);
+    setSubmitError("");
   };
 
-  // Toggle affected run selection in Create Fix form
-  const toggleAffectedRun = (runId: number) => {
-    if (formAffected.includes(runId)) {
-      setFormAffected(formAffected.filter((id) => id !== runId));
+  const toggleAffectedRun = (id: number, isEdit = false) => {
+    if (isEdit) {
+      setEditAffected((prev) =>
+        prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+      );
     } else {
-      setFormAffected([...formAffected, runId]);
+      setFormAffected((prev) =>
+        prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+      );
     }
   };
 
-  // Handle Create Fix submission
   const handleCreateFixSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle.trim()) {
-      setSubmitError("Title is required");
-      return;
-    }
-
+    if (!createFixForRun) return;
     setSubmitting(true);
-    setSubmitError(null);
+    setSubmitError("");
+
     try {
       await backupService.createFix({
         title: formTitle,
@@ -111,769 +187,511 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
         affectedRuns: formAffected,
       });
 
-      // Close modal
       setCreateFixForRun(null);
-
-      // Refresh list to show updated fixes/badges
-      await fetchPage(currentPage);
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to create fix");
+      await fetchFixes();
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to create fix");
     } finally {
       setSubmitting(false);
     }
   };
-
-  // Helper to determine if a run is failed
-  const isFailedRun = (run: BackupRun) => {
-    return run.status === "failed" || run.failed > 0;
-  };
-
-  // Find other failed runs in the current loaded page (excluding current one) to display as checkboxes
-  const otherFailedRuns = runs.filter(
-    (run) => isFailedRun(run) && createFixForRun && run.id !== createFixForRun.id
-  );
-
-  // Edit Fix handlers
-  const startEditing = () => {
-    if (!activeFix) return;
-    setEditTitle(activeFix.title || "");
-    setEditDesc(activeFix.description || "");
-    setEditCommit(activeFix.commit_hash || "");
-    setEditAuthor(activeFix.author || "");
-    setEditAffected(activeFix.affected_runs || []);
-    setIsEditing(true);
-    setSubmitError(null);
-  };
-
-  const handleEditFixSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeFix) return;
-    if (!editTitle.trim()) {
-      setSubmitError("Title is required");
-      return;
-    }
-
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const updatedFix = await backupService.updateFix(activeFix.id, {
-        title: editTitle,
-        description: editDesc,
-        commitHash: editCommit,
-        author: editAuthor,
-        affectedRuns: editAffected,
-      });
-
-      // Update the active fix state
-      setActiveFix(updatedFix);
-      setIsEditing(false);
-
-      // Refresh list to show updated fixes/badges
-      await fetchPage(currentPage);
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to update fix");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const toggleEditAffectedRun = (runId: number) => {
-    if (editAffected.includes(runId)) {
-      setEditAffected(editAffected.filter((id) => id !== runId));
-    } else {
-      setEditAffected([...editAffected, runId]);
-    }
-  };
-
-  // Get all unique failed runs we can choose from during editing
-  const pageFailedRuns = runs.filter(isFailedRun);
-  const allAvailableFailedRuns = [...pageFailedRuns];
-  for (const id of editAffected) {
-    if (!allAvailableFailedRuns.some((r) => r.id === id)) {
-      allAvailableFailedRuns.push({
-        id,
-        status: "failed",
-        started_at: "",
-        completed_at: null,
-        total_repos: 0,
-        successful: 0,
-        failed: 1,
-        skipped: 0,
-        duration_ms: 0,
-        error_message: "",
-      });
-    }
-  }
-  allAvailableFailedRuns.sort((a, b) => b.id - a.id);
 
   return (
     <>
-      <div className="card table-card">
-        {errorMessage ? (
-          <p
-            style={{
-              color: "var(--danger)",
-              padding: 40,
-              textAlign: "center",
-              fontSize: 15,
-            }}
-          >
-            {errorMessage}
-          </p>
-        ) : loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text-secondary)" }}>
-            <span className="loading-state">Loading runs...</span>
-          </div>
-        ) : runs.length === 0 ? (
-          <p
-            className="text-sm text-muted"
-            style={{ padding: 40, textAlign: "center" }}
-          >
-            No backup runs found. Run the worker to create backups.
-          </p>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Run</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Duration</th>
-                  <th>Total</th>
-                  <th>Success</th>
-                  <th>Failed</th>
-                  <th>Skipped</th>
-                  <th>Fix Status</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => {
-                  const hasFixes = run.fixes && run.fixes.length > 0;
-                  const failed = isFailedRun(run);
+      <Card>
+        <CardContent className="p-0">
+          <div className="flex flex-col">
+            <div className="w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Run #</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead className="text-right">Repos</TableHead>
+                    <TableHead className="text-right">✓ OK</TableHead>
+                    <TableHead className="text-right">✗ Failed</TableHead>
+                    <TableHead className="text-right">Skipped</TableHead>
+                    <TableHead>Resolution</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {runs.map((run) => {
+                    const isFailed = run.status === "failed";
+                    const hasFix = !!fixesMap[run.id];
+                    const fixData = fixesMap[run.id];
 
-                  return (
-                    <tr key={run.id}>
-                      <td data-label="Run" style={{ fontWeight: 500 }}>
-                        #{run.id}
-                      </td>
-                      <td data-label="Status">
-                        <span
-                          className={`badge ${
-                            run.status === "completed"
-                              ? "badge-success"
-                              : run.status === "running"
-                              ? "badge-running"
-                              : "badge-error"
-                          }`}
-                        >
-                          {run.status}
-                        </span>
-                      </td>
-                      <td data-label="Date" style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-                        {formatDate(run.started_at)}
-                      </td>
-                      <td data-label="Duration">
-                        {formatDuration(run.duration_ms)}
-                      </td>
-                      <td data-label="Total">{run.total_repos}</td>
-                      <td data-label="Success" style={{ color: "var(--success)" }}>
-                        {run.successful}
-                      </td>
-                      <td
-                        data-label="Failed"
-                        style={{
-                          color: run.failed > 0 ? "var(--danger)" : "inherit",
-                        }}
-                      >
-                        {run.failed}
-                      </td>
-                      <td data-label="Skipped" className="text-muted">
-                        {run.skipped}
-                      </td>
-                      <td data-label="Fix Status">
-                        {failed ? (
-                          hasFixes ? (
-                            <button
-                              type="button"
-                              onClick={() => setActiveFix(run.fixes![0])}
-                              className="badge"
-                              style={{
-                                background: "rgba(16, 185, 129, 0.15)",
-                                color: "#10b981",
-                                border: "1px solid rgba(16, 185, 129, 0.3)",
-                                cursor: "pointer",
-                                fontSize: "12px",
-                                padding: "2px 8px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontWeight: 600,
-                              }}
-                            >
-                              <span>🟢</span> Fixed
-                            </button>
-                          ) : (
-                            <span
-                              className="badge"
-                              style={{
-                                background: "rgba(239, 68, 68, 0.1)",
-                                color: "var(--danger)",
-                                border: "1px solid rgba(239, 68, 68, 0.2)",
-                                fontSize: "12px",
-                                padding: "2px 8px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontWeight: 600,
-                              }}
-                            >
-                              <span>❌</span> Failed
-                            </span>
-                          )
-                        ) : (
-                          <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>—</span>
-                        )}
-                      </td>
-                      <td data-label="Actions" style={{ textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", alignItems: "center" }}>
-                          {failed && !hasFixes && (
-                            <button
-                              type="button"
-                              onClick={() => openCreateFix(run)}
-                              className="btn btn-outline"
-                              style={{
-                                padding: "6px 12px",
-                                fontSize: "12px",
-                                borderColor: "rgba(139, 92, 246, 0.4)",
-                                color: "var(--accent)",
-                              }}
-                            >
-                              Create Fix
-                            </button>
-                          )}
-                          {failed && hasFixes && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveFix(run.fixes![0])}
-                              className="btn btn-outline"
-                              style={{
-                                padding: "6px 12px",
-                                fontSize: "12px",
-                                borderColor: "rgba(16, 185, 129, 0.4)",
-                                color: "#10b981",
-                              }}
-                            >
-                              Details
-                            </button>
-                          )}
-                          <Link
-                            href={`/backups/${run.id}`}
-                            className="btn btn-ghost"
-                            style={{ padding: "6px 10px", fontSize: "13px" }}
+                    return (
+                      <TableRow key={run.id} className="group">
+                        <TableCell className="font-medium">#{run.id}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              run.status === "completed"
+                                ? "default"
+                                : run.status === "running"
+                                  ? "secondary"
+                                  : "destructive"
+                            }
+                            className={
+                              run.status === "completed"
+                                ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20"
+                                : ""
+                            }
                           >
-                            View →
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {pagination && (
-              <div style={{ padding: "0 16px 16px" }}>
-                <PaginationBar
-                  page={currentPage}
-                  totalPages={pagination.total_pages}
-                  pageSize={pagination.limit}
-                  totalItems={pagination.total_items}
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Modal dialog: View / Edit Fix Details ───────────────────────────── */}
-      {activeFix && (
-        <div className="modal-overlay" onClick={() => { setActiveFix(null); setIsEditing(false); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
-                {isEditing ? "Edit Resolution Details" : "Resolution Details"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => { setActiveFix(null); setIsEditing(false); }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  fontSize: 20,
-                  cursor: "pointer",
-                }}
-              >
-                &times;
-              </button>
+                            {run.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {formatDate(run.started_at)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {formatDuration(run.duration_ms)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {run.total_repos}
+                        </TableCell>
+                        <TableCell className="text-right text-emerald-500 font-medium">
+                          {run.successful}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-medium ${run.failed > 0 ? "text-destructive" : ""}`}
+                        >
+                          {run.failed}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {run.skipped}
+                        </TableCell>
+                        <TableCell>
+                          {isFailed ? (
+                            loadingFixes ? (
+                              <div className="flex flex-col gap-1 w-24">
+                                <div className="h-2 bg-muted rounded w-full animate-pulse"></div>
+                                <div className="h-2 bg-muted rounded w-2/3 animate-pulse"></div>
+                              </div>
+                            ) : hasFix ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenFix(fixData)}
+                                className="h-7 text-xs gap-1.5 border-emerald-500/30 text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/15 w-[140px] justify-start"
+                              >
+                                <CheckCircle2 className="h-3 w-3 shrink-0" />
+                                <span className="truncate">
+                                  View Resolution
+                                </span>
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenCreateFix(run)}
+                                className="h-7 text-xs gap-1.5 border-primary/30 text-primary bg-primary/5 hover:bg-primary/15 w-[140px] justify-start"
+                                disabled={!isAuthenticated}
+                                title={
+                                  !isAuthenticated
+                                    ? "Login via sidebar to create fix"
+                                    : ""
+                                }
+                              >
+                                <Wrench className="h-3 w-3 shrink-0" />
+                                <span className="truncate">Resolve Issue</span>
+                              </Button>
+                            )
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Link href={`/backups/${run.id}`}>
+                              Details <ArrowRight className="h-4 w-4 ml-2" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
 
-            {isEditing ? (
-              <form onSubmit={handleEditFixSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div>
-                  <label
-                    htmlFor="edit-fix-title"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                  >
-                    Title <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <input
-                    id="edit-fix-title"
-                    type="text"
-                    className="input"
+            <div className="p-4 border-t border-border">
+              <PaginationBar
+                page={pagination.page}
+                totalPages={pagination.total_pages}
+                pageSize={pagination.limit}
+                totalItems={pagination.total_items}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal dialog: View / Edit Fix Details */}
+      <Dialog
+        open={!!activeFix}
+        onOpenChange={(open) => !open && setActiveFix(null)}
+      >
+        <DialogContent className="sm:max-w-[600px] gap-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-4">
+              <span className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-primary" />
+                {isEditingFix ? "Edit Resolution" : "Resolution Details"}
+              </span>
+              {activeFix && !isEditingFix && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingFix(true)}
+                  disabled={!isAuthenticated}
+                >
+                  Edit
+                </Button>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditingFix
+                ? "Update the details for this resolution."
+                : "Details of the fix applied to this backup run."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!isEditingFix && activeFix ? (
+            <div className="flex flex-col gap-6">
+              <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                <h4 className="font-semibold text-lg mb-2 text-foreground">
+                  {activeFix.title}
+                </h4>
+                {activeFix.description ? (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                    {activeFix.description}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    No description provided.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5 p-3 bg-card border rounded-lg">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Commit Hash
+                  </span>
+                  {activeFix.commit_hash ? (
+                    <span className="font-mono text-sm text-primary bg-primary/10 px-2 py-0.5 rounded w-fit">
+                      {activeFix.commit_hash}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 p-3 bg-card border rounded-lg">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Author
+                  </span>
+                  <span className="text-sm font-medium">
+                    {activeFix.author || "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5 p-3 bg-card border rounded-lg col-span-2 sm:col-span-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Created At
+                  </span>
+                  <span className="text-sm">
+                    {formatDate(activeFix.created_at)}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5 p-3 bg-card border rounded-lg col-span-2 sm:col-span-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Affected Runs
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeFix.affected_runs?.map((runId) => (
+                      <Badge
+                        key={runId}
+                        variant="secondary"
+                        className="px-1.5 py-0"
+                      >
+                        #{runId}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            activeFix && (
+              <form onSubmit={handleUpdateFix} className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">
+                    Title <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="edit-title"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     required
                   />
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="edit-fix-desc"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                  >
-                    Description
-                  </label>
-                  <textarea
-                    id="edit-fix-desc"
-                    className="textarea"
+                <div className="space-y-2">
+                  <Label htmlFor="edit-desc">Description</Label>
+                  <Textarea
+                    id="edit-desc"
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
+                    className="h-24 resize-none"
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  <div>
-                    <label
-                      htmlFor="edit-fix-commit"
-                      style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                    >
-                      Commit Hash
-                    </label>
-                    <input
-                      id="edit-fix-commit"
-                      type="text"
-                      className="input"
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-commit">Commit Hash</Label>
+                    <Input
+                      id="edit-commit"
                       value={editCommit}
                       onChange={(e) => setEditCommit(e.target.value)}
+                      placeholder="e.g. a1b2c3d"
+                      className="font-mono"
                     />
                   </div>
-
-                  <div>
-                    <label
-                      htmlFor="edit-fix-author"
-                      style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                    >
-                      Author
-                    </label>
-                    <input
-                      id="edit-fix-author"
-                      type="text"
-                      className="input"
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-author">Author</Label>
+                    <Input
+                      id="edit-author"
                       value={editAuthor}
                       onChange={(e) => setEditAuthor(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 8 }}>
-                    Select Affected Failed Runs
-                  </label>
-                  <div
-                    style={{
-                      maxHeight: 120,
-                      overflowY: "auto",
-                      background: "rgba(0,0,0,0.15)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "8px 12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                    }}
-                  >
-                    {allAvailableFailedRuns.length > 0 ? (
-                      allAvailableFailedRuns.map((run) => (
-                        <label key={run.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
-                          <input
-                            type="checkbox"
-                            checked={editAffected.includes(run.id)}
-                            onChange={() => toggleEditAffectedRun(run.id)}
-                          />
-                          <span>
-                            Run #{run.id} {run.started_at ? `(${formatDate(run.started_at)})` : "(Linked Run)"}
-                          </span>
-                        </label>
-                      ))
-                    ) : (
-                      <div style={{ fontSize: 12.5, color: "var(--text-muted)", padding: "4px 0" }}>
-                        No failed runs available to select.
-                      </div>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <Label>Affected Failed Runs</Label>
+                  <ScrollArea className="h-32 rounded-md border p-3">
+                    <div className="flex flex-col gap-3">
+                      {runs
+                        .filter((r) => r.status === "failed")
+                        .map((run) => {
+                          const _isOriginalRun =
+                            activeFix.affected_runs?.includes(run.id);
+                          const isChecked = editAffected.includes(run.id);
+                          const isOtherFix =
+                            !!fixesMap[run.id] &&
+                            fixesMap[run.id].id !== activeFix.id;
+
+                          if (isOtherFix && !isChecked) return null; // hide runs associated with other fixes
+
+                          return (
+                            <div
+                              key={run.id}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                id={`edit-run-${run.id}`}
+                                checked={isChecked}
+                                onCheckedChange={() =>
+                                  toggleAffectedRun(run.id, true)
+                                }
+                              />
+                              <label
+                                htmlFor={`edit-run-${run.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                Run #{run.id}{" "}
+                                <span className="text-muted-foreground ml-1 font-normal">
+                                  ({formatDate(run.started_at)})
+                                </span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </ScrollArea>
                 </div>
 
-                {submitError && (
-                  <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
-                    ⚠️ {submitError}
+                {editError && (
+                  <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-center gap-2 border border-destructive/20">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {editError}
                   </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 12 }}>
-                  <button
+                <DialogFooter className="mt-4">
+                  <Button
                     type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="btn btn-outline"
-                    style={{ padding: "10px 18px", fontSize: 14 }}
-                    disabled={submitting}
+                    variant="outline"
+                    onClick={() => setIsEditingFix(false)}
+                    disabled={submittingEdit}
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    style={{ padding: "10px 18px", fontSize: 14 }}
-                    disabled={submitting}
-                  >
-                    {submitting ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
+                  </Button>
+                  <Button type="submit" disabled={submittingEdit}>
+                    {submittingEdit && (
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Save Changes
+                  </Button>
+                </DialogFooter>
               </form>
-            ) : (
-              <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div>
-                    <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Title</label>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: "#10b981", marginTop: 4 }}>
-                      {activeFix.title}
-                    </div>
-                  </div>
+            )
+          )}
+        </DialogContent>
+      </Dialog>
 
-                  <div>
-                    <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Description</label>
-                    <p style={{ fontSize: 14.5, color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                      {activeFix.description || "No description provided."}
-                    </p>
-                  </div>
+      {/* Modal dialog: Create Fix */}
+      <Dialog
+        open={!!createFixForRun}
+        onOpenChange={(open) => !open && setCreateFixForRun(null)}
+      >
+        <DialogContent className="sm:max-w-[600px] gap-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-primary" />
+              Create Resolution
+            </DialogTitle>
+            <DialogDescription>
+              Record the fix for Run #{createFixForRun?.id} so the AI agent
+              learns from it.
+            </DialogDescription>
+          </DialogHeader>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Commit Hash</label>
-                      <div style={{ fontSize: 14, fontFamily: "monospace", color: "var(--text)", marginTop: 4 }}>
-                        {activeFix.commit_hash ? (
-                          <span style={{ background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
-                            {activeFix.commit_hash}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Author</label>
-                      <div style={{ fontSize: 14.5, color: "var(--text)", marginTop: 4 }}>
-                        {activeFix.author || "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Created At</label>
-                      <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>
-                        {formatDate(activeFix.created_at)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Affected Runs</label>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-                        {activeFix.affected_runs && activeFix.affected_runs.length > 0 ? (
-                          activeFix.affected_runs.map((runId) => (
-                            <Link
-                              key={runId}
-                              href={`/backups/${runId}`}
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: "rgba(139, 92, 246, 0.1)",
-                                color: "var(--accent)",
-                                padding: "2px 6px",
-                                borderRadius: 4,
-                                textDecoration: "none",
-                                border: "1px solid rgba(139, 92, 246, 0.2)",
-                              }}
-                            >
-                              #{runId}
-                            </Link>
-                          ))
-                        ) : (
-                          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>None linked</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                  {hasToken && (
-                    <button
-                      type="button"
-                      onClick={startEditing}
-                      className="btn btn-outline"
-                      style={{ padding: "8px 16px", fontSize: 14, borderColor: "rgba(139, 92, 246, 0.4)", color: "var(--accent)" }}
-                    >
-                      Edit Fix
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setActiveFix(null)}
-                    className="btn btn-outline"
-                    style={{ padding: "8px 16px", fontSize: 14 }}
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal dialog: Create Fix ─────────────────────────────────── */}
-      {createFixForRun && (
-        <div className="modal-overlay" onClick={() => setCreateFixForRun(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
-                Create Resolution Fix for Run #{createFixForRun.id}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setCreateFixForRun(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  fontSize: 20,
-                  cursor: "pointer",
-                }}
-              >
-                &times;
-              </button>
+          <form
+            onSubmit={handleCreateFixSubmit}
+            className="flex flex-col gap-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="create-title">
+                Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="create-title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="e.g., Disable GPG signing for automated commits"
+                required
+              />
             </div>
 
-            <form onSubmit={handleCreateFixSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label
-                  htmlFor="fix-title"
-                  style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                >
-                  Title <span style={{ color: "var(--danger)" }}>*</span>
-                </label>
-                <input
-                  id="fix-title"
-                  type="text"
-                  className="input"
-                  placeholder="e.g., Disable GPG signing for automated commits"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  required
+            <div className="space-y-2">
+              <Label htmlFor="create-desc">Description</Label>
+              <Textarea
+                id="create-desc"
+                value={formDesc}
+                onChange={(e) => setFormDesc(e.target.value)}
+                placeholder="Explain what caused the failure and how it was resolved..."
+                className="h-24 resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-commit">Commit Hash (Optional)</Label>
+                <Input
+                  id="create-commit"
+                  value={formCommit}
+                  onChange={(e) => setFormCommit(e.target.value)}
+                  placeholder="e.g. a1b2c3d"
+                  className="font-mono"
                 />
               </div>
-
-              <div>
-                <label
-                  htmlFor="fix-desc"
-                  style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                >
-                  Description
-                </label>
-                <textarea
-                  id="fix-desc"
-                  className="textarea"
-                  placeholder="Explain what caused the failure and how it was resolved..."
-                  value={formDesc}
-                  onChange={(e) => setFormDesc(e.target.value)}
+              <div className="space-y-2">
+                <Label htmlFor="create-author">Author</Label>
+                <Input
+                  id="create-author"
+                  value={formAuthor}
+                  onChange={(e) => setFormAuthor(e.target.value)}
                 />
               </div>
+            </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div>
-                  <label
-                    htmlFor="fix-commit"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                  >
-                    Commit Hash (Optional)
-                  </label>
-                  <input
-                    id="fix-commit"
-                    type="text"
-                    className="input"
-                    placeholder="e.g., a0252b8"
-                    value={formCommit}
-                    onChange={(e) => setFormCommit(e.target.value)}
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label>Select Affected Failed Runs</Label>
+              <ScrollArea className="h-32 rounded-md border p-3 bg-muted/10">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="current-run" checked disabled />
+                    <label
+                      htmlFor="current-run"
+                      className="text-sm font-medium leading-none text-primary cursor-not-allowed"
+                    >
+                      Run #{createFixForRun?.id} (Current Run)
+                    </label>
+                  </div>
 
-                <div>
-                  <label
-                    htmlFor="fix-author"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
-                  >
-                    Author
-                  </label>
-                  <input
-                    id="fix-author"
-                    type="text"
-                    className="input"
-                    placeholder="e.g., Shardendu Mishra"
-                    value={formAuthor}
-                    onChange={(e) => setFormAuthor(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 8 }}>
-                  Select Affected Failed Runs
-                </label>
-                <div
-                  style={{
-                    maxHeight: 120,
-                    overflowY: "auto",
-                    background: "rgba(0,0,0,0.15)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "8px 12px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
-                  {/* Current run is preselected and locked or toggleable */}
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={true}
-                      disabled={true}
-                      style={{ cursor: "not-allowed" }}
-                    />
-                    <span style={{ fontWeight: 600, color: "var(--accent)" }}>Run #{createFixForRun.id} (Current Run)</span>
-                  </label>
-
-                  {otherFailedRuns.length > 0 ? (
-                    otherFailedRuns.map((run) => (
-                      <label key={run.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
-                        <input
-                          type="checkbox"
-                          checked={formAffected.includes(run.id)}
-                          onChange={() => toggleAffectedRun(run.id)}
-                        />
-                        <span>
-                          Run #{run.id} ({formatDate(run.started_at)})
+                  {otherFailedRuns.map((run) => (
+                    <div key={run.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`create-run-${run.id}`}
+                        checked={formAffected.includes(run.id)}
+                        onCheckedChange={() => toggleAffectedRun(run.id)}
+                      />
+                      <label
+                        htmlFor={`create-run-${run.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Run #{run.id}{" "}
+                        <span className="text-muted-foreground ml-1 font-normal">
+                          ({formatDate(run.started_at)})
                         </span>
                       </label>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: 12.5, color: "var(--text-muted)", padding: "4px 0" }}>
+                    </div>
+                  ))}
+
+                  {otherFailedRuns.length === 0 && (
+                    <div className="text-xs text-muted-foreground italic ml-6">
                       No other failed runs on this page to select.
                     </div>
                   )}
                 </div>
+              </ScrollArea>
+            </div>
+
+            {submitError && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-center gap-2 border border-destructive/20">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {submitError}
               </div>
+            )}
 
-              {submitError && (
-                <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
-                  ⚠️ {submitError}
-                </div>
-              )}
-
-              {!hasToken && (
-                <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
-                  ⚠️ You must be logged into the AI Observatory to submit a resolution. (Please login using the sidebar/assistant first).
-                </div>
-              )}
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setCreateFixForRun(null)}
-                  className="btn btn-outline"
-                  style={{ padding: "10px 18px", fontSize: 14 }}
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: "10px 18px", fontSize: 14 }}
-                  disabled={submitting || !hasToken}
-                >
-                  {submitting ? "Saving..." : "Save Resolution"}
-                </button>
+            {!isAuthenticated && (
+              <div className="p-3 text-sm text-amber-600 bg-amber-500/10 rounded-md flex items-start gap-2 border border-amber-500/20">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  You must be logged into the AI Observatory to submit a
+                  resolution. (Please login using the sidebar/assistant first).
+                </span>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Modal / overlay helper CSS */}
-      <style jsx global>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(4px);
-        }
-
-        .modal-content {
-          background: var(--bg-card, #1c1c1f);
-          border: 1px solid var(--border, #2a2a2e);
-          border-radius: var(--radius-lg, 12px);
-          width: 90%;
-          max-width: 600px;
-          padding: 24px;
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
-          animation: modal-fade-in 0.2s ease-out;
-        }
-
-        @keyframes modal-fade-in {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-      `}</style>
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateFixForRun(null)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting || !isAuthenticated}>
+                {submitting && (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Resolution
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

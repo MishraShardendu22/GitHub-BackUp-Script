@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useEffect, useState } from "react";
 import { sessionService } from "@/services/session.service";
 import type { Message } from "@/types";
@@ -9,61 +7,55 @@ export function useChat(token: string | null, sessionId: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMessages = useCallback(async () => {
-    if (!sessionId) {
+  const fetchMessages = useCallback(async () => {
+    if (!token || !sessionId) {
       setMessages([]);
       return;
     }
-
     setLoading(true);
-    setError(null);
     try {
       const data = await sessionService.getMessages(token, sessionId);
-      const formatted = data.map((msg: any) => ({
+      const formatted = data.map((msg) => ({
         id: msg.id,
         role: msg.role as "user" | "assistant",
         content: msg.content,
-        timestamp: new Date(msg.created_at || Date.now()),
+        timestamp: new Date(msg.created_at),
         toolCalls: msg.tool_calls || [],
+        streaming: false,
       }));
-      setMessages((prev) => {
-        const formattedIds = new Set(formatted.map((m) => m.id));
-        const optimistic = prev.filter((m) => !formattedIds.has(m.id));
-        return [...formatted, ...optimistic];
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load messages");
-      console.error("Failed to load messages", e);
+      setMessages(formatted);
+      setError(null);
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to load messages");
+      setMessages([]);
     } finally {
       setLoading(false);
     }
   }, [token, sessionId]);
 
   useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
+    fetchMessages();
+  }, [fetchMessages]);
 
-  const addMessage = useCallback((message: Message) => {
-    setMessages((prev) => [...prev, message]);
+  const addMessage = useCallback((msg: Message) => {
+    setMessages((prev) => [...prev, msg]);
   }, []);
 
   const updateMessage = useCallback(
-    (id: string, updates: Partial<Message> | ((prev: Message) => Message)) => {
+    (
+      id: string,
+      updates: Partial<Message> | ((prev: Message) => Partial<Message>),
+    ) => {
       setMessages((prev) =>
         prev.map((m) => {
           if (m.id !== id) return m;
-          return typeof updates === "function"
-            ? updates(m)
-            : { ...m, ...updates };
+          const patch = typeof updates === "function" ? updates(m) : updates;
+          return { ...m, ...patch };
         }),
       );
     },
     [],
   );
-
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-  }, []);
 
   return {
     messages,
@@ -71,7 +63,6 @@ export function useChat(token: string | null, sessionId: string | null) {
     error,
     addMessage,
     updateMessage,
-    clearMessages,
-    refresh: loadMessages,
+    refresh: fetchMessages,
   };
 }

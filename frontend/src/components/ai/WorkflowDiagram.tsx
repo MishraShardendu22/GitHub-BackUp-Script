@@ -1,62 +1,37 @@
+import { ArrowRight, CircleDot } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 export function WorkflowDiagram({ activeStep }: { activeStep: string }) {
   const steps = [
-    { key: "query", label: "Query received" },
-    { key: "agent", label: "Agent reasoning" },
-    { key: "tools", label: "Tool execution" },
+    { key: "query", label: "Query" },
+    { key: "agent", label: "Reasoning" },
+    { key: "tools", label: "Tools" },
     { key: "response", label: "Answering" },
   ];
 
   return (
-    <div className="ai-workflow-container">
-      <span
-        style={{
-          fontSize: "9px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: "var(--text-secondary)",
-          marginRight: 8,
-          flexShrink: 0,
-        }}
-      >
-        Pipeline:
+    <div className="flex items-center w-full h-full overflow-hidden">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mr-3 shrink-0">
+        Pipeline
       </span>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          overflowX: "auto",
-          flex: 1,
-          whiteSpace: "nowrap",
-        }}
-      >
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 whitespace-nowrap">
         {steps.map((step, idx) => {
           const active = activeStep === step.key;
           return (
-            <div
-              key={step.key}
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
-            >
-              <span
-                style={{
-                  color: active ? "var(--accent)" : "var(--text-secondary)",
-                  fontWeight: active ? 600 : 400,
-                  textShadow: active
-                    ? "0 0 8px rgba(212, 168, 50, 0.3)"
-                    : "none",
-                  fontSize: "11px",
-                }}
+            <div key={step.key} className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 text-xs transition-colors duration-300",
+                  active
+                    ? "text-primary font-semibold drop-shadow-sm"
+                    : "text-muted-foreground",
+                )}
               >
-                {active ? "● " : ""}
+                {active && <CircleDot className="h-3 w-3 animate-pulse" />}
                 {step.label}
-              </span>
+              </div>
               {idx < steps.length - 1 && (
-                <span
-                  style={{ color: "rgba(255,255,255,0.15)", fontSize: "10px" }}
-                >
-                  →
-                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
               )}
             </div>
           );

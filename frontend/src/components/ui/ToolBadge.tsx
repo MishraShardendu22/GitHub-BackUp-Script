@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface ToolBadgeProps {
@@ -8,8 +9,15 @@ interface ToolBadgeProps {
 
 export function ToolBadge({ name, active = true, className }: ToolBadgeProps) {
   return (
-    <span className={cn("ai-tool-badge", active && "active", className)}>
+    <Badge
+      variant={active ? "secondary" : "outline"}
+      className={cn(
+        "font-mono text-[10px] px-2 py-0",
+        active && "bg-primary/10 text-primary border-primary/20",
+        className,
+      )}
+    >
       {name}
-    </span>
+    </Badge>
   );
 }

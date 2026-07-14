@@ -24,6 +24,9 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { useAIContext } from "./AIContext";
 
 interface NavNode {
@@ -201,15 +204,27 @@ export default function Sidebar({
 
   const isExternalLink = (href?: string) => !!href && /^https?:\/\//.test(href);
 
-  const renderNavLink = (node: NavNode, className: string, extraStyle?: React.CSSProperties, iconSize = 18) => {
+  const renderNavLink = (
+    node: NavNode,
+    className: string,
+    extraStyle?: React.CSSProperties,
+    iconSize = 18,
+  ) => {
     const Icon = node.icon;
     const content = (
       <>
-        <span className="tree-node-icon">
-          <Icon size={iconSize} />
-        </span>
-        <span className="tree-node-label">{node.label}</span>
+        <Icon size={iconSize} className="shrink-0" />
+        {!isCollapsed && <span className="ml-3 truncate">{node.label}</span>}
       </>
+    );
+
+    const linkClasses = cn(
+      "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+      isActive(node.href)
+        ? "bg-accent text-accent-foreground"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+      isCollapsed && "justify-center px-0",
+      className,
     );
 
     if (isExternalLink(node.href)) {
@@ -219,7 +234,7 @@ export default function Sidebar({
           href={node.href}
           target="_blank"
           rel="noopener noreferrer"
-          className={className}
+          className={linkClasses}
           style={extraStyle}
           onClick={onCloseMobile}
         >
@@ -232,7 +247,7 @@ export default function Sidebar({
       <Link
         key={node.label}
         href={node.href || "/"}
-        className={className}
+        className={linkClasses}
         style={extraStyle}
         onClick={onCloseMobile}
       >
@@ -286,14 +301,11 @@ export default function Sidebar({
 
   if (!mounted) {
     return (
-      <aside className="global-sidebar" style={{ width: "280px" }}>
-        <div
-          className="global-sidebar-header"
-          style={{ justifyContent: "flex-end" }}
-        >
-          <button type="button" className="global-sidebar-toggle-btn">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[280px] flex-col border-r bg-card md:flex">
+        <div className="flex h-14 items-center justify-end px-4">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
             <ChevronsLeft size={16} />
-          </button>
+          </Button>
         </div>
       </aside>
     );
@@ -302,50 +314,37 @@ export default function Sidebar({
   return (
     <>
       {/* Mobile background overlay */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop click */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click */}
-      <div
-        className={`sidebar-overlay ${isMobileOpen ? "mobile-open" : ""}`}
-        onClick={onCloseMobile}
-      />
+      {isMobileOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden cursor-default border-0"
+          onClick={onCloseMobile}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") onCloseMobile?.();
+          }}
+        />
+      )}
 
       <aside
-        className={`global-sidebar ${isMobileOpen ? "mobile-open" : ""}`}
-        style={{
-          width: isCollapsed ? "68px" : "280px",
-        }}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-card transition-all duration-300 ease-in-out md:translate-x-0",
+          isCollapsed ? "w-[68px]" : "w-[280px]",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
       >
         {/* Sidebar Header */}
-        <div
-          className="global-sidebar-header"
-          style={{
-            justifyContent: isCollapsed ? "center" : "space-between",
-            padding: isCollapsed ? "0" : "0 16px",
-            gap: 8,
-          }}
-        >
+        <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-border/50">
           {!isCollapsed && (
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: "10px",
-                color: "var(--text-secondary)",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                flex: 1,
-              }}
-              title="GitHub Backup Observatory Agent"
-            >
-              Github Backup Observatory
-            </div>
+            <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase truncate flex-1">
+              Backup Observatory
+            </span>
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={toggleCollapse}
-            className="global-sidebar-toggle-btn"
+            className={cn("h-8 w-8", isCollapsed && "mx-auto")}
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
@@ -353,556 +352,366 @@ export default function Sidebar({
             ) : (
               <ChevronsLeft size={16} />
             )}
-          </button>
+          </Button>
         </div>
 
-        <nav className="tree-nav">
-          
-          {treeData.map((node) => {
-            const hasChildren = node.children && node.children.length > 0;
-            const nodeActive = hasChildren
-              ? isFolderActive(node)
-              : isActive(node.href);
-            const Icon = node.icon;
-            const RepIcon = node.representativeIcon || Icon;
+        <ScrollArea className="flex-1 py-4">
+          <nav className="flex flex-col gap-1 px-3">
+            {treeData.map((node) => {
+              const hasChildren = node.children && node.children.length > 0;
+              const nodeActive = hasChildren
+                ? isFolderActive(node)
+                : isActive(node.href);
+              const Icon = node.icon;
+              const RepIcon = node.representativeIcon || Icon;
 
-            // Collapsed layout
-            if (isCollapsed) {
-              const mainHref = node.href || node.children?.[0]?.href || "/";
-              return (
-                <div key={node.label} className="sidebar-tooltip-wrapper">
-                  {isExternalLink(node.href) ? (
-                    <a
-                      href={node.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`tree-node ${nodeActive ? "active" : ""}`}
-                      style={{ justifyContent: "center", padding: "10px 0" }}
-                      onClick={onCloseMobile}
-                    >
-                      <RepIcon size={20} />
-                    </a>
-                  ) : (
-                    <Link
-                      href={mainHref}
-                      className={`tree-node ${nodeActive ? "active" : ""}`}
-                      style={{ justifyContent: "center", padding: "10px 0" }}
-                      onClick={onCloseMobile}
-                    >
-                      <RepIcon size={20} />
-                    </Link>
-                  )}
-                  <span className="sidebar-tooltip">
-                    {node.label}
-                    {hasChildren &&
-                      node.children &&
-                      ` (${node.children.map((c) => c.label).join(", ")})`}
-                  </span>
-                </div>
-              );
-            }
-
-            // Expanded Folder layout
-            if (hasChildren && node.children) {
-              const isOpen = !!expandedNodes[node.label];
-              const FolderIcon = isOpen ? FolderOpen : Folder;
-
-              return (
-                <div key={node.label} className="tree-node-wrapper">
-                  <button
-                    type="button"
-                    className={`tree-node ${nodeActive ? "active" : ""}`}
-                    onClick={(e) => toggleFolder(node.label, e)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      background: "transparent",
-                      border: "none",
-                      padding: "6px 8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      cursor: "pointer",
-                    }}
+              // Collapsed layout
+              if (isCollapsed) {
+                const mainHref = node.href || node.children?.[0]?.href || "/";
+                return (
+                  <div
+                    key={node.label}
+                    className="group relative flex justify-center py-1"
                   >
-                    <span className="tree-node-chevron">
-                      {isOpen ? (
-                        <ChevronDown size={14} />
-                      ) : (
-                        <ChevronRight size={14} />
+                    {isExternalLink(node.href) ? (
+                      <a
+                        href={node.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                          nodeActive
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                        )}
+                        onClick={onCloseMobile}
+                      >
+                        <RepIcon size={20} />
+                      </a>
+                    ) : (
+                      <Link
+                        href={mainHref}
+                        className={cn(
+                          "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                          nodeActive
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                        )}
+                        onClick={onCloseMobile}
+                      >
+                        <RepIcon size={20} />
+                      </Link>
+                    )}
+                    <span className="absolute left-full ml-2 hidden whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md group-hover:block z-50">
+                      {node.label}
+                    </span>
+                  </div>
+                );
+              }
+
+              // Expanded Folder layout
+              if (hasChildren && node.children) {
+                const isOpen = !!expandedNodes[node.label];
+                const FolderIcon = isOpen ? FolderOpen : Folder;
+
+                return (
+                  <div key={node.label} className="flex flex-col gap-1 py-1">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        nodeActive
+                          ? "bg-accent/50 text-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                       )}
-                    </span>
-                    <span className="tree-node-icon">
-                      <FolderIcon size={18} />
-                    </span>
-                    <span className="tree-node-label">{node.label}</span>
-                  </button>
+                      onClick={(e) => toggleFolder(node.label, e)}
+                    >
+                      <span className="mr-2 shrink-0">
+                        {isOpen ? (
+                          <ChevronDown size={14} />
+                        ) : (
+                          <ChevronRight size={14} />
+                        )}
+                      </span>
+                      <FolderIcon size={16} className="mr-3 shrink-0" />
+                      <span className="truncate">{node.label}</span>
+                    </button>
 
-                  {isOpen && (
-                    <div className="tree-children-container">
-                      {node.children.map((child) => {
-                        const childActive = isActive(child.href);
-                        const ChildIcon = child.icon;
+                    {isOpen && (
+                      <div className="flex flex-col gap-1 pl-9 pr-1">
+                        {node.children.map((child) => {
+                          const childActive = isActive(child.href);
+                          const ChildIcon = child.icon;
 
-                        return (
-                          <Link
-                            key={child.href}
-                            href={child.href || "/"}
-                            className={`tree-node ${childActive ? "active" : ""}`}
-                            onClick={onCloseMobile}
-                          >
-                            <span
-                              className="tree-node-icon"
-                              style={{ marginLeft: 4 }}
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href || "/"}
+                              className={cn(
+                                "flex items-center w-full px-3 py-1.5 text-sm rounded-md transition-colors",
+                                childActive
+                                  ? "text-foreground font-medium"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
+                              )}
+                              onClick={onCloseMobile}
                             >
-                              <ChildIcon size={16} />
-                            </span>
-                            <span
-                              className="tree-node-label"
-                              style={{ fontSize: "14px" }}
-                            >
-                              {child.label}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
+                              <ChildIcon size={14} className="mr-3 shrink-0" />
+                              <span className="truncate">{child.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Expanded direct leaf layout
+              return (
+                <div key={node.label} className="py-1">
+                  {renderNavLink(node, "")}
                 </div>
               );
-            }
+            })}
 
-            // Expanded direct leaf layout
-            return renderNavLink(
-              node,
-              `tree-node ${nodeActive ? "active" : ""}`,
-              { paddingLeft: "26px" },
-              18,
-            );
-          })}
-
-          {/* DYNAMIC AI ASSISTANT NODE (Consolidated Sidebar) */}
-          {isCollapsed ? (
-            <div className="sidebar-tooltip-wrapper">
-              <Link
-                href="/ai"
-                className={`tree-node ${pathname.startsWith("/ai") ? "active" : ""}`}
-                style={{ justifyContent: "center", padding: "10px 0" }}
-                onClick={onCloseMobile}
-              >
-                <MessageSquare size={20} />
-              </Link>
-              <span className="sidebar-tooltip">
-                AI Assistant{" "}
-                {sessions.length > 0 && `(${sessions.length} chats)`}
-              </span>
-            </div>
-          ) : (
-            <div className="tree-node-wrapper">
-              {/* Folder Row header (icon-less as requested) */}
-              <button
-                type="button"
-                className={`tree-node ${pathname.startsWith("/ai") ? "active" : ""}`}
-                onClick={(e) => toggleFolder("AIAssistant", e)}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  background: "transparent",
-                  border: "none",
-                  padding: "6px 8px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                <span className="tree-node-chevron">
-                  {expandedNodes.AIAssistant ? (
-                    <ChevronDown size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
+            {/* AI Assistant Section */}
+            {isCollapsed ? (
+              <div className="group relative flex justify-center py-1 mt-4 border-t border-border/50 pt-4">
+                <Link
+                  href="/ai"
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                    pathname.startsWith("/ai")
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                   )}
-                </span>
-                <span className="tree-node-label" style={{ fontWeight: 600 }}>
+                  onClick={onCloseMobile}
+                >
+                  <MessageSquare size={20} />
+                </Link>
+                <span className="absolute left-full ml-2 hidden whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md group-hover:block z-50">
                   AI Assistant
                 </span>
-              </button>
-
-              {expandedNodes.AIAssistant && (
-                <div className="tree-children-container">
-                  {/* Action 1: New Chat */}
-                  <button
-                    type="button"
-                    className="tree-node"
-                    onClick={handleNewChat}
-                    disabled={!isAuthenticated}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      background: "transparent",
-                      border: "none",
-                      padding: "5px 8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      cursor: isAuthenticated ? "pointer" : "not-allowed",
-                      opacity: isAuthenticated ? 1 : 0.5,
-                      color: "var(--accent)",
-                    }}
-                  >
-                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
-                      <Plus size={16} />
-                    </span>
-                    <span
-                      className="tree-node-label"
-                      style={{ fontSize: "14px", fontWeight: 600 }}
-                    >
-                      New Analysis Chat
-                    </span>
-                  </button>
-
-                  {/* Action 2: Stats Dashboard */}
-                  <button
-                    type="button"
-                    className={`tree-node ${pathname === "/ai" ? "active" : ""}`}
-                    onClick={() => {
-                      router.push("/ai");
-                      onCloseMobile?.();
-                    }}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      background: "transparent",
-                      border: "none",
-                      padding: "5px 8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
-                      <LayoutDashboard size={15} />
-                    </span>
-                    <span
-                      className="tree-node-label"
-                      style={{ fontSize: "14px" }}
-                    >
-                      Stats Dashboard
-                    </span>
-                  </button>
-
-                  {/* Chat History Header */}
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "var(--text-muted)",
-                      padding: "8px 8px 2px 12px",
-                    }}
-                  >
-                    Chat History
-                  </div>
-
-                  {/* List of Chat Sessions */}
-                  {sessionsLoading && sessions.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "6px 12px",
-                        color: "var(--text-muted)",
-                        fontSize: "13px",
-                      }}
-                    >
-                      Syncing...
-                    </div>
-                  ) : sessions.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "6px 12px",
-                        color: "var(--text-muted)",
-                        fontSize: "11px",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      No active chats
-                    </div>
-                  ) : (
-                    sessions.map((s) => {
-                      const isSessionActive = pathname === `/ai/${s.id}`;
-
-                      return (
-                        <div
-                          key={s.id}
-                          className={`tree-node ${isSessionActive ? "active" : ""}`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "4px 8px",
-                            position: "relative",
-                          }}
-                        >
-                          <Link
-                            href={`/ai/${s.id}`}
-                            onClick={(e) => {
-                              if (renamingSessionId === s.id) {
-                                e.preventDefault();
-                              } else {
-                                onCloseMobile?.();
-                              }
-                            }}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              flex: 1,
-                              minWidth: 0,
-                              cursor: "pointer",
-                              background: "transparent",
-                              border: "none",
-                              padding: 0,
-                              textAlign: "left",
-                              color: "inherit",
-                              textDecoration: "none",
-                            }}
-                          >
-                            <span
-                              className="tree-node-icon"
-                              style={{ marginLeft: 4 }}
-                            >
-                              <MessageSquare size={15} />
-                            </span>
-                            {renamingSessionId === s.id ? (
-                              <input
-                                type="text"
-                                className="ai-session-rename-input"
-                                value={renameInput}
-                                onChange={(e) => setRenameInput(e.target.value)}
-                                onBlur={() =>
-                                  handleRenameSession(s.id, renameInput)
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter")
-                                    handleRenameSession(s.id, renameInput);
-                                  if (e.key === "Escape")
-                                    setRenamingSessionId(null);
-                                }}
-                                style={{
-                                  background: "rgba(0, 0, 0, 0.4)",
-                                  border: "1px solid var(--accent)",
-                                  color: "var(--text)",
-                                  fontSize: "11px",
-                                  padding: "1px 4px",
-                                  borderRadius: "3px",
-                                  width: "100%",
-                                  outline: "none",
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            ) : (
-                              <span
-                                className="tree-node-label"
-                                style={{
-                                  fontSize: "13.5px",
-                                  textOverflow: "ellipsis",
-                                  overflow: "hidden",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {s.session_name}
-                              </span>
-                            )}
-                          </Link>
-
-                          {/* Action Hover Controls */}
-                          {renamingSessionId !== s.id && (
-                            <div
-                              className="sidebar-item-actions"
-                              style={{
-                                display: "flex",
-                                gap: 2,
-                                flexShrink: 0,
-                              }}
-                            >
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setRenamingSessionId(s.id);
-                                  setRenameInput(s.session_name);
-                                }}
-                                disabled={!isAuthenticated}
-                                style={{
-                                  background: "transparent",
-                                  border: "none",
-                                  color: "var(--text-muted)",
-                                  padding: 2,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                }}
-                                title="Rename Chat"
-                              >
-                                <Edit2 size={11} />
-                              </button>
-                              {isAuthenticated && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteSession(s.id, e)}
-                                  style={{
-                                    background: "transparent",
-                                    border: "none",
-                                    color: "var(--text-muted)",
-                                    padding: 2,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                  }}
-                                  title="Delete Chat"
-                                >
-                                  <Trash2 size={11} />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </nav>
-
-        {/* User Profile / Auth Actions */}
-        <div
-          style={{
-            padding: isCollapsed ? "12px 8px" : "12px 16px",
-            borderTop: "1px solid var(--border-light)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-            overflow: "hidden",
-          }}
-        >
-          {isCollapsed ? (
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              {isAuthenticated ? (
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1 py-1 mt-4 border-t border-border/50 pt-4">
                 <button
                   type="button"
+                  className={cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    pathname.startsWith("/ai")
+                      ? "bg-accent/50 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  )}
+                  onClick={(e) => toggleFolder("AIAssistant", e)}
+                >
+                  <span className="mr-2 shrink-0">
+                    {expandedNodes.AIAssistant ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronRight size={14} />
+                    )}
+                  </span>
+                  <span className="truncate font-semibold text-foreground flex-1 text-left">
+                    AI Assistant
+                  </span>
+                </button>
+
+                {expandedNodes.AIAssistant && (
+                  <div className="flex flex-col gap-1 pl-4 pr-1 mt-1">
+                    {/* Action 1: New Chat */}
+                    <button
+                      type="button"
+                      onClick={handleNewChat}
+                      disabled={!isAuthenticated}
+                      className={cn(
+                        "flex items-center w-full px-3 py-1.5 text-sm rounded-md transition-colors text-primary font-medium hover:bg-primary/10",
+                        !isAuthenticated && "opacity-50 cursor-not-allowed",
+                      )}
+                    >
+                      <Plus size={14} className="mr-3 shrink-0" />
+                      <span className="truncate">New Analysis Chat</span>
+                    </button>
+
+                    {/* Action 2: Stats Dashboard */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        router.push("/ai");
+                        onCloseMobile?.();
+                      }}
+                      className={cn(
+                        "flex items-center w-full px-3 py-1.5 text-sm rounded-md transition-colors",
+                        pathname === "/ai"
+                          ? "text-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
+                      )}
+                    >
+                      <LayoutDashboard size={14} className="mr-3 shrink-0" />
+                      <span className="truncate">Stats Dashboard</span>
+                    </button>
+
+                    {/* Chat History Header */}
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-4 mb-1 px-3">
+                      Chat History
+                    </div>
+
+                    {/* List of Chat Sessions */}
+                    {sessionsLoading && sessions.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        Syncing...
+                      </div>
+                    ) : sessions.length === 0 ? (
+                      <div className="px-3 py-2 text-xs italic text-muted-foreground">
+                        No active chats
+                      </div>
+                    ) : (
+                      sessions.map((s) => {
+                        const isSessionActive = pathname === `/ai/${s.id}`;
+
+                        return (
+                          <div
+                            key={s.id}
+                            className={cn(
+                              "group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors",
+                              isSessionActive
+                                ? "bg-accent/50 text-foreground"
+                                : "text-muted-foreground hover:bg-accent/30 hover:text-foreground",
+                            )}
+                          >
+                            <Link
+                              href={`/ai/${s.id}`}
+                              onClick={(e) => {
+                                if (renamingSessionId === s.id) {
+                                  e.preventDefault();
+                                } else {
+                                  onCloseMobile?.();
+                                }
+                              }}
+                              className="flex items-center gap-3 flex-1 min-w-0"
+                            >
+                              <MessageSquare size={14} className="shrink-0" />
+                              {renamingSessionId === s.id ? (
+                                <input
+                                  type="text"
+                                  // biome-ignore lint/a11y/noAutofocus: intentional focus for renaming
+                                  autoFocus
+                                  className="flex h-6 w-full rounded-sm border border-primary bg-background px-2 text-xs ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+                                  value={renameInput}
+                                  onChange={(e) =>
+                                    setRenameInput(e.target.value)
+                                  }
+                                  onBlur={() =>
+                                    handleRenameSession(s.id, renameInput)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter")
+                                      handleRenameSession(s.id, renameInput);
+                                    if (e.key === "Escape")
+                                      setRenamingSessionId(null);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className="text-sm truncate">
+                                  {s.session_name}
+                                </span>
+                              )}
+                            </Link>
+
+                            {/* Action Hover Controls */}
+                            {renamingSessionId !== s.id && (
+                              <div className="hidden group-hover:flex items-center gap-1 shrink-0 ml-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setRenamingSessionId(s.id);
+                                    setRenameInput(s.session_name);
+                                  }}
+                                  disabled={!isAuthenticated}
+                                  className="p-1 text-muted-foreground hover:text-foreground rounded-sm hover:bg-background transition-colors"
+                                  title="Rename Chat"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                {isAuthenticated && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDeleteSession(s.id, e)
+                                    }
+                                    className="p-1 text-muted-foreground hover:text-destructive rounded-sm hover:bg-background transition-colors"
+                                    title="Delete Chat"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </nav>
+        </ScrollArea>
+
+        {/* User Profile / Auth Actions */}
+        <div className="border-t border-border p-4 shrink-0">
+          {isCollapsed ? (
+            <div className="flex justify-center">
+              {isAuthenticated ? (
+                <Button
+                  variant="outline"
+                  size="icon"
                   onClick={logout}
                   title="Sign Out"
-                  style={{
-                    background: "transparent",
-                    border: "1px solid var(--border-light)",
-                    color: "var(--text-secondary)",
-                    padding: "6px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
                 >
                   <LogOut size={16} />
-                </button>
+                </Button>
               ) : (
-                <Link
-                  href="/ai"
-                  onClick={onCloseMobile}
-                  title="Sign In"
-                  style={{
-                    border: "1px solid var(--border-light)",
-                    color: "var(--text-secondary)",
-                    padding: "6px",
-                    borderRadius: "4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <LogIn size={16} />
-                </Link>
+                <Button variant="outline" size="icon" asChild title="Sign In">
+                  <Link href="/ai" onClick={onCloseMobile}>
+                    <LogIn size={16} />
+                  </Link>
+                </Button>
               )}
             </div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 8,
-                minWidth: "248px",
-              }}
-            >
+            <div className="flex items-center justify-between gap-2">
               {isAuthenticated ? (
                 <>
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      color: "var(--text)",
-                      textOverflow: "ellipsis",
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                      flex: 1,
-                    }}
-                    title={auth.username || ""}
-                  >
-                    {auth.username}
-                  </span>
-                  <button
-                    type="button"
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span
+                      className="text-sm font-medium text-foreground truncate"
+                      title={auth.username || ""}
+                    >
+                      {auth.username}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      Authenticated
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={logout}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid var(--border)",
-                      color: "var(--text-secondary)",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      fontSize: "11px",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                      whiteSpace: "nowrap",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "var(--danger)";
-                      e.currentTarget.style.borderColor = "var(--danger-bg)";
-                      e.currentTarget.style.background = "var(--danger-bg)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = "var(--text-secondary)";
-                      e.currentTarget.style.borderColor = "var(--border)";
-                      e.currentTarget.style.background = "transparent";
-                    }}
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
                     Sign Out
-                  </button>
+                  </Button>
                 </>
               ) : (
-                <Link
-                  href="/ai"
-                  onClick={onCloseMobile}
-                  style={{
-                    border: "1px solid var(--accent)",
-                    color: "var(--accent)",
-                    background: "var(--accent-bg)",
-                    padding: "5px 8px",
-                    borderRadius: "4px",
-                    fontSize: "11px",
-                    textDecoration: "none",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    textAlign: "center",
-                    width: "100%",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Sign In
-                </Link>
+                <Button className="w-full" size="sm" asChild>
+                  <Link href="/ai" onClick={onCloseMobile}>
+                    Sign In
+                  </Link>
+                </Button>
               )}
             </div>
           )}

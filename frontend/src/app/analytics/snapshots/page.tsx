@@ -1,5 +1,31 @@
+import {
+  Clock,
+  FileCode,
+  FileText,
+  GitCommit,
+  HardDrive,
+  Network,
+} from "lucide-react";
 import { AnalyticsSubNav } from "@/components/analytics/analytics-sub-nav";
 import { PaginationBar } from "@/components/analytics/pagination-bar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { serverFetch } from "@/lib/server-api";
 import { formatBytes, formatDate } from "@/lib/utils";
 import type { RepoAnalyticsSnapshot } from "@/types";
@@ -38,21 +64,26 @@ export default async function SnapshotsPage({
   const latest = page === 1 && snapshots.length > 0 ? snapshots[0] : null;
 
   return (
-    <div className="page">
-      <div className="page-head" style={{ marginBottom: 24 }}>
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="page-kicker">Analytics / Git Snapshots</div>
-          <h1 className="page-title">Repository Snapshots</h1>
-          <p className="page-subtitle">
+          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary mb-3 gap-2">
+            <GitCommit className="h-3 w-3" />
+            Analytics / Git Snapshots
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Repository Snapshots
+          </h1>
+          <p className="text-muted-foreground mt-1 max-w-2xl">
             Git metadata captured by the backend collector at each backup point
             — commits, branches, tags, blob sizes, and archive sizes.
           </p>
         </div>
         {snapshots.length > 0 && (
-          <div className="pill" style={{ alignSelf: "flex-start" }}>
+          <Badge variant="outline" className="px-3 py-1 font-medium bg-card">
             {pagination?.total_items || snapshots.length} snapshot
             {(pagination?.total_items || snapshots.length) !== 1 ? "s" : ""}
-          </div>
+          </Badge>
         )}
       </div>
 
@@ -60,148 +91,168 @@ export default async function SnapshotsPage({
 
       {/* ── Latest snapshot summary ─────────────────────────────────── */}
       {latest && (
-        <section className="card section-card">
-          <div className="section-title">Latest snapshot</div>
-          <div className="section-desc">
-            Captured {formatDate(latest.captured_at)}
-            {latest.head_commit && (
-              <>
-                {" "}
-                · commit{" "}
-                <code
-                  style={{
-                    fontSize: 14,
-                    fontFamily: "monospace",
-                    color: "var(--accent)",
-                  }}
-                >
-                  {latest.head_commit.slice(0, 10)}
-                </code>
-              </>
-            )}
-            {latest.head_commit_message && ` — ${latest.head_commit_message}`}
-          </div>
-          <div
-            className="metric-grid metric-grid--four"
-            style={{ marginTop: 14 }}
-          >
-            <div className="card-flat">
-              <div className="stat-label">Total commits</div>
-              <div className="stat-value stat-value--md">
-                {latest.total_commits}
+        <Card className="border-primary/20 shadow-sm bg-gradient-to-br from-card to-primary/5">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">Latest Snapshot</CardTitle>
+                <CardDescription className="mt-1.5 flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    Captured {formatDate(latest.captured_at)}
+                  </span>
+                  {latest.head_commit && (
+                    <>
+                      <span className="text-border mx-1">•</span>
+                      <span className="flex items-center gap-1.5 font-mono text-primary text-xs bg-primary/10 px-2 py-0.5 rounded">
+                        <GitCommit className="h-3.5 w-3.5" />
+                        {latest.head_commit.slice(0, 10)}
+                      </span>
+                    </>
+                  )}
+                  {latest.head_commit_message && (
+                    <>
+                      <span className="text-border mx-1">•</span>
+                      <span
+                        className="truncate max-w-[300px] text-muted-foreground text-sm"
+                        title={latest.head_commit_message}
+                      >
+                        {latest.head_commit_message}
+                      </span>
+                    </>
+                  )}
+                </CardDescription>
               </div>
             </div>
-            <div className="card-flat">
-              <div className="stat-label">Branches</div>
-              <div className="stat-value stat-value--md">
-                {latest.branch_count}
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-background/50 border rounded-lg p-4 flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <GitCommit className="h-3.5 w-3.5" /> Total Commits
+                </span>
+                <span className="text-2xl font-bold">
+                  {latest.total_commits}
+                </span>
+              </div>
+              <div className="bg-background/50 border rounded-lg p-4 flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <Network className="h-3.5 w-3.5" /> Branches
+                </span>
+                <span className="text-2xl font-bold">
+                  {latest.branch_count}
+                </span>
+              </div>
+              <div className="bg-background/50 border rounded-lg p-4 flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Tracked Files
+                </span>
+                <span className="text-2xl font-bold">
+                  {latest.tracked_files}
+                </span>
+              </div>
+              <div className="bg-background/50 border rounded-lg p-4 flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <HardDrive className="h-3.5 w-3.5" /> Total Archive Size
+                </span>
+                <span className="text-2xl font-bold text-primary">
+                  {formatBytes(latest.total_archive_size_bytes)}
+                </span>
               </div>
             </div>
-            <div className="card-flat">
-              <div className="stat-label">Tracked files</div>
-              <div className="stat-value stat-value--md">
-                {latest.tracked_files}
-              </div>
-            </div>
-            <div className="card-flat">
-              <div className="stat-label">Total archive size</div>
-              <div className="stat-value stat-value--md">
-                {formatBytes(latest.total_archive_size_bytes)}
-              </div>
-            </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── History table ───────────────────────────────────────────── */}
-      <section className="card section-card">
-        <div className="section-title">Full history</div>
-
-        {!result ? (
-          <p style={{ color: "var(--danger)", fontSize: 15, paddingTop: 12 }}>
-            Failed to load snapshots. Check the backend is running.
-          </p>
-        ) : snapshots.length === 0 ? (
-          <div
-            style={{
-              padding: "40px 0",
-              textAlign: "center",
-              color: "var(--text-muted)",
-            }}
-          >
-            <p
-              style={{
-                fontWeight: 600,
-                fontSize: 16,
-                color: "var(--text-secondary)",
-              }}
-            >
-              No snapshots yet
-            </p>
-            <p style={{ fontSize: 15, marginTop: 8 }}>
-              Run the backup worker to start collecting repository analytics.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="table-wrap" style={{ marginTop: 14 }}>
-              <table className="table table-wide">
-                <thead>
-                  <tr>
-                    <th>Captured at</th>
-                    <th>Commit</th>
-                    <th>Message</th>
-                    <th>Commits</th>
-                    <th>Branches</th>
-                    <th>Tags</th>
-                    <th>Files</th>
-                    <th>Blob size</th>
-                    <th>Archive size</th>
-                  </tr>
-                </thead>
-                <tbody>
+      <Card>
+        <CardHeader className="border-b bg-muted/20">
+          <CardTitle className="text-lg">Snapshot History</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {!result ? (
+            <div className="p-8">
+              <ErrorState
+                title="Failed to load snapshots"
+                message="Check that the backend API is running and accessible."
+              />
+            </div>
+          ) : snapshots.length === 0 ? (
+            <div className="p-8">
+              <EmptyState
+                title="No snapshots yet"
+                description="Run the backup worker to start collecting repository analytics."
+                icon={<FileCode className="h-8 w-8" />}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Captured At</TableHead>
+                    <TableHead>Commit</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead className="text-right">Commits</TableHead>
+                    <TableHead className="text-right">Branches</TableHead>
+                    <TableHead className="text-right">Tags</TableHead>
+                    <TableHead className="text-right">Files</TableHead>
+                    <TableHead className="text-right">Blob Size</TableHead>
+                    <TableHead className="text-right">Archive Size</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {snapshots.map((snap) => (
-                    <tr key={snap.id}>
-                      <td data-label="Captured at" style={{ fontSize: 14 }}>
+                    <TableRow key={snap.id}>
+                      <TableCell className="whitespace-nowrap">
                         {formatDate(snap.captured_at)}
-                      </td>
-                      <td
-                        data-label="Commit"
-                        style={{ fontSize: 14, fontFamily: "monospace", color: "var(--text-muted)" }}
-                      >
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground text-xs">
                         {snap.head_commit ? snap.head_commit.slice(0, 10) : "—"}
-                      </td>
-                      <td
-                        data-label="Message"
-                        className="truncate"
-                        style={{ maxWidth: 180, fontSize: 14 }}
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[200px] truncate"
                         title={snap.head_commit_message}
                       >
                         {snap.head_commit_message || "—"}
-                      </td>
-                      <td data-label="Commits">{snap.total_commits}</td>
-                      <td data-label="Branches">{snap.branch_count}</td>
-                      <td data-label="Tags">{snap.tag_count}</td>
-                      <td data-label="Files">{snap.tracked_files}</td>
-                      <td data-label="Blob size">{formatBytes(snap.total_blob_size_bytes)}</td>
-                      <td data-label="Archive size">{formatBytes(snap.total_archive_size_bytes)}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {snap.total_commits}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {snap.branch_count}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {snap.tag_count}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {snap.tracked_files}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatBytes(snap.total_blob_size_bytes)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatBytes(snap.total_archive_size_bytes)}
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
 
-            {pagination && (
-              <PaginationBar
-                page={pagination.page}
-                totalPages={pagination.total_pages}
-                pageSize={pagination.page_size}
-                totalItems={pagination.total_items}
-              />
-            )}
-          </>
-        )}
-      </section>
+              {pagination && (
+                <div className="p-4 border-t">
+                  <PaginationBar
+                    page={pagination.page}
+                    totalPages={pagination.total_pages}
+                    pageSize={pagination.page_size}
+                    totalItems={pagination.total_items}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

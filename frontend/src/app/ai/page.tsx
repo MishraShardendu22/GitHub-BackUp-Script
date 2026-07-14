@@ -1,11 +1,14 @@
 import { AIDashboard } from "@/components/ai/AIDashboard";
 
+export const metadata = {
+  title: "AI Assistant",
+  description:
+    "AI assistant for analyzing and fixing GitHub backup operations.",
+};
+
 export default function AIPage() {
   return (
-    <div
-      className="page"
-      style={{ padding: 0, margin: 0, maxWidth: "100%", height: "100%" }}
-    >
+    <div className="flex h-[calc(100vh-5rem)] w-full flex-col p-0 m-0">
       <AIDashboard />
     </div>
   );

@@ -20,8 +20,15 @@ export interface RepoAnalyticsSnapshot {
   largest_archive_size_bytes: number;
 }
 
+export interface BackupRunChartData {
+  started_at: string;
+  successful: number;
+  failed: number;
+  duration_ms: number;
+}
+
 export interface MetricsData {
-  runs: any[];
+  runs: BackupRunChartData[];
   total_runs: number;
   avg_duration_ms: number;
   total_successful: number;

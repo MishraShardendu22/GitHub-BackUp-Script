@@ -1,74 +1,122 @@
+import {
+  ChevronRight,
+  Database,
+  GitCommit,
+  History,
+  Info,
+  Search,
+} from "lucide-react";
 import Link from "next/link";
 import { AnalyticsCharts } from "@/components/analytics/analytics-charts";
 import { AnalyticsSubNav } from "@/components/analytics/analytics-sub-nav";
 import { DaySelector } from "@/components/analytics/day-selector";
-import { serverFetch } from "@/lib/server-api";
-import { formatBytes, formatDuration } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { safeFetch } from "@/lib/api";
+import { cn, formatBytes, formatDuration } from "@/lib/utils";
 import type { MetricsData } from "@/types";
 
-const DAY_OPTIONS = [7, 14, 30, 90] as const;
+export const dynamic = "force-dynamic";
 
-async function fetchMetrics(days: number): Promise<MetricsData | null> {
-  return serverFetch<MetricsData>(`/api/metrics?days=${days}`);
+export const metadata = {
+  title: "Analytics",
+  description: "Repository storage and execution metrics over time.",
+};
+
+async function getAnalyticsData(days: number): Promise<MetricsData | null> {
+  return safeFetch<MetricsData>(`/api/analytics?days=${days}`);
 }
 
-export default async function AnalyticsOverviewPage({
+export default async function AnalyticsPage({
   searchParams,
 }: {
   searchParams: Promise<{ days?: string }>;
 }) {
-  const params = await searchParams;
-  const days = Number(params.days) || 30;
-  const metrics = await fetchMetrics(days);
+  const resolvedParams = await searchParams;
+  const days = Number.parseInt(resolvedParams.days || "30", 10);
+  const metrics = await getAnalyticsData(days);
 
-  const hasData = metrics?.runs && metrics.runs.length > 0;
+  const hasData = metrics && metrics.total_runs > 0;
 
   return (
-    <div className="page">
-      <div className="page-head">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="page-kicker">Analytics</div>
-          <h1 className="page-title">Overview</h1>
-          <p className="page-subtitle">
-            Backup performance trends over time. Use the tabs below to browse
-            detailed run history or Git snapshot records.
+          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary mb-3">
+            System Analytics
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Analytics Overview
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Storage utilization and execution metrics over the last {days} days.
           </p>
         </div>
-
-        <DaySelector currentDays={days} options={DAY_OPTIONS} />
+        <DaySelector currentDays={days} />
       </div>
 
       <AnalyticsSubNav />
 
-      {/* ── Stats ─────────────────────────────────────────────────────── */}
-      {!hasData ? (
-        <InsufficientData days={days} />
-      ) : (
-        <div className="metric-grid metric-grid--four stats-grid">
-          <div className="stat-card">
-            <div className="stat-label">Runs in {days}d window</div>
-            <div className="stat-value">{metrics?.total_runs ?? 0}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Avg duration</div>
-            <div className="stat-value">
-              {metrics?.avg_duration_ms
-                ? formatDuration(metrics.avg_duration_ms)
-                : "—"}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Successful</div>
-            <div className="stat-value stat-value--success">
-              {metrics?.total_successful ?? 0}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Failed</div>
-            <div className="stat-value stat-value--danger">
-              {metrics?.total_failed ?? 0}
-            </div>
-          </div>
+      {/* ── Overview Metrics ──────────────────────────────────────────── */}
+      {!hasData && <InsufficientData days={days} />}
+
+      {hasData && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Total Executions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {metrics?.total_runs ?? 0}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Avg Duration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {metrics?.avg_duration_ms
+                  ? formatDuration(metrics.avg_duration_ms)
+                  : "—"}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs font-semibold tracking-wide text-emerald-500/80 uppercase">
+                Successful
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-emerald-500">
+                {metrics?.total_successful ?? 0}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs font-semibold tracking-wide text-destructive/80 uppercase">
+                Failed
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-destructive">
+                {metrics?.total_failed ?? 0}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -79,168 +127,74 @@ export default async function AnalyticsOverviewPage({
 
       {/* ── Storage summary (only on overview) ─────────────────────────── */}
       {metrics && (
-        <div className="split-grid">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Storage card */}
-          <div className="card section-card">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: "var(--accent-bg)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <ellipse cx="12" cy="5" rx="9" ry="3" />
-                  <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
-                  <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 0 }}>
-                  Storage
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
+                  <Database className="h-5 w-5" />
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-muted)",
-                    marginTop: 2,
-                  }}
-                >
-                  Last {days} days
+                <div>
+                  <CardTitle>Storage</CardTitle>
+                  <CardDescription>Last {days} days</CardDescription>
                 </div>
               </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              <StorageStat
-                label="Total size"
-                value={formatBytes(metrics.total_size_bytes ?? 0)}
-                accent
-              />
-              <StorageStat
-                label="Largest archive"
-                value={formatBytes(metrics.largest_archive_bytes ?? 0)}
-              />
-              <StorageStat
-                label="Distinct repos"
-                value={String(metrics.distinct_repos ?? 0)}
-              />
-              <StorageStat
-                label="Largest repo"
-                value={metrics.largest_repository || "—"}
-                truncate
-              />
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <StorageStat
+                  label="Total size"
+                  value={formatBytes(metrics.total_size_bytes ?? 0)}
+                  accent
+                />
+                <StorageStat
+                  label="Largest archive"
+                  value={formatBytes(metrics.largest_archive_bytes ?? 0)}
+                />
+                <StorageStat
+                  label="Distinct repos"
+                  value={String(metrics.distinct_repos ?? 0)}
+                />
+                <StorageStat
+                  label="Largest repo"
+                  value={metrics.largest_repository || "—"}
+                  truncate
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Dive deeper card */}
-          <div className="card section-card">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: "var(--accent-bg)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                  <path d="M11 8v6M8 11h6" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 0 }}>
-                  Explore
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
+                  <Search className="h-5 w-5" />
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-muted)",
-                    marginTop: 2,
-                  }}
-                >
-                  Detailed historical data
+                <div>
+                  <CardTitle>Explore</CardTitle>
+                  <CardDescription>Detailed historical data</CardDescription>
                 </div>
               </div>
-            </div>
-
-            <div style={{ display: "grid", gap: 7 }}>
-              <DiveLink
-                href="/analytics/runs"
-                label="Run History"
-                desc="Full paginated table of all backup runs"
-                icon={
-                  <>
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <path d="M3 9h18M9 21V9" />
-                  </>
-                }
-              />
-              <DiveLink
-                href="/analytics/snapshots"
-                label="Git Snapshots"
-                desc="Repository analytics at each backup point"
-                icon={
-                  <>
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
-                  </>
-                }
-              />
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3">
+                <DiveLink
+                  href="/analytics/runs"
+                  label="Run History"
+                  desc="Full paginated table of all backup runs"
+                  icon={<History className="h-5 w-5" />}
+                />
+                <DiveLink
+                  href="/analytics/snapshots"
+                  label="Git Snapshots"
+                  desc="Repository analytics at each backup point"
+                  icon={<GitCommit className="h-5 w-5" />}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
@@ -249,44 +203,13 @@ export default async function AnalyticsOverviewPage({
 
 function InsufficientData({ days }: { days: number }) {
   return (
-    <div
-      style={{
-        padding: "16px 20px",
-        borderRadius: 8,
-        background: "rgba(139, 92, 246, 0.06)",
-        border: "1px solid rgba(139, 92, 246, 0.18)",
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
-      }}
-    >
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ flexShrink: 0, marginTop: 1 }}
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
-      </svg>
+    <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+      <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
       <div>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: 14.5,
-            color: "var(--text-secondary)",
-          }}
-        >
+        <h4 className="text-sm font-semibold text-foreground">
           No data for the {days}-day window
-        </p>
-        <p style={{ fontSize: 13, marginTop: 4, color: "var(--text-muted)" }}>
+        </h4>
+        <p className="text-sm text-muted-foreground mt-1">
           No backup runs were recorded in the last {days} days. Try a longer
           range or start the backup worker.
         </p>
@@ -308,30 +231,23 @@ function StorageStat({
 }) {
   return (
     <div
-      style={{
-        background: accent
-          ? "linear-gradient(135deg, rgba(139, 92, 246, 0.10), rgba(139, 92, 246, 0.02))"
-          : "rgba(255,255,255,0.03)",
-        border: accent
-          ? "1px solid rgba(139, 92, 246, 0.20)"
-          : "1px solid rgba(255,255,255,0.06)",
-        borderRadius: 7,
-        padding: "10px 12px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 3,
-      }}
+      className={cn(
+        "flex flex-col gap-1 p-3 rounded-lg border",
+        accent
+          ? "bg-primary/5 border-primary/20"
+          : "bg-muted/30 border-border/50",
+      )}
     >
-      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</div>
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {label}
+      </div>
       <div
-        style={{
-          fontSize: 16,
-          fontWeight: 600,
-          color: accent ? "var(--accent)" : "var(--text-primary)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: truncate ? "nowrap" : undefined,
-        }}
+        className={cn(
+          "text-lg font-semibold",
+          accent ? "text-primary" : "text-foreground",
+          truncate && "truncate",
+        )}
+        title={truncate ? value : undefined}
       >
         {value}
       </div>
@@ -353,63 +269,20 @@ function DiveLink({
   return (
     <Link
       href={href}
-      className="dive-link"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 10px",
-        borderRadius: 7,
-        textDecoration: "none",
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        transition: "background 0.15s",
-      }}
+      className="group flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent hover:text-accent-foreground transition-colors"
     >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ flexShrink: 0, opacity: 0.7 }}
-        aria-hidden="true"
-      >
-        {icon}
-      </svg>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-        >
-          {label}
+      <div className="flex items-center gap-4">
+        <div className="text-muted-foreground group-hover:text-primary transition-colors">
+          {icon}
         </div>
-        <div
-          style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}
-        >
-          {desc}
+        <div>
+          <div className="text-sm font-medium">{label}</div>
+          <div className="text-xs text-muted-foreground group-hover:text-accent-foreground/80">
+            {desc}
+          </div>
         </div>
       </div>
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--text-muted)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ flexShrink: 0 }}
-        aria-hidden="true"
-      >
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
+      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
     </Link>
   );
 }

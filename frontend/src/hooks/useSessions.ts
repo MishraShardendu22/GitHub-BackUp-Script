@@ -10,10 +10,14 @@ export function useSessions(token?: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await sessionService.list(token);
+      const data = await sessionService.getSessions(token);
       setSessions(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch sessions");
@@ -30,7 +34,7 @@ export function useSessions(token?: string | null) {
   const createSession = useCallback(
     async (id: string, name: string) => {
       if (!token) throw new Error("Not authenticated");
-      await sessionService.create(token, id, name);
+      await sessionService.createSession(token, id, name);
       await fetchSessions();
     },
     [token, fetchSessions],
@@ -39,7 +43,7 @@ export function useSessions(token?: string | null) {
   const renameSession = useCallback(
     async (id: string, name: string) => {
       if (!token || !name.trim()) return;
-      await sessionService.rename(token, id, name);
+      await sessionService.renameSession(token, id, name);
       await fetchSessions();
     },
     [token, fetchSessions],
@@ -48,7 +52,7 @@ export function useSessions(token?: string | null) {
   const deleteSession = useCallback(
     async (id: string) => {
       if (!token) return;
-      await sessionService.delete(token, id);
+      await sessionService.deleteSession(token, id);
       await fetchSessions();
     },
     [token, fetchSessions],

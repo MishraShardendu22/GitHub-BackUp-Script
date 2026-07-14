@@ -1,75 +1,84 @@
+import {
+  Activity,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  XCircle,
+} from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import type { MessageToolCall } from "@/types";
-
-const ChevronIcon = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ flexShrink: 0 }}
-  >
-    <polyline points="6 9 12 15 18 9"></polyline>
-  </svg>
-);
 
 export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="ai-tool-activity-card">
-      <div
-        className="ai-tool-activity-header"
+    <div className="border border-border/50 rounded-lg bg-muted/20 overflow-hidden mb-2 shadow-sm transition-all duration-200">
+      <button
+        type="button"
+        className={cn(
+          "w-full flex items-center justify-between p-3 text-left transition-colors hover:bg-muted/40",
+          expanded && "border-b border-border/50 bg-muted/40",
+        )}
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
       >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <span
-            className={`ai-tool-status-icon ${tool.running ? "running" : tool.success ? "success" : "error"}`}
-          />
-          <strong style={{ fontFamily: "monospace", color: "var(--accent)" }}>
+        <div className="flex items-center gap-3">
+          {tool.running ? (
+            <Activity className="h-4 w-4 text-primary animate-pulse" />
+          ) : tool.success ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          ) : (
+            <XCircle className="h-4 w-4 text-destructive" />
+          )}
+          <span className="font-mono text-sm font-semibold text-foreground">
             {tool.name}
-          </strong>
+          </span>
           <span
-            style={{
-              marginLeft: 8,
-              color: "var(--text-secondary)",
-              fontSize: "11px",
-            }}
+            className={cn(
+              "text-xs px-2 py-0.5 rounded-full",
+              tool.running
+                ? "bg-primary/10 text-primary"
+                : tool.success
+                  ? "bg-emerald-500/10 text-emerald-600"
+                  : "bg-destructive/10 text-destructive",
+            )}
           >
             {tool.running
               ? "Running…"
               : tool.success
-                ? `Success (${tool.duration_ms ? tool.duration_ms.toFixed(0) : 0}ms)`
+                ? `${tool.duration_ms ? tool.duration_ms.toFixed(0) : 0}ms`
                 : "Failed"}
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className="text-xs font-medium uppercase tracking-wider">
             {expanded ? "Hide" : "Details"}
           </span>
-          <ChevronIcon />
+          {expanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
         </div>
-      </div>
+      </button>
+
       {expanded && (
-        <div className="ai-tool-activity-details">
+        <div className="p-3 bg-background space-y-3 border-t-2 border-t-primary/10">
           <div>
-            <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
-              Arguments:
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+              Arguments
             </span>
-            <pre className="ai-json-viewer">
+            <pre className="text-[13px] bg-muted/50 p-3 rounded-md overflow-x-auto font-mono text-muted-foreground border border-border/50 leading-relaxed">
               {JSON.stringify(tool.args, null, 2)}
             </pre>
           </div>
           {tool.result !== undefined && tool.result !== null && (
             <div>
-              <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
-                Result:
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                Result
               </span>
-              <pre className="ai-json-viewer">
+              <pre className="text-[13px] bg-muted/50 p-3 rounded-md overflow-x-auto font-mono text-foreground border border-border/50 leading-relaxed max-h-60">
                 {typeof tool.result === "string"
                   ? tool.result
                   : JSON.stringify(tool.result, null, 2)}
@@ -78,8 +87,10 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
           )}
           {tool.error && (
             <div>
-              <span style={{ color: "#ef4444", fontWeight: 600 }}>Error:</span>
-              <pre className="ai-json-viewer" style={{ color: "#f87171" }}>
+              <span className="text-xs font-semibold text-destructive uppercase tracking-wider mb-1.5 block">
+                Error
+              </span>
+              <pre className="text-[13px] bg-destructive/10 p-3 rounded-md overflow-x-auto font-mono text-destructive border border-destructive/20 leading-relaxed">
                 {tool.error}
               </pre>
             </div>

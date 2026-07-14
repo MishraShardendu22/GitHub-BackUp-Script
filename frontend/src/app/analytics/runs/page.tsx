@@ -1,6 +1,19 @@
+import { AlertCircle, ArrowRight, TerminalSquare } from "lucide-react";
 import Link from "next/link";
 import { AnalyticsSubNav } from "@/components/analytics/analytics-sub-nav";
 import { PaginationBar } from "@/components/analytics/pagination-bar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { serverFetch } from "@/lib/server-api";
 import { formatDate, formatDuration } from "@/lib/utils";
 import type { BackupRun } from "@/types";
@@ -38,12 +51,17 @@ export default async function RunHistoryPage({
   const pagination = result?.pagination;
 
   return (
-    <div className="page">
-      <div className="page-head" style={{ marginBottom: 24 }}>
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="page-kicker">Analytics / Run History</div>
-          <h1 className="page-title">Backup Runs</h1>
-          <p className="page-subtitle">
+          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary mb-3 gap-2">
+            <TerminalSquare className="h-3 w-3" />
+            Analytics / Run History
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Backup Runs
+          </h1>
+          <p className="text-muted-foreground mt-1">
             Full paginated history of all backup runs. Click a run to see
             per-repository results.
           </p>
@@ -52,115 +70,111 @@ export default async function RunHistoryPage({
 
       <AnalyticsSubNav />
 
-      <section className="card section-card">
-        {!result ? (
-          <p style={{ color: "var(--danger)", fontSize: 15 }}>
-            Failed to load run history. Check the backend is running.
-          </p>
-        ) : runs.length === 0 ? (
-          <EmptyRuns />
-        ) : (
-          <>
-            <div className="table-wrap">
-              <table className="table table-wide">
-                <thead>
-                  <tr>
-                    <th>Run #</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>Duration</th>
-                    <th>Repos</th>
-                    <th>✓ OK</th>
-                    <th>✗ Failed</th>
-                    <th>Skipped</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
+      <Card>
+        <CardContent className="p-0">
+          {!result ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center text-destructive">
+              <AlertCircle className="h-8 w-8 mb-4 opacity-50" />
+              <p className="font-semibold">Failed to load run history.</p>
+              <p className="text-sm opacity-80 mt-1">
+                Check the backend is running and accessible.
+              </p>
+            </div>
+          ) : runs.length === 0 ? (
+            <EmptyState
+              title="No runs found"
+              description="Start the backup worker to create a backup run."
+              icon={<TerminalSquare className="h-8 w-8" />}
+            />
+          ) : (
+            <div className="flex flex-col">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Run #</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead className="text-right">Repos</TableHead>
+                    <TableHead className="text-right">✓ OK</TableHead>
+                    <TableHead className="text-right">✗ Failed</TableHead>
+                    <TableHead className="text-right">Skipped</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {runs.map((run) => (
-                    <tr key={run.id}>
-                      <td data-label="Run #" style={{ fontWeight: 600 }}>#{run.id}</td>
-                      <td data-label="Status">
-                        <span
-                          className={`badge ${
+                    <TableRow key={run.id} className="group">
+                      <TableCell className="font-medium">#{run.id}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
                             run.status === "completed"
-                              ? "badge-success"
+                              ? "default"
                               : run.status === "running"
-                                ? "badge-running"
-                                : "badge-error"
-                          }`}
+                                ? "secondary"
+                                : "destructive"
+                          }
+                          className={
+                            run.status === "completed"
+                              ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20"
+                              : ""
+                          }
                         >
                           {run.status}
-                        </span>
-                      </td>
-                      <td data-label="Started" style={{ fontSize: 14, color: "var(--text-muted)" }}>
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                         {formatDate(run.started_at)}
-                      </td>
-                      <td data-label="Duration">{formatDuration(run.duration_ms)}</td>
-                      <td data-label="Repos">{run.total_repos}</td>
-                      <td data-label="✓ OK" style={{ color: "var(--success)" }}>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDuration(run.duration_ms)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {run.total_repos}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-500 font-medium">
                         {run.successful}
-                      </td>
-                      <td
-                        data-label="✗ Failed"
-                        style={{
-                          color: run.failed > 0 ? "var(--danger)" : "inherit",
-                        }}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-medium ${run.failed > 0 ? "text-destructive" : ""}`}
                       >
                         {run.failed}
-                      </td>
-                      <td data-label="Skipped" className="text-muted">{run.skipped}</td>
-                      <td data-label="Details">
-                        <Link
-                          href={`/backups/${run.id}`}
-                          className="btn btn-ghost"
-                          style={{ fontSize: 14 }}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {run.skipped}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          Details →
-                        </Link>
-                      </td>
-                    </tr>
+                          <Link href={`/backups/${run.id}`}>
+                            Details <ArrowRight className="h-4 w-4 ml-2" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
+
+              {pagination && (
+                <div className="p-4 border-t border-border">
+                  <PaginationBar
+                    page={pagination.page}
+                    totalPages={pagination.total_pages}
+                    pageSize={pagination.page_size}
+                    totalItems={pagination.total_items}
+                  />
+                </div>
+              )}
             </div>
-
-            {pagination && (
-              <PaginationBar
-                page={pagination.page}
-                totalPages={pagination.total_pages}
-                pageSize={pagination.page_size}
-                totalItems={pagination.total_items}
-              />
-            )}
-          </>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function EmptyRuns() {
-  return (
-    <div
-      style={{
-        padding: "40px 0",
-        textAlign: "center",
-        color: "var(--text-muted)",
-      }}
-    >
-      <p
-        style={{
-          fontWeight: 600,
-          fontSize: 16,
-          color: "var(--text-secondary)",
-        }}
-      >
-        No runs found
-      </p>
-      <p style={{ fontSize: 15, marginTop: 8 }}>
-        Start the backup worker to create a backup run.
-      </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

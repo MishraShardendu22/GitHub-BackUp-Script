@@ -1,3 +1,5 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { STATUS_BACKGROUNDS, STATUS_COLORS } from "@/constants/status";
 
 // ─── Formatting utilities ────────────────────────────────────────────────────
@@ -78,6 +80,6 @@ export function uid(): string {
 
 // ─── Class name utilities ────────────────────────────────────────────────────
 
-export function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(" ");
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }

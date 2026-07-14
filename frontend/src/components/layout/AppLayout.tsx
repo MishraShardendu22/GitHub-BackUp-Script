@@ -1,7 +1,9 @@
 "use client";
 
-import { Menu, Activity, Server } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AIContextProvider } from "./AIContext";
 import Sidebar from "./sidebar";
 
@@ -17,28 +19,37 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="app-layout">
-      {/* Collapsible/Drawer Sidebar */}
+    <div className="flex min-h-screen w-full flex-col bg-background md:flex-row">
       <Sidebar
         isMobileOpen={isMobileOpen}
         onCloseMobile={() => setIsMobileOpen(false)}
       />
 
-      <div className="app-content-wrapper">
+      <div
+        className={cn(
+          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+          "md:ml-[var(--sidebar-width,280px)]",
+        )}
+      >
         {/* Mobile top navigation bar */}
-        <header className="mobile-header">
-          <button
-            type="button"
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setIsMobileOpen(true)}
-            className="mobile-menu-btn"
             aria-label="Open navigation menu"
           >
-            <Menu size={20} />
-          </button>
-          <span className="mobile-header-title">Observatory</span>
-          <div style={{ width: 32 }} /> {/* Empty space to center title */}
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="text-sm font-semibold tracking-tight">
+            Observatory
+          </span>
+          <div className="w-9" /> {/* Spacer to center title */}
         </header>
-        {children}
+
+        <main className="flex-1 overflow-auto bg-background/50">
+          {children}
+        </main>
       </div>
     </div>
   );

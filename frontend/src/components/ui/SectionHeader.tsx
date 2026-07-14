@@ -14,16 +14,17 @@ export function SectionHeader({
   className,
 }: SectionHeaderProps) {
   return (
-    <div className={cn(className)} style={{ marginBottom: "28px" }}>
-      {kicker && <div className="page-kicker">{kicker}</div>}
-      <h1 className="hero-title" style={{ margin: "4px 0" }}>
+    <div className={cn("flex flex-col gap-1.5 mb-6", className)}>
+      {kicker && (
+        <div className="text-xs font-bold tracking-wider text-primary uppercase">
+          {kicker}
+        </div>
+      )}
+      <h2 className="text-2xl font-bold tracking-tight text-foreground">
         {title}
-      </h1>
+      </h2>
       {subtitle && (
-        <p
-          className="hero-subtitle"
-          style={{ fontSize: "14px", color: "var(--text-secondary)" }}
-        >
+        <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
           {subtitle}
         </p>
       )}

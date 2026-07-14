@@ -1,6 +1,20 @@
 "use client";
 
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const PAGE_SIZES = [10, 25, 50] as const;
 
@@ -26,140 +40,90 @@ export function PaginationBar({
     router.push(`?${params.toString()}`);
   };
 
-  const handlePageSize = (newSize: number) => {
+  const handlePageSize = (newSize: string) => {
     const params = new URLSearchParams(searchParams);
     params.set("page", "1");
-    params.set("pageSize", String(newSize));
+    params.set("pageSize", newSize);
     router.push(`?${params.toString()}`);
   };
   const from = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, totalItems);
 
-  // Window of up to 5 page numbers centered on current page
-  const windowStart = Math.max(1, Math.min(page - 2, totalPages - 4));
-  const windowEnd = Math.min(windowStart + 4, totalPages);
-  const pages = Array.from(
-    { length: windowEnd - windowStart + 1 },
-    (_, i) => windowStart + i,
-  );
-
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 12,
-        paddingTop: 14,
-        borderTop: "1px solid var(--border)",
-        marginTop: 2,
-      }}
-    >
-      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-        {totalItems === 0 ? "No results" : `${from}–${to} of ${totalItems}`}
-      </span>
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm w-full">
+      <div className="flex items-center text-muted-foreground whitespace-nowrap">
+        {totalItems === 0
+          ? "No results found"
+          : `Showing ${from} to ${to} of ${totalItems} entries`}
+      </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 12,
-            color: "var(--text-muted)",
-          }}
-        >
-          Rows
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSize(Number(e.target.value))}
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              color: "var(--text)",
-              padding: "3px 8px",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
-          >
-            {PAGE_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground whitespace-nowrap">
+            Rows per page
+          </span>
+          <Select value={String(pageSize)} onValueChange={handlePageSize}>
+            <SelectTrigger className="h-8 w-[70px] bg-background">
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {PAGE_SIZES.map((s) => (
+                <SelectItem key={s} value={String(s)}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div style={{ display: "flex", gap: 3 }}>
-          <PBtn onClick={() => handlePage(1)} disabled={page <= 1} label="«" />
-          <PBtn
-            onClick={() => handlePage(page - 1)}
-            disabled={page <= 1}
-            label="‹"
-          />
-          {pages.map((p) => (
-            <PBtn
-              key={p}
-              onClick={() => handlePage(p)}
-              label={String(p)}
-              active={p === page}
-            />
-          ))}
-          <PBtn
-            onClick={() => handlePage(page + 1)}
-            disabled={page >= totalPages}
-            label="›"
-          />
-          <PBtn
-            onClick={() => handlePage(totalPages)}
-            disabled={page >= totalPages}
-            label="»"
-          />
+        <div className="flex items-center gap-1.5">
+          <span className="flex items-center justify-center text-muted-foreground mr-2">
+            Page {page} of {totalPages || 1}
+          </span>
+          <div className="flex items-center space-x-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 hidden sm:flex"
+              onClick={() => handlePage(1)}
+              disabled={page <= 1}
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handlePage(page - 1)}
+              disabled={page <= 1}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handlePage(page + 1)}
+              disabled={page >= totalPages}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 hidden sm:flex"
+              onClick={() => handlePage(totalPages)}
+              disabled={page >= totalPages}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function PBtn({
-  onClick,
-  disabled = false,
-  active = false,
-  label,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  active?: boolean;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-current={active ? "page" : undefined}
-      style={{
-        border: active
-          ? "1px solid rgba(212,168,50,0.5)"
-          : "1px solid var(--border)",
-        background: active ? "rgba(212,168,50,0.15)" : "var(--surface)",
-        color: disabled
-          ? "var(--text-muted)"
-          : active
-            ? "var(--accent)"
-            : "var(--text-secondary)",
-        borderRadius: 6,
-        padding: "4px 10px",
-        fontSize: 13,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.4 : 1,
-        minWidth: 32,
-        transition: "background 0.12s, border-color 0.12s",
-      }}
-    >
-      {label}
-    </button>
   );
 }

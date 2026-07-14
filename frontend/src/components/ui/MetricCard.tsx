@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface MetricCardProps {
@@ -15,29 +16,31 @@ export function MetricCard({
   className,
   compact,
 }: MetricCardProps) {
-  if (compact) {
-    return (
-      <div className={cn("stat-card stat-card--compact", className)}>
-        <div className="stat-label">{label}</div>
-        <div className="stat-value stat-value--md">{value}</div>
-        {subtitle && (
-          <div className="text-xs text-muted" style={{ marginTop: 6 }}>
-            {subtitle}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className={cn("ai-dashboard-card", className)}>
-      <div className="ai-card-title">{label}</div>
-      <div className="ai-card-value">{value}</div>
-      {subtitle && (
-        <div className="text-xs text-muted" style={{ marginTop: 6 }}>
-          {subtitle}
-        </div>
+    <Card
+      className={cn(
+        "shadow-sm hover:shadow transition-shadow bg-card",
+        className,
       )}
-    </div>
+    >
+      <CardHeader className={cn(compact ? "p-4 pb-2" : "p-6 pb-2")}>
+        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className={cn(compact ? "p-4 pt-0" : "p-6 pt-0")}>
+        <div
+          className={cn(
+            "font-bold text-foreground",
+            compact ? "text-2xl" : "text-3xl",
+          )}
+        >
+          {value}
+        </div>
+        {subtitle && (
+          <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

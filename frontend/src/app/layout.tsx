@@ -3,6 +3,7 @@ import { Instrument_Serif, Inter } from "next/font/google";
 import { AppLayout } from "@/components/layout/AppLayout";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,7 +29,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Backup Observatory | GitHub Backup Monitor",
-    description: "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
+    description:
+      "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
     url: "https://github.mishrashardendu22.is-a.dev",
     siteName: "Backup Observatory",
     locale: "en_US",
@@ -37,7 +39,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Backup Observatory | GitHub Backup Monitor",
-    description: "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
+    description:
+      "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
   },
   robots: {
     index: true,
@@ -51,16 +54,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${instrumentSerif.variable}`}>
+    <html
+      lang="en"
+      className={cn("dark", inter.variable, instrumentSerif.variable)}
+    >
       <Analytics />
-      <body className="app-shell">
+      <body className="min-h-screen bg-background font-sans antialiased text-foreground">
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
         <AppLayout>
-          <main id="main-content" className="app-main">
+          <div
+            id="main-content"
+            className="w-full max-w-[1600px] mx-auto p-6 md:p-8"
+          >
             {children}
-          </main>
+          </div>
         </AppLayout>
       </body>
     </html>

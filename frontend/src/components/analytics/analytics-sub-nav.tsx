@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/analytics", label: "Overview" },
@@ -15,13 +16,7 @@ export function AnalyticsSubNav() {
   return (
     <nav
       aria-label="Analytics sections"
-      style={{
-        display: "flex",
-        gap: 4,
-        borderBottom: "1px solid var(--border)",
-        paddingBottom: 0,
-        marginBottom: 0,
-      }}
+      className="flex gap-2 border-b border-border/50 pb-0 mb-2 overflow-x-auto no-scrollbar"
     >
       {tabs.map((tab) => {
         const isActive = pathname === tab.href;
@@ -29,19 +24,12 @@ export function AnalyticsSubNav() {
           <Link
             key={tab.href}
             href={tab.href}
-            style={{
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 500,
-              textDecoration: "none",
-              borderBottom: isActive
-                ? "2px solid var(--accent)"
-                : "2px solid transparent",
-              color: isActive ? "var(--accent)" : "var(--text-muted)",
-              marginBottom: -1,
-              transition: "color 0.15s, border-color 0.15s",
-              whiteSpace: "nowrap",
-            }}
+            className={cn(
+              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+              isActive
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30",
+            )}
             aria-current={isActive ? "page" : undefined}
           >
             {tab.label}

@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoadingStateProps {
@@ -11,29 +12,29 @@ export function LoadingState({
   className,
   size = "md",
 }: LoadingStateProps) {
-  const spinnerSize = size === "sm" ? 12 : size === "lg" ? 24 : 16;
+  const iconSizeClass = {
+    sm: "h-3 w-3",
+    md: "h-4 w-4",
+    lg: "h-6 w-6",
+  }[size];
+
+  const textSizeClass = {
+    sm: "text-xs",
+    md: "text-sm",
+    lg: "text-base",
+  }[size];
 
   return (
     <div
-      className={cn("loading-state", className)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        color: "var(--text-secondary)",
-        fontSize: size === "sm" ? "12px" : "13px",
-      }}
+      className={cn(
+        "flex items-center justify-center gap-2 text-muted-foreground animate-in fade-in duration-300",
+        className,
+      )}
     >
-      <div
-        className="ai-loader-spinner"
-        style={{
-          width: spinnerSize,
-          height: spinnerSize,
-          borderWidth: size === "sm" ? 1.5 : 2,
-          margin: 0,
-        }}
-      />
-      <span>{message}</span>
+      <Loader2 className={cn("animate-spin text-primary", iconSizeClass)} />
+      {message && (
+        <span className={cn("font-medium", textSizeClass)}>{message}</span>
+      )}
     </div>
   );
 }
