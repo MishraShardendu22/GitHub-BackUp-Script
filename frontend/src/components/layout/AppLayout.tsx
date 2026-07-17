@@ -35,7 +35,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          <span className="mobile-header-title">Observatory</span>
+          <span className="mobile-header-title">Systems Lab</span>
           <div style={{ width: 32 }} /> {/* Empty space to center title */}
         </header>
         {children}

@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  ArrowLeft,
   BarChart3,
+  BookOpen,
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
@@ -51,6 +53,16 @@ const GitHubIcon = ({ size = 16, ...props }: LucideProps) => (
 
 // Tree structure for standard sections
 const treeData: NavNode[] = [
+  {
+    label: "Main Portfolio",
+    href: "https://mishrashardendu22.is-a.dev",
+    icon: ArrowLeft,
+  },
+  {
+    label: "Tech Blog",
+    href: "https://blogs.mishrashardendu22.is-a.dev",
+    icon: BookOpen,
+  },
   {
     label: "View the Codebase",
     href: "https://github.com/MishraShardendu22/github-backup-automation-system",
@@ -337,9 +349,9 @@ export default function Sidebar({
                 textOverflow: "ellipsis",
                 flex: 1,
               }}
-              title="GitHub Backup Observatory Agent"
+              title="Systems Lab Agent"
             >
-              Github Backup Observatory
+              Systems Lab
             </div>
           )}
           <button

@@ -11,8 +11,9 @@
   --success: #22c55e;
   --danger: #ef4444;
   --warning: #f59e0b;
-  --font-serif: var(--font-instrument), Georgia, serif;
-  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
+  --font-serif: var(--font-heading), system-ui, sans-serif;
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-mono: var(--font-mono), monospace;
   --page-max: 1600px;
   --space-xs: 6px;
   --space-sm: 12px;
@@ -28,7 +29,7 @@
   --accent-bg: rgba(139, 92, 246, 0.15);
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-lg: 12px;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
@@ -53,9 +54,12 @@ body {
 
 h1,
 h2,
-h3 {
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-serif);
-  font-weight: 400;
+  font-weight: 600;
 }
 
 a {

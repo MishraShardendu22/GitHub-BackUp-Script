@@ -18,7 +18,7 @@ export function LoginPanel({ onLogin, loading, error }: LoginPanelProps) {
   return (
     <div className="ai-login-panel">
       <p className="ai-login-label">
-        Sign in to access the AI Observatory Dashboard
+        Sign in to access the AI Systems Lab Dashboard
       </p>
       <form onSubmit={handleSubmit} className="ai-login-form" noValidate>
         <input

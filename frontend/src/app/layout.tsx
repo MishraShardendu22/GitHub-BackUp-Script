@@ -1,25 +1,32 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, Inter } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { AppLayout } from "@/components/layout/AppLayout";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 
-const inter = Inter({
-  variable: "--font-inter",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-heading",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument",
+const ibmPlexSans = IBM_Plex_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "600"],
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://github.mishrashardendu22.is-a.dev"),
   title: {
-    default: "Backup Observatory | GitHub Backup Monitor",
-    template: "%s | Backup Observatory",
+    default: "Systems Lab | GitHub Backup Monitor",
+    template: "%s | Systems Lab",
   },
   description:
     "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
@@ -27,16 +34,16 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Backup Observatory | GitHub Backup Monitor",
+    title: "Systems Lab | GitHub Backup Monitor",
     description: "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
     url: "https://github.mishrashardendu22.is-a.dev",
-    siteName: "Backup Observatory",
+    siteName: "Systems Lab",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Backup Observatory | GitHub Backup Monitor",
+    title: "Systems Lab | GitHub Backup Monitor",
     description: "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
   },
   robots: {
@@ -51,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${instrumentSerif.variable}`}>
+    <html lang="en" className={`${spaceGrotesk.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <Analytics />
       <body className="app-shell">
         <a className="skip-link" href="#main-content">

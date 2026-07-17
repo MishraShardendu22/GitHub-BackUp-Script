@@ -803,10 +803,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   ⚠️ {submitError}
                 </div>
               )}
-
               {!hasToken && (
                 <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
-                  ⚠️ You must be logged into the AI Observatory to submit a resolution. (Please login using the sidebar/assistant first).
+                  ⚠️ You must be logged into the Systems Lab to submit a resolution. (Please login using the sidebar/assistant first).
                 </div>
               )}
 

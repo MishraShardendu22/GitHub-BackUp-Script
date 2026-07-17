@@ -20,7 +20,7 @@ export function MessageBubble({ msg }: { msg: Message }) {
   return (
     <div className="assistantWrap">
       <div className="msgHeader">
-        <span style={{ color: "var(--accent)" }}>◆</span> Observatory Agent ·{" "}
+        <span style={{ color: "var(--accent)" }}>◆</span> Systems Lab Agent ·{" "}
         {formatTime(msg.timestamp)}
       </div>
       <div className="assistantBubble">

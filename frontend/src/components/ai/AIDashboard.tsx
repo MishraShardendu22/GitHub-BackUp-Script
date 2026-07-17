@@ -176,7 +176,7 @@ export function AIDashboard() {
           <div className="ai-agent-identity">
             <div className="ai-agent-info">
               <div className="ai-agent-name">
-                GitHub Backup Observatory Agent
+                Systems Lab Agent
               </div>
               <div className="ai-agent-status">
                 <span className={`ai-status-dot ${sending ? "busy" : ""}`} />
@@ -279,9 +279,9 @@ export function AIDashboard() {
             ) : (
               <div className="ai-dashboard-panel">
                 <div style={{ marginBottom: "28px" }}>
-                  <div className="page-kicker">Observatory Operations</div>
+                  <div className="page-kicker">Systems Lab Operations</div>
                   <h1 className="hero-title" style={{ margin: "4px 0" }}>
-                    Backup Agent Dashboard
+                    Systems Lab Dashboard
                   </h1>
                   <p
                     className="hero-subtitle"
