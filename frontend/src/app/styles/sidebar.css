@@ -1,27 +1,29 @@
+/* ── App Layout Shell ────────────────────────────────────────────── */
 .app-layout {
   display: flex;
   min-height: 100vh;
   width: 100%;
+  background: var(--bg);
 }
 
 .app-content-wrapper {
   flex: 1;
   min-width: 0;
-  margin-left: var(--sidebar-width, 280px);
-  transition: margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-left: var(--sidebar-width, 272px);
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
 }
 
-/* Mobile responsive header bar */
+/* ── Mobile Header Bar ───────────────────────────────────────────── */
 .mobile-header {
   display: none;
-  height: 48px;
+  height: 56px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 20px;
   position: sticky;
   top: 0;
   z-index: 90;
@@ -29,39 +31,40 @@
 }
 
 .mobile-menu-btn {
-  background: transparent;
-  border: none;
+  background: var(--surface2);
+  border: 1px solid var(--border);
   color: var(--text);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  border-radius: 4px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
 }
 
 .mobile-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-hover);
+  border-color: var(--accent);
 }
 
 .mobile-header-title {
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 500;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 
-/* Desktop Global Header */
+/* ── Desktop Global Header ───────────────────────────────────────── */
 .global-header {
-  height: 48px;
-  border-bottom: 1px solid var(--border-light);
+  height: 56px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  background: rgba(24, 24, 27, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  padding: 0 32px;
+  background: var(--surface);
   position: sticky;
   top: 0;
   z-index: 80;
@@ -70,13 +73,14 @@
 .global-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .global-header-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  font-family: var(--font-sans);
 }
 
 .status-indicator {
@@ -85,24 +89,25 @@
   gap: 8px;
   font-size: 12px;
   color: var(--text-secondary);
+  font-family: var(--font-sans);
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--border);
 }
 
 .status-dot.healthy {
   background: var(--success);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 6px rgba(76, 175, 125, 0.4);
 }
 
-/* Sidebar structure */
+/* ── Sidebar Structure ───────────────────────────────────────────── */
 .global-sidebar {
-  background: rgba(9, 9, 11, 0.98);
-  border-right: 1px solid var(--border-light);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -110,14 +115,14 @@
   left: 0;
   top: 0;
   z-index: 100;
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .global-sidebar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 .global-sidebar-header {
@@ -126,55 +131,59 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 20px;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .global-sidebar-logo-link {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
   color: var(--text);
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: var(--font-sans);
   white-space: nowrap;
   overflow: hidden;
 }
 
 .global-sidebar-toggle-btn {
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 6px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .global-sidebar-toggle-btn:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-hover);
+  border-color: var(--accent);
 }
 
-/* Tree Navigation Styling */
+/* ── Tree Navigation ─────────────────────────────────────────────── */
 .tree-nav {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 24px 16px;
+  padding: 20px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  gap: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .tree-nav::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 .tree-node-wrapper {
@@ -186,10 +195,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 15px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
   font-weight: 500;
+  font-family: var(--font-sans);
   text-decoration: none;
   color: var(--text-secondary);
   cursor: pointer;
@@ -198,7 +208,7 @@
 }
 
 .tree-node:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-hover);
   color: var(--text);
 }
 
@@ -208,7 +218,7 @@
   border-left: 2px solid var(--accent);
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  padding-left: 6px; /* Offset the 2px border */
+  padding-left: 12px;
 }
 
 .tree-node-chevron {
@@ -219,6 +229,7 @@
   transition: transform 0.2s ease;
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
 }
 
 .tree-node-chevron.open {
@@ -244,30 +255,32 @@
   flex: 1;
 }
 
-/* Children connector lines */
+/* ── Tree Children Connector ─────────────────────────────────────── */
 .tree-children-container {
   display: flex;
   flex-direction: column;
   margin-left: 18px;
   padding-left: 14px;
-  border-left: 1px dashed rgba(255, 255, 255, 0.1);
+  border-left: 1px solid var(--border);
   margin-top: 4px;
   margin-bottom: 4px;
-  gap: 4px;
+  gap: 2px;
 }
 
-/* Sidebar Footer */
+/* ── Sidebar Footer ──────────────────────────────────────────────── */
 .global-sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid var(--border);
-  font-size: 13px;
+  font-size: 12px;
+  font-family: var(--font-sans);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
-/* Tooltip style when collapsed */
+/* ── Collapsed Tooltips ──────────────────────────────────────────── */
 .tooltip-trigger {
   position: relative;
 }
@@ -279,26 +292,26 @@
 
 .sidebar-tooltip {
   position: absolute;
-  left: calc(100% + 8px);
+  left: calc(100% + 10px);
   top: 50%;
-  transform: translateY(-50%) translateX(-5px);
-  background: var(--surface2);
-  color: var(--text);
+  transform: translateY(-50%) translateX(-6px);
+  background: #F5E9D3;
+  color: #111111;
   border: 1px solid var(--border);
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: var(--font-sans);
   pointer-events: none;
   opacity: 0;
   white-space: nowrap;
   box-shadow: var(--shadow-md);
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
   z-index: 200;
 }
 
+/* ── Session Item Actions ────────────────────────────────────────── */
 .sidebar-item-actions {
   display: flex;
   gap: 4px;
@@ -311,7 +324,7 @@
   opacity: 1;
 }
 
-/* Media Queries for responsive drawer */
+/* ── Mobile Responsive Drawer ────────────────────────────────────── */
 @media (max-width: 768px) {
   .app-content-wrapper {
     margin-left: 0 !important;
@@ -337,8 +350,7 @@
   .sidebar-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.65);
     z-index: 999;
     opacity: 0;
     pointer-events: none;

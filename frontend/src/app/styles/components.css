@@ -1,13 +1,12 @@
-/* Cards */
+/* ── Cards ───────────────────────────────────────────────────────── */
 .card {
   background: var(--bg-card);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px 32px;
-  box-shadow: var(--shadow-sm);
+  padding: 32px 40px;
+  box-shadow: var(--shadow-card);
   min-width: 0;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
 }
 
 .card.table-card {
@@ -19,54 +18,66 @@
   background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: 18px 24px;
+  padding: 20px 24px;
   min-width: 0;
 }
 
-/* Stat Cards */
+/* ── Stat Cards ──────────────────────────────────────────────────── */
 .stat-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 20px 24px;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-card);
   min-width: 0;
   min-height: 100%;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .stat-card:hover {
-  border-color: var(--border-glow);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-1px);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 24px rgba(139, 124, 255, 0.12);
+}
+
+.nav-card {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nav-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 24px rgba(139, 124, 255, 0.12);
 }
 
 .stat-card--compact {
-  min-height: 84px;
-  padding: 16px 20px;
+  min-height: 96px;
+  padding: 18px 24px;
 }
 
 .stat-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
 }
 
 .stat-value {
-  font-size: clamp(28px, 3vw, 42px);
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: clamp(32px, 3.5vw, 48px);
+  font-weight: 400;
   color: var(--text);
-  line-height: 1.1;
+  line-height: 1.0;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
 .stat-value--md {
-  font-size: 32px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: 36px;
+  line-height: 1.1;
 }
 
 .stat-value--success {
@@ -77,74 +88,84 @@
   color: var(--danger);
 }
 
-/* Badges */
+/* ── Badges ──────────────────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 15px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
   font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid transparent;
 }
 
 .badge-success {
   background: var(--success-bg);
   color: var(--success);
+  border-color: rgba(76, 175, 125, 0.20);
 }
 
 .badge-error {
   background: var(--danger-bg);
   color: var(--danger);
+  border-color: rgba(224, 96, 96, 0.20);
 }
 
 .badge-running {
   background: var(--accent-bg);
   color: var(--accent);
+  border-color: rgba(139, 124, 255, 0.20);
 }
 
-/* Buttons */
+/* ── Buttons ─────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
   font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  text-decoration: none;
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent-hover);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+  background: #F5E9D3;
+  color: #111111;
+  border-color: #F5E9D3;
+  box-shadow: 0 0 0 1px #F5E9D3;
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(139, 124, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 .btn-outline {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
 }
 
 .btn-outline:hover {
   background: var(--bg-hover);
-  border-color: var(--text-muted);
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
-  padding: 10px 14px;
+  padding: 10px 16px;
 }
 
 .btn-ghost:hover {
@@ -152,7 +173,7 @@
   background: var(--bg-hover);
 }
 
-/* Tables */
+/* ── Tables ──────────────────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -172,21 +193,23 @@
 .table th {
   text-align: left;
   padding: 16px 24px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.12em;
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border-light);
-  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  font-family: var(--font-sans);
 }
 
 .table td {
-  padding: 16px 24px;
-  font-size: 17px;
+  padding: 18px 24px;
+  font-size: 15px;
   border-bottom: 1px solid var(--border-light);
   color: var(--text);
-  transition: background 0.2s;
+  transition: background 0.15s ease;
+  font-family: var(--font-sans);
 }
 
 .table tr:last-child td {
@@ -194,30 +217,30 @@
 }
 
 .table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-hover);
 }
 
 .table td::before {
   content: none;
 }
 
-/* Form Inputs */
+/* ── Form Inputs ─────────────────────────────────────────────────── */
 .input {
   width: 100%;
-  padding: 14px 20px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 14px 18px;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text);
-  font-size: 17px;
+  font-size: 15px;
   font-family: var(--font-sans);
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .input::placeholder {
@@ -226,51 +249,55 @@
 
 .textarea {
   width: 100%;
-  padding: 14px 20px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 14px 18px;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text);
-  font-size: 17px;
+  font-size: 15px;
   font-family: var(--font-sans);
   outline: none;
   resize: vertical;
   min-height: 120px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  line-height: 1.6;
 }
 
 .textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
-/* Pills */
+/* ── Pills ───────────────────────────────────────────────────────── */
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: 8px 18px;
-  border-radius: 99px;
-  font-size: 15px;
-  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 600;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  font-family: var(--font-sans);
 }
 
 .pill:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--text-muted);
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .dive-link:hover {
   background: var(--accent-bg) !important;
+  border-color: var(--accent) !important;
 }
 
-/* Common Layout Helpers */
+/* ── Common Layout Helpers ───────────────────────────────────────── */
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -281,15 +308,13 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 13px;
   padding: 10px 18px;
 }
 
-/* Spinner & Loading */
+/* ── Spinner & Loading ───────────────────────────────────────────── */
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 .spinner {
@@ -299,20 +324,22 @@
 .loading-state {
   color: var(--text-secondary);
   font-size: 15px;
+  font-family: var(--font-sans);
 }
 
 .empty-state {
   color: var(--text-muted);
   font-size: 15px;
-  line-height: 1.7;
-  padding: 24px 0;
+  line-height: 1.65;
+  padding: 32px 0;
+  font-family: var(--font-sans);
 }
 
-/* Mobile responsive components override */
+/* ── Mobile Responsive ───────────────────────────────────────────── */
 @media (max-width: 720px) {
   .card,
   .stat-card {
-    padding: 16px;
+    padding: 20px 24px;
   }
 }
 
@@ -341,7 +368,7 @@
 
   .table tbody {
     display: grid;
-    gap: 12px;
+    gap: 16px;
   }
 
   .table tr {
@@ -351,7 +378,7 @@
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-card);
   }
 
   .table tbody tr:hover {
@@ -364,7 +391,7 @@
     justify-content: space-between;
     gap: 18px;
     min-height: 44px;
-    padding: 12px 14px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border-light);
     text-align: right;
     overflow: visible;
@@ -378,11 +405,11 @@
 
   .table td::before {
     content: attr(data-label);
-    flex: 0 0 92px;
+    flex: 0 0 96px;
     color: var(--text-muted);
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.10em;
     line-height: 1.4;
     text-align: left;
     text-transform: uppercase;

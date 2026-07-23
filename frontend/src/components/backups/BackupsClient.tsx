@@ -245,7 +245,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <th>Failed</th>
                   <th>Skipped</th>
                   <th>Fix Status</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th style={{ textAlign: "right", minWidth: "160px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -336,7 +336,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                           <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>—</span>
                         )}
                       </td>
-                      <td data-label="Actions" style={{ textAlign: "right" }}>
+                      <td data-label="Actions" style={{ textAlign: "right", minWidth: "160px" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", alignItems: "center" }}>
                           {failed && !hasFixes && (
                             <button
@@ -348,6 +348,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                                 fontSize: "12px",
                                 borderColor: "rgba(139, 92, 246, 0.4)",
                                 color: "var(--accent)",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               Create Fix
@@ -363,6 +364,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                                 fontSize: "12px",
                                 borderColor: "rgba(16, 185, 129, 0.4)",
                                 color: "#10b981",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               Details
@@ -371,7 +373,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                           <Link
                             href={`/backups/${run.id}`}
                             className="btn btn-ghost"
-                            style={{ padding: "6px 10px", fontSize: "13px" }}
+                            style={{ padding: "6px 10px", fontSize: "13px", whiteSpace: "nowrap" }}
                           >
                             View →
                           </Link>

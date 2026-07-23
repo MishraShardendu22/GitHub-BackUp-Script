@@ -1,52 +1,59 @@
+/* ── Segmented Controls ──────────────────────────────────────────── */
 .segmented {
   display: flex;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--border-light);
-  border-radius: 999px;
-  padding: 6px;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 5px;
 }
 
 .segmented-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 20px;
-  border-radius: 999px;
-  font-size: 14px;
+  padding: 9px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
   font-weight: 600;
+  font-family: var(--font-sans);
   border: none;
   cursor: pointer;
   background: transparent;
   color: var(--text-secondary);
   min-height: 38px;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .segmented-btn:hover {
   color: var(--text);
+  background: var(--bg-hover);
 }
 
 .segmented-btn--active {
-  background: var(--surface2);
+  background: var(--bg-card);
   color: var(--text);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
 }
 
+/* ── Core Grid ───────────────────────────────────────────────────── */
 .grid {
   display: grid;
-  gap: var(--space-3);
+  gap: 24px;
 }
 
 .auto-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 172px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
 }
 
 .stats-grid {
   align-items: stretch;
 }
 
+/* ── Metric Grids ────────────────────────────────────────────────── */
 .metric-grid {
   display: grid;
   gap: 16px;
@@ -62,9 +69,10 @@
 }
 
 .metric-grid--three {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+/* ── Split Grid ──────────────────────────────────────────────────── */
 .split-grid {
   display: grid;
   gap: 16px;
@@ -72,6 +80,7 @@
   width: 100%;
 }
 
+/* ── Named Column Helpers ────────────────────────────────────────── */
 .grid-cols-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -84,17 +93,20 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+/* ── Log Layout ──────────────────────────────────────────────────── */
 .log-card {
   padding: 0;
   min-height: 600px;
 }
 
 .log-header {
-  padding: 18px 32px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: var(--surface2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .log-body {
@@ -102,8 +114,9 @@
   overflow: auto;
   padding: 24px 32px;
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.8;
+  background: var(--surface);
 }
 
 .log-row {
@@ -112,25 +125,20 @@
   gap: 16px;
   align-items: start;
   padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
 }
 
-/* Log levels */
-.log-info {
-  color: #60a5fa; /* A softer blue for logs instead of the main accent, for readability */
+.log-row:last-child {
+  border-bottom: none;
 }
 
-.log-warn {
-  color: var(--warning);
-}
+/* ── Log Levels ──────────────────────────────────────────────────── */
+.log-info  { color: var(--accent); }
+.log-warn  { color: var(--warning); }
+.log-error { color: var(--danger); }
+.log-debug { color: var(--text-muted); }
 
-.log-error {
-  color: var(--danger);
-}
-
-.log-debug {
-  color: var(--text-muted);
-}
-
+/* ── Responsive Breakdowns ───────────────────────────────────────── */
 @media (max-width: 1100px) {
   .metric-grid--six {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -171,6 +179,7 @@
   .segmented {
     width: 100%;
     overflow-x: auto;
+    border-radius: var(--radius-lg);
   }
 
   .segmented-btn {
