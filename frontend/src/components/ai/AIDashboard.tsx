@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LoginPanel, MessageBubble, WorkflowDiagram } from "@/components/ai";
+import { LoginPanel, MessageBubble, ModelSelector, WorkflowDiagram } from "@/components/ai";
 import { useAIContext } from "@/components/layout/AIContext";
 import { LoaderPanel, MetricCard, ToolBadge } from "@/components/ui";
 import { LOADING_MESSAGES, PREMADE_PROMPTS } from "@/constants";
@@ -215,48 +215,15 @@ export function AIDashboard() {
               justifyContent: "flex-end",
             }}
           >
-            <div className="ai-model-selector">
-              <span className="ai-model-icon" title="Select OpenRouter Model">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="4" y="4" width="16" height="16" rx="2"/>
-                  <rect x="9" y="9" width="6" height="6"/>
-                  <path d="M15 2v2M9 2v2M15 20v2M9 20v2M20 15h2M20 9h2M2 15h2M2 9h2"/>
-                </svg>
-              </span>
-              <label htmlFor="model-select" className="ai-model-label">
-                Model:
-              </label>
-              {modelsLoading ? (
-                <span className="ai-model-loading">Loading models…</span>
-              ) : modelsError ? (
-                <span className="ai-model-error">
-                  Failed to load models
-                  <button
-                    type="button"
-                    className="ai-model-retry-btn"
-                    onClick={refreshModels}
-                  >
-                    Retry
-                  </button>
-                </span>
-              ) : models.length === 0 ? (
-                <span className="ai-model-loading">No free models available</span>
-              ) : (
-                <select
-                  id="model-select"
-                  className="ai-model-dropdown"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  disabled={sending}
-                >
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+            <ModelSelector
+              models={models}
+              selectedModel={selectedModel}
+              onSelectModel={setSelectedModel}
+              loading={modelsLoading}
+              error={modelsError}
+              onRefresh={refreshModels}
+              disabled={sending}
+            />
             {isAuthenticated && (
               <button
                 type="button"
