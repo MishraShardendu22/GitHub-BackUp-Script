@@ -14,6 +14,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from utils.response import success_response
 from agent import invoke_agent, stream_agent
+from agent.models import fetch_free_text_models, validate_model_id
 from data.persistence import persistence_store
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -47,6 +48,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     question: str
     session_id: str | None = None
+    model: str | None = None
 
 
 class CreateSessionRequest(BaseModel):
@@ -76,6 +78,17 @@ async def health_check():
 async def test_backend():
     data = await client.get_dashboard_stats()
     return success_response(data=data)
+
+
+@app.get("/api/models")
+async def list_available_models():
+    models = await fetch_free_text_models()
+    if not models:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to fetch available models from OpenRouter",
+        )
+    return success_response(data=models, message="Available free text models")
 
 
 @app.post("/auth/login", response_model=TokenResponse)
@@ -154,12 +167,13 @@ async def get_ai_stats():
 async def chat_get(
     question: str = Query(..., description="Question for the agent"),
     session_id: str | None = Query(None, description="Optional chat session ID"),
+    model: str | None = Query(None, description="OpenRouter model ID to use"),
     current_user: str = Depends(get_current_user),
 ):
     if session_id:
         await persistence_store.create_session(session_id=session_id)
         
-    agent_response = await invoke_agent(question, session_id=session_id)
+    agent_response = await invoke_agent(question, session_id=session_id, model=model)
     
     user_msg = {"role": "user", "content": question, "created_at": datetime.utcnow().isoformat()}
     assistant_msg = {"role": "assistant", "content": agent_response.answer, "created_at": datetime.utcnow().isoformat()}
@@ -186,7 +200,7 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
     if request.session_id:
         await persistence_store.create_session(session_id=request.session_id)
         
-    agent_response = await invoke_agent(request.question, session_id=request.session_id)
+    agent_response = await invoke_agent(request.question, session_id=request.session_id, model=request.model)
     
     user_msg = {"role": "user", "content": request.question, "created_at": datetime.utcnow().isoformat()}
     assistant_msg = {"role": "assistant", "content": agent_response.answer, "created_at": datetime.utcnow().isoformat()}
@@ -220,7 +234,7 @@ async def chat_stream(request: ChatRequest, current_user: str = Depends(get_curr
         request_id = None
 
         # async generator to stream events from the agent
-        async for event_str in stream_agent(request.question, session_id=request.session_id):
+        async for event_str in stream_agent(request.question, session_id=request.session_id, model=request.model):
             sse_token = event_str.replace("\n", "\ndata: ")
             yield f"data: {sse_token}\n\n"
             try:

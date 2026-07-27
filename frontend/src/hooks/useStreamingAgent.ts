@@ -29,6 +29,7 @@ export function useStreamingAgent({
         updates: Partial<Message> | ((prev: Message) => Message),
       ) => void,
       onMessageAdd: (message: Message) => void,
+      model?: string,
     ) => {
       if (sending) return;
 
@@ -55,7 +56,7 @@ export function useStreamingAgent({
       setActiveStep("query");
 
       try {
-        const reader = await aiService.chat(token, question, sessionId);
+        const reader = await aiService.chat(token, question, sessionId, model);
         const decoder = new TextDecoder();
         let buffer = "";
 

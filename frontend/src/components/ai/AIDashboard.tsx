@@ -6,6 +6,7 @@ import { useAIContext } from "@/components/layout/AIContext";
 import { LoaderPanel, MetricCard, ToolBadge } from "@/components/ui";
 import { LOADING_MESSAGES, PREMADE_PROMPTS } from "@/constants";
 import { useChat } from "@/hooks/useChat";
+import { useModels } from "@/hooks/useModels";
 import { useParams, useRouter } from "next/navigation";
 import { useStats } from "@/hooks/useStats";
 import { useStreamingAgent } from "@/hooks/useStreamingAgent";
@@ -82,6 +83,15 @@ export function AIDashboard() {
     onStatsRefresh: refreshStats,
   });
 
+  const {
+    models,
+    selectedModel,
+    setSelectedModel,
+    loading: modelsLoading,
+    error: modelsError,
+    refresh: refreshModels,
+  } = useModels();
+
   const feedRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -144,6 +154,7 @@ export function AIDashboard() {
         sessionId,
         updateMessage,
         addMessage,
+        selectedModel,
       );
       setInput("");
     } catch (err: unknown) {
@@ -204,30 +215,40 @@ export function AIDashboard() {
               justifyContent: "flex-end",
             }}
           >
-            <div
-              style={{
-                fontSize: "13px",
-                color: "var(--text-secondary)",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span>Active Model:</span>
-              <code
-                style={{
-                  fontSize: "13px",
-                  color: "var(--accent)",
-                  textTransform: "none",
-                  background: "rgba(139, 92, 246, 0.06)",
-                  padding: "2px 6px",
-                  borderRadius: "4px",
-                  border: "1px solid rgba(139, 92, 246, 0.2)",
-                }}
-              >
-                {stats?.model_name || "loading..."}
-              </code>
+            <div className="ai-model-selector">
+              <label htmlFor="model-select" className="ai-model-label">
+                Model:
+              </label>
+              {modelsLoading ? (
+                <span className="ai-model-loading">Loading models…</span>
+              ) : modelsError ? (
+                <span className="ai-model-error">
+                  Failed to load models
+                  <button
+                    type="button"
+                    className="ai-model-retry-btn"
+                    onClick={refreshModels}
+                  >
+                    Retry
+                  </button>
+                </span>
+              ) : models.length === 0 ? (
+                <span className="ai-model-loading">No free models available</span>
+              ) : (
+                <select
+                  id="model-select"
+                  className="ai-model-dropdown"
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  disabled={sending}
+                >
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             {isAuthenticated && (
               <button

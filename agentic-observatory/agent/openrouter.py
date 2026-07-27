@@ -54,10 +54,10 @@ TOOLS = [
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}
 
 # Initialize the LLM
-def get_llm() -> ChatOpenRouter:
+def get_llm(model: str | None = None) -> ChatOpenRouter:
     return ChatOpenRouter(
         temperature=0.2,
-        model=settings.OPENROUTER_MODEL,
+        model=model or settings.OPENROUTER_MODEL,
         api_key=settings.OPENROUTER_API_KEY,
         # We can pass extra_body to the LLM to tell it which tools are available for it to call
         # Open has web search tool, we can tell the LLM that it can use it by passing it in the extra_body
@@ -71,8 +71,8 @@ def get_llm() -> ChatOpenRouter:
     )
 
 # Bind tools to the LLM, so that it can call them when needed
-def get_bound_llm():
-    return get_llm().bind_tools(TOOLS, strict=True)
+def get_bound_llm(model: str | None = None):
+    return get_llm(model=model).bind_tools(TOOLS, strict=True)
 
 
 # Main function to invoke the agent with a user question,
@@ -81,10 +81,11 @@ async def invoke_agent(
     question: str,
     session_id: str | None = None,
     request_id: str | None = None,
+    model: str | None = None,
 ) -> AgentResponse:
     request_id = request_id or create_request_id()
     start = time.perf_counter()
-    llm = get_bound_llm()
+    llm = get_bound_llm(model=model)
 
     # Load history messages if session_id is provided
     history_messages = []
@@ -256,6 +257,7 @@ async def stream_agent(
     question: str,
     session_id: str | None = None,
     request_id: str | None = None,
+    model: str | None = None,
 ) -> AsyncIterator[str]:
     # if request_id is not provided, create a new one
     request_id = request_id or create_request_id()
@@ -264,7 +266,7 @@ async def stream_agent(
     start = time.perf_counter()
 
     # get the LLM instance with tools bound to it
-    llm = get_bound_llm()
+    llm = get_bound_llm(model=model)
 
     # Yield info event first
     yield json.dumps({"type": "info", "request_id": request_id, "session_id": session_id})
