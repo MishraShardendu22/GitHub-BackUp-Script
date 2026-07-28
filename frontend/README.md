@@ -25,6 +25,11 @@ Navigate to the `frontend` directory and install dependencies:
 
 ```bash
 cd frontend
+
+# Update dependencies and install
+pnpm up -Lr
+
+# Install dependencies
 pnpm install
 ```
 
