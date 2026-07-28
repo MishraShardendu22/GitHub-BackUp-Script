@@ -281,11 +281,11 @@ textarea:disabled {
   background: var(--text-muted);
 }
 
-/* ── Scroll reveal utility ───────────────────────────────────────── */
+/* ── Scroll & Entrance reveal utilities ──────────────────────────── */
 @keyframes reveal-up {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -293,21 +293,52 @@ textarea:disabled {
   }
 }
 
-.reveal {
-  animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-.reveal-delay-1 {
-  animation-delay: 0.05s;
+.reveal {
+  animation: reveal-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.reveal-delay-2 {
+
+.stagger-1 {
+  animation-delay: 0.04s;
+}
+.stagger-2 {
+  animation-delay: 0.08s;
+}
+.stagger-3 {
   animation-delay: 0.12s;
 }
-.reveal-delay-3 {
-  animation-delay: 0.19s;
+.stagger-4 {
+  animation-delay: 0.16s;
 }
-.reveal-delay-4 {
-  animation-delay: 0.26s;
+.stagger-5 {
+  animation-delay: 0.2s;
+}
+
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--surface),
+    var(--surface2),
+    var(--surface)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s infinite linear;
+}
+
+/* Micro-interactions */
+button:active:not(:disabled),
+a.btn:active:not(:disabled),
+[role="button"]:active:not(:disabled) {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -316,7 +347,8 @@ textarea:disabled {
   }
 
   .reveal,
-  .spinner {
+  .spinner,
+  .skeleton-pulse {
     animation: none;
   }
 
@@ -324,6 +356,7 @@ textarea:disabled {
   *::before,
   *::after {
     transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
   }
 }
 
