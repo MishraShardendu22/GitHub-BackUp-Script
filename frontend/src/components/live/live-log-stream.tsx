@@ -1,7 +1,10 @@
 "use client";
 
+import { Radio, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { WsMessage } from "@/types";
+
+type LiveLog = WsMessage & { clientId: number };
 
 function buildLiveSocketUrl() {
   const configuredBase =
@@ -28,35 +31,50 @@ function levelColor(level?: string) {
 
 export function LiveLogStream() {
   const [connected, setConnected] = useState(false);
-  const [logs, setLogs] = useState<WsMessage[]>([]);
+  const [logs, setLogs] = useState<LiveLog[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logSequenceRef = useRef(0);
 
   useEffect(() => {
+    let disposed = false;
+
     function connect() {
+      if (disposed) return;
       const ws = new WebSocket(buildLiveSocketUrl());
       wsRef.current = ws;
       ws.onopen = () => setConnected(true);
       ws.onclose = () => {
         setConnected(false);
-        setTimeout(connect, 3000);
+        if (!disposed) reconnectTimerRef.current = setTimeout(connect, 3000);
       };
       ws.onerror = () => ws.close();
       ws.onmessage = (event) => {
         try {
           const msg: WsMessage = JSON.parse(event.data);
-          if (msg.type === "log") setLogs((prev) => [...prev.slice(-500), msg]);
+          if (msg.type !== "log") return;
+          setLogs((prev) => [
+            ...prev.slice(-500),
+            { ...msg, clientId: logSequenceRef.current++ },
+          ]);
+          window.requestAnimationFrame(() =>
+            logsEndRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "end",
+            }),
+          );
         } catch {
           /* ignore */
         }
       };
     }
     connect();
-    return () => wsRef.current?.close();
-  }, []);
-
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    return () => {
+      disposed = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      wsRef.current?.close();
+    };
   }, []);
 
   return (
@@ -89,23 +107,55 @@ export function LiveLogStream() {
         </div>
       </div>
 
-      <div className="card log-card">
+      <div className="card log-card" aria-live="polite">
         <div className="log-header">
-          <span style={{ fontWeight: 600, fontSize: 16 }}>Log stream</span>
-          <span style={{ fontSize: 14, color: "var(--text-muted)" }}>{logs.length} entries</span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontWeight: 600,
+              fontSize: 16,
+            }}
+          >
+            <Radio size={16} aria-hidden="true" />
+            Log stream
+          </span>
+          <div
+            style={{ display: "inline-flex", alignItems: "center", gap: 12 }}
+          >
+            <span style={{ fontSize: 14, color: "var(--text-muted)" }}>
+              {logs.length} entries
+            </span>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setLogs([])}
+              aria-label="Clear live log entries"
+              title="Clear log entries"
+              disabled={logs.length === 0}
+            >
+              <RotateCcw size={15} aria-hidden="true" />
+            </button>
+          </div>
         </div>
         <div className="log-body">
           {logs.length === 0 ? (
             <div
-              style={{ fontSize: 15, color: "var(--text-muted)", textAlign: "center", paddingTop: 120 }}
+              style={{
+                fontSize: 15,
+                color: "var(--text-muted)",
+                textAlign: "center",
+                paddingTop: 120,
+              }}
             >
               {connected
                 ? "Waiting for log messages..."
                 : "Connecting to WebSocket..."}
             </div>
           ) : (
-            logs.map((log, i) => (
-              <div key={`${log.id}-${i}`} className="log-row">
+            logs.map((log) => (
+              <div key={log.clientId} className="log-row">
                 <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
                   {log.timestamp
                     ? new Date(log.timestamp).toLocaleTimeString()
@@ -120,7 +170,10 @@ export function LiveLogStream() {
                 >
                   {log.level?.toUpperCase()}
                 </span>
-                <span className="truncate" style={{ fontSize: 13, color: "var(--accent)", opacity: 0.8 }}>
+                <span
+                  className="truncate"
+                  style={{ fontSize: 13, color: "var(--accent)", opacity: 0.8 }}
+                >
                   {log.repository ? `[${log.repository}]` : "[system]"}
                 </span>
                 <span style={{ fontSize: 14, color: "var(--text)" }}>

@@ -361,8 +361,6 @@ function DiveLink({
         padding: "8px 10px",
         borderRadius: 7,
         textDecoration: "none",
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
         transition: "background 0.15s",
       }}
     >

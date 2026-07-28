@@ -1,67 +1,71 @@
 /* ── Design Tokens ───────────────────────────────────────────────── */
 :root {
+  color-scheme: dark;
   /* Palette — dark editorial */
-  --bg:               #111111;
-  --surface:          #181818;
-  --surface2:         #202020;
-  --border:           #343434;
-  --border-light:     rgba(52, 52, 52, 0.7);
-  --accent:           #8B7CFF;
-  --accent-hover:     #7566F8;
-  --accent-mustard:   #D8B45A;
-  --text:             #F5F3EE;
-  --text-secondary:   #B7B3AA;
-  --text-muted:       #6E6B65;
-  --success:          #4CAF7D;
-  --danger:           #E06060;
-  --warning:          #D8A84A;
+  --bg: #111111;
+  --surface: #181818;
+  --surface2: #202020;
+  --border: #343434;
+  --border-light: rgba(52, 52, 52, 0.7);
+  --accent: #8b7cff;
+  --accent-hover: #7566f8;
+  --accent-mustard: #d8b45a;
+  --text: #f5f3ee;
+  --text-secondary: #b7b3aa;
+  --text-muted: #6e6b65;
+  --success: #4caf7d;
+  --danger: #e06060;
+  --warning: #d8a84a;
 
   /* Semantic surface/bg helpers */
-  --bg-card:          #202020;
-  --bg-hover:         rgba(139, 124, 255, 0.06);
-  --success-bg:       rgba(76, 175, 125, 0.10);
-  --danger-bg:        rgba(224, 96, 96, 0.10);
-  --warning-bg:       rgba(216, 168, 74, 0.10);
-  --accent-bg:        rgba(139, 124, 255, 0.10);
-  --accent-mustard-bg: rgba(216, 180, 90, 0.10);
-  --border-glow:      rgba(139, 124, 255, 0.30);
+  --bg-card: #202020;
+  --bg-hover: rgba(139, 124, 255, 0.06);
+  --success-bg: rgba(76, 175, 125, 0.1);
+  --danger-bg: rgba(224, 96, 96, 0.1);
+  --warning-bg: rgba(216, 168, 74, 0.1);
+  --accent-bg: rgba(139, 124, 255, 0.1);
+  --accent-mustard-bg: rgba(216, 180, 90, 0.1);
+  --border-glow: rgba(139, 124, 255, 0.3);
 
   /* Typography */
   --font-serif: var(--font-heading), "Georgia", "Times New Roman", serif;
-  --font-sans:  var(--font-body), "Inter", system-ui, sans-serif;
-  --font-mono:  var(--font-mono-var, var(--font-mono)), "IBM Plex Mono", "Menlo", monospace;
+  --font-sans: var(--font-body), "Inter", system-ui, sans-serif;
+  --font-mono:
+    var(--font-mono-var, var(--font-mono)), "IBM Plex Mono", "Menlo", monospace;
 
   /* Layout */
-  --page-max:   1280px;
+  --page-max: 1280px;
 
   /* 8px spacing system */
-  --space-1:    8px;
-  --space-2:    16px;
-  --space-3:    24px;
-  --space-4:    32px;
-  --space-5:    40px;
-  --space-6:    48px;
-  --space-xs:   6px;
-  --space-sm:   12px;
-  --space-md:   16px;
-  --space-lg:   24px;
-  --space-xl:   40px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-xs: 6px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
 
   /* Border radii */
-  --radius-sm:  8px;
-  --radius-md:  16px;
-  --radius-lg:  28px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
   --radius-img: 24px;
   --radius-pill: 999px;
 
   /* Shadows — thin borders, no heavy drops */
-  --shadow-sm:  0 1px 0 var(--border), 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow-md:  0 1px 0 var(--border), 0 4px 24px rgba(0, 0, 0, 0.40);
+  --shadow-sm: 0 1px 0 var(--border), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 1px 0 var(--border), 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-card: 0 0 0 1px var(--border);
 }
 
 /* ── Reset ───────────────────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -69,7 +73,13 @@
 
 /* ── Body ────────────────────────────────────────────────────────── */
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(
+      circle at 78% -10%,
+      rgba(139, 124, 255, 0.11),
+      transparent 32rem
+    ),
+    var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -80,11 +90,16 @@ body {
 }
 
 /* ── Headings ────────────────────────────────────────────────────── */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-serif);
   font-weight: 400;
   letter-spacing: -0.02em;
-  line-height: 1.0;
+  line-height: 1;
   color: var(--text);
 }
 
@@ -94,9 +109,36 @@ a {
   text-decoration: none;
 }
 
+::selection {
+  background: rgba(139, 124, 255, 0.34);
+  color: var(--text);
+}
+
 /* ── Form elements ───────────────────────────────────────────────── */
-button, input, textarea, select {
+button,
+input,
+textarea,
+select {
   font-family: inherit;
+}
+
+button:not(:disabled),
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
 }
 
 /* ── Skip Link ───────────────────────────────────────────────────── */
@@ -104,7 +146,7 @@ button, input, textarea, select {
   position: absolute;
   top: -48px;
   left: 16px;
-  background: #F5E9D3;
+  background: #f5e9d3;
   color: #111111;
   padding: 10px 16px;
   border-radius: var(--radius-pill);
@@ -134,6 +176,41 @@ button, input, textarea, select {
   margin: 0 auto;
   padding: 40px clamp(24px, 4vw, 48px) 64px;
   flex: 1;
+}
+
+.page-error,
+.page-loading {
+  display: grid;
+  place-items: center;
+  min-height: min(58vh, 560px);
+}
+
+.state-card {
+  width: min(100%, 560px);
+  text-align: center;
+}
+
+.state-card__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface2);
+  color: var(--accent);
+}
+
+.state-card__title {
+  font-size: clamp(28px, 4vw, 38px);
+  margin-bottom: 12px;
+}
+
+.state-card__description {
+  max-width: 42ch;
+  margin: 0 auto;
+  color: var(--text-secondary);
 }
 
 /* ── Page structure ──────────────────────────────────────────────── */
@@ -220,10 +297,35 @@ button, input, textarea, select {
   animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.reveal-delay-1 { animation-delay: 0.05s; }
-.reveal-delay-2 { animation-delay: 0.12s; }
-.reveal-delay-3 { animation-delay: 0.19s; }
-.reveal-delay-4 { animation-delay: 0.26s; }
+.reveal-delay-1 {
+  animation-delay: 0.05s;
+}
+.reveal-delay-2 {
+  animation-delay: 0.12s;
+}
+.reveal-delay-3 {
+  animation-delay: 0.19s;
+}
+.reveal-delay-4 {
+  animation-delay: 0.26s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal,
+  .spinner {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms;
+  }
+}
 
 /* ── Mobile ──────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
@@ -234,7 +336,7 @@ button, input, textarea, select {
 
   .page-title {
     font-size: 36px;
-    line-height: 1.0;
+    line-height: 1;
   }
 
   .page {

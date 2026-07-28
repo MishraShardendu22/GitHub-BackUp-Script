@@ -1,43 +1,25 @@
-# Shared Design System & Brand Specification
+# Systems Lab design system
 
-This document details the unified visual system and design tokens for the federated product ecosystem, ensuring independent surfaces look and feel like a single cohesive product family.
+The application uses a dark, operations-first visual language. The source of truth is the semantic token layer in `src/app/styles/base.css`; component primitives build on it in `src/app/styles/components.css`.
 
-> [!NOTE]
-> This repository implements the shared design specification independently. No shared package or dependency is imported; this file is for documentation purposes only. It is safe to edit locally if this repository's needs diverge intentionally in the future.
+## Foundations
 
----
+- **Typography:** Instrument Serif establishes hierarchy, Inter carries interface text, and IBM Plex Mono is reserved for system data and logs.
+- **Spacing:** Work in the documented 8px scale (`--space-1` through `--space-6`). Use grid gaps before one-off margins.
+- **Surfaces:** `--bg` is the application canvas, `--surface` and `--surface2` separate navigation and controls, and `--bg-card` is for grouped information.
+- **Status colors:** Use `--success`, `--warning`, and `--danger` only for operational state. `--accent` is the navigational and interactive color.
 
-## 1. Design Token System
+## Reusable primitives
 
-### 1.1 Neutral Palette (10-Step Zinc Scale)
-*   **Background (Global Canvas)**: `zinc-950` (`#09090b`)
-*   **Surface Primary (Cards, Headers, Sidebars)**: `zinc-900` (`#18181b`)
-*   **Surface Elevated (Inputs, Secondary Areas)**: `zinc-800` (`#27272a`)
-*   **Borders (Subtle)**: `zinc-800` (`#27272a`)
-*   **Borders (Elevated/Hover)**: `zinc-700` (`#3f3f46`)
-*   **Text (Primary)**: `zinc-50` (`#fafafa`)
-*   **Text (Secondary/Muted)**: `zinc-400` (`#a1a1aa`)
+- Use `.card` for grouped content and `.card-flat` for nested metrics.
+- Use `.stat-card`, `.stat-label`, and `.stat-value` for dashboard metrics.
+- Use `.btn`, plus `btn-primary`, `btn-outline`, or `btn-ghost`, for actions. Use `.icon-button` for compact icon-only actions and always provide an accessible label.
+- Use `StatusBadge` for run state, `EmptyState` for absent data, and `ErrorState` for recoverable client failures.
+- Use `.table-wrap` with `.table` for data tables; it preserves horizontal access on small screens and a card layout on phones.
 
-### 1.2 Locked Accent Color (Violet)
-*   **Accent Primary**: `#7c3aed` (violet-600)
-*   **Accent Hover/Light**: `#8b5cf6` (violet-500)
-*   **Accent Active/Dark**: `#6d28d9` (violet-700)
-*   **Accent Muted/Glow**: `rgba(124, 58, 237, 0.15)`
+## Interaction requirements
 
-### 1.3 Typography Pairings
-*   **Headings/Titles**: `Space Grotesk` (Geometric, sharp sans-serif)
-*   **Body & User Interface**: `IBM Plex Sans` (Technical sans-serif)
-*   **Code & Logs / Data**: `IBM Plex Mono` (Technical monospace)
-
-### 1.4 Spacing & Border Radius
-*   **Spacing Base**: 4px scale (`4px` xs / `8px` sm / `16px` md / `24px` lg / `48px` xl)
-*   **Buttons & Inputs Radius**: `6px` to `8px`
-*   **Cards, Dialogs, & Modals Radius**: `12px`
-
-### 1.5 Motion Timing & Easing
-*   **Standard Transition**: `200ms` using standard ease-in-out easing (`cubic-bezier(0.4, 0, 0.2, 1)`)
-*   **Sidebar Slide Transition**: `300ms` using snappy ease-out-quint easing (`cubic-bezier(0.16, 1, 0.3, 1)`)
-
-### 1.6 Icon Standard
-*   **Icon Library**: Lucide Icons
-*   **Stroke Width**: `1.5px`
+- All interactive elements must show a visible keyboard focus ring.
+- Motion must be informative and respect `prefers-reduced-motion`.
+- Route loading, error, and not-found states are provided at the app boundary; new routes should preserve that experience.
+- Keep data pages server-rendered. Add client components only for local interaction, streaming, or browser-only APIs.

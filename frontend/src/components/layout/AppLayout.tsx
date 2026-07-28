@@ -1,7 +1,7 @@
 "use client";
 
-import { Menu, Activity, Server } from "lucide-react";
-import { useState } from "react";
+import { Menu } from "lucide-react";
+import { useEffect, useState } from "react";
 import { AIContextProvider } from "./AIContext";
 import Sidebar from "./sidebar";
 
@@ -15,6 +15,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMobileOpen(false);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = "";
+    };
+  }, [isMobileOpen]);
 
   return (
     <div className="app-layout">
@@ -32,6 +48,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             onClick={() => setIsMobileOpen(true)}
             className="mobile-menu-btn"
             aria-label="Open navigation menu"
+            aria-controls="app-navigation"
+            aria-expanded={isMobileOpen}
           >
             <Menu size={20} />
           </button>

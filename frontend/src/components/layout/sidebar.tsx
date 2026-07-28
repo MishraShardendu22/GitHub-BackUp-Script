@@ -190,6 +190,14 @@ export default function Sidebar({
     localStorage.setItem("sidebar-collapsed", String(nextVal));
   };
 
+  const handleSidebarToggle = () => {
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      onCloseMobile?.();
+      return;
+    }
+    toggleCollapse();
+  };
+
   const toggleFolder = (label: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -213,7 +221,12 @@ export default function Sidebar({
 
   const isExternalLink = (href?: string) => !!href && /^https?:\/\//.test(href);
 
-  const renderNavLink = (node: NavNode, className: string, extraStyle?: React.CSSProperties, iconSize = 18) => {
+  const renderNavLink = (
+    node: NavNode,
+    className: string,
+    extraStyle?: React.CSSProperties,
+    iconSize = 18,
+  ) => {
     const Icon = node.icon;
     const content = (
       <>
@@ -322,6 +335,8 @@ export default function Sidebar({
       />
 
       <aside
+        id="app-navigation"
+        aria-label="Primary navigation"
         className={`global-sidebar ${isMobileOpen ? "mobile-open" : ""}`}
         style={{
           width: isCollapsed ? "68px" : "280px",
@@ -356,9 +371,10 @@ export default function Sidebar({
           )}
           <button
             type="button"
-            onClick={toggleCollapse}
+            onClick={handleSidebarToggle}
             className="global-sidebar-toggle-btn"
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse navigation"}
+            title={isCollapsed ? "Expand sidebar" : "Collapse navigation"}
           >
             {isCollapsed ? (
               <ChevronsRight size={16} />
@@ -369,7 +385,6 @@ export default function Sidebar({
         </div>
 
         <nav className="tree-nav">
-          
           {treeData.map((node) => {
             const hasChildren = node.children && node.children.length > 0;
             const nodeActive = hasChildren
