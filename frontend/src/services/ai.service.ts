@@ -15,7 +15,12 @@ export const aiService = {
     return data.data || [];
   },
 
-  async chat(token: string, question: string, sessionId: string, model?: string) {
+  async chat(
+    token: string,
+    question: string,
+    sessionId: string,
+    model?: string,
+  ) {
     const res = await fetch(`${AGENT_URL}/chat/stream`, {
       method: "POST",
       headers: {

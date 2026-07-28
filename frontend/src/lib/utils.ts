@@ -1,6 +1,6 @@
 import { STATUS_BACKGROUNDS, STATUS_COLORS } from "@/constants/status";
 
-// ─── Formatting utilities ────────────────────────────────────────────────────
+// --- Formatting utilities ----------------------------------------------------
 
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -55,7 +55,7 @@ export function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-// ─── Status styling utilities ────────────────────────────────────────────────
+// --- Status styling utilities ------------------------------------------------
 
 export function statusColor(status: string): string {
   return (
@@ -70,13 +70,13 @@ export function statusBg(status: string): string {
   );
 }
 
-// ─── ID generation ───────────────────────────────────────────────────────────
+// --- ID generation -----------------------------------------------------------
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// ─── Class name utilities ────────────────────────────────────────────────────
+// --- Class name utilities ----------------------------------------------------
 
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");

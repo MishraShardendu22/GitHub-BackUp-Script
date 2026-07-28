@@ -40,7 +40,7 @@ export default async function AnalyticsOverviewPage({
 
       <AnalyticsSubNav />
 
-      {/* ── Stats ─────────────────────────────────────────────────────── */}
+      {/* -- Stats ------------------------------------------------------- */}
       {!hasData ? (
         <InsufficientData days={days} />
       ) : (
@@ -72,12 +72,12 @@ export default async function AnalyticsOverviewPage({
         </div>
       )}
 
-      {/* ── Charts ────────────────────────────────────────────────────── */}
+      {/* -- Charts ------------------------------------------------------ */}
       {hasData && metrics?.runs && (
         <AnalyticsCharts data={metrics.runs} days={days} />
       )}
 
-      {/* ── Storage summary (only on overview) ─────────────────────────── */}
+      {/* -- Storage summary (only on overview) --------------------------- */}
       {metrics && (
         <div className="split-grid">
           {/* Storage card */}

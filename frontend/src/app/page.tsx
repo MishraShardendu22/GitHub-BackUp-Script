@@ -39,17 +39,21 @@ async function fetchStats(): Promise<DashboardStats | null> {
 }
 
 async function fetchLatestRun(): Promise<BackupRun | null> {
-  const data = await safeFetch<{ run: BackupRun | null }>("/api/backups/latest");
+  const data = await safeFetch<{ run: BackupRun | null }>(
+    "/api/backups/latest",
+  );
   return data?.run || null;
 }
 
 export default async function DashboardPage() {
-  const [stats, latestRun] = await Promise.all([fetchStats(), fetchLatestRun()]);
+  const [stats, latestRun] = await Promise.all([
+    fetchStats(),
+    fetchLatestRun(),
+  ]);
 
   return (
     <div className="page">
-
-      {/* ── Hero / Status Block ───────────────────────────────────────── */}
+      {/* -- Hero / Status Block ----------------------------------------- */}
       <section
         className="card section-card reveal"
         style={{
@@ -61,7 +65,9 @@ export default async function DashboardPage() {
           <div>
             <div className="page-kicker">Backup Operations Overview</div>
             <h1 className="page-title">
-              System<br /><em>Status</em>
+              System
+              <br />
+              <em>Status</em>
             </h1>
             <p className="page-subtitle">
               Real-time monitoring of GitHub repository backups, worker health,
@@ -131,12 +137,14 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* ── KPI Tiles ────────────────────────────────────────────────── */}
+      {/* -- KPI Tiles -------------------------------------------------- */}
       <div className="metric-grid metric-grid--four stats-grid">
         <div className="stat-card reveal reveal-delay-1">
           <div className="stat-label">Avg Run Duration</div>
           <div className="stat-value">
-            {stats?.avg_duration_ms ? formatDuration(stats.avg_duration_ms) : "—"}
+            {stats?.avg_duration_ms
+              ? formatDuration(stats.avg_duration_ms)
+              : "—"}
           </div>
         </div>
         <div className="stat-card reveal reveal-delay-2">
@@ -157,9 +165,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Latest Run Quick-Card ─────────────────────────────────────── */}
+      {/* -- Latest Run Quick-Card --------------------------------------- */}
       {latestRun && (
-        <section className="card section-card reveal" style={{ padding: "32px 40px" }}>
+        <section
+          className="card section-card reveal"
+          style={{ padding: "32px 40px" }}
+        >
           <div
             style={{
               display: "flex",
@@ -222,7 +233,9 @@ export default async function DashboardPage() {
           <div className="metric-grid metric-grid--four">
             <div className="card-flat">
               <div className="stat-label">Repos backed up</div>
-              <div className="stat-value stat-value--md">{latestRun.total_repos}</div>
+              <div className="stat-value stat-value--md">
+                {latestRun.total_repos}
+              </div>
             </div>
             <div className="card-flat">
               <div className="stat-label">Successful</div>
@@ -243,7 +256,10 @@ export default async function DashboardPage() {
             </div>
             <div className="card-flat">
               <div className="stat-label">Skipped</div>
-              <div className="stat-value stat-value--md" style={{ color: "var(--text-muted)" }}>
+              <div
+                className="stat-value stat-value--md"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {latestRun.skipped}
               </div>
             </div>
@@ -251,7 +267,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* ── Navigation Cards ──────────────────────────────────────────── */}
+      {/* -- Navigation Cards -------------------------------------------- */}
       <div className="metric-grid metric-grid--four">
         <NavCard
           href="/backups"
@@ -297,7 +313,6 @@ export default async function DashboardPage() {
           }
         />
       </div>
-
     </div>
   );
 }
@@ -316,7 +331,10 @@ function NavCard({
   icon: React.ReactNode;
 }) {
   return (
-    <Link href={href} style={{ textDecoration: "none", display: "block", height: "100%" }}>
+    <Link
+      href={href}
+      style={{ textDecoration: "none", display: "block", height: "100%" }}
+    >
       <div
         className="card reveal nav-card"
         style={{

@@ -38,8 +38,11 @@ export function MessageBubble({ msg }: { msg: Message }) {
             >
               Agent Tool Calls ({msg.toolCalls.length})
             </span>
-            {msg.toolCalls.map((tool, idx) => (
-              <ToolActivityBlock key={idx} tool={tool} />
+            {msg.toolCalls.map((tool) => (
+              <ToolActivityBlock
+                key={`${tool.name}-${JSON.stringify(tool.args)}`}
+                tool={tool}
+              />
             ))}
           </div>
         )}

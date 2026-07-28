@@ -1,6 +1,6 @@
+import BackupsClient from "@/components/backups/BackupsClient";
 import { serverFetch } from "@/lib/server-api";
 import type { BackupRun } from "@/types";
-import BackupsClient from "@/components/backups/BackupsClient";
 
 interface BackupsResponse {
   data: BackupRun[];
@@ -51,7 +51,8 @@ export default async function BackupsPage({
           <div className="page-kicker">Backup Run Logs</div>
           <h1 className="page-title">Execution History</h1>
           <p className="page-subtitle">
-            Complete history of all backup executions and their detailed results.
+            Complete history of all backup executions and their detailed
+            results.
           </p>
         </div>
       </div>

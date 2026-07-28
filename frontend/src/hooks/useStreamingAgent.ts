@@ -86,8 +86,8 @@ export function useStreamingAgent({
                   }
                 } else if (event.type === "confirm_required") {
                   setActiveConfirmation({
-                    confirmId: event.confirm_id!,
-                    name: event.name!,
+                    confirmId: event.confirm_id ?? "",
+                    name: event.name ?? "",
                     args: event.args || {},
                   });
                 } else if (event.type === "tool_start") {
@@ -101,7 +101,7 @@ export function useStreamingAgent({
                       toolCalls: [
                         ...toolCalls,
                         {
-                          name: event.name!,
+                          name: event.name ?? "tool",
                           args: event.args || {},
                           success: false,
                           running: true,
@@ -119,9 +119,9 @@ export function useStreamingAgent({
                         t.name === event.name
                           ? {
                               ...t,
-                              success: event.success!,
+                              success: Boolean(event.success),
                               running: false,
-                              duration_ms: event.duration_ms!,
+                              duration_ms: event.duration_ms ?? 0,
                               result: event.result,
                               error: event.error,
                             }
@@ -138,7 +138,7 @@ export function useStreamingAgent({
                 } else if (event.type === "done") {
                   setActiveStep("idle");
                   onMessageUpdate(assistantMsg.id, {
-                    content: event.answer!,
+                    content: event.answer ?? "",
                     streaming: false,
                   });
                 }

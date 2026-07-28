@@ -1,3 +1,5 @@
+import type { BackupRun } from "./backup";
+
 export interface RepoAnalyticsSnapshot {
   id: number;
   run_id: number | null;
@@ -21,16 +23,14 @@ export interface RepoAnalyticsSnapshot {
 }
 
 export interface MetricsData {
-  runs: any[];
+  runs: BackupRun[];
   total_runs: number;
   avg_duration_ms: number;
   total_successful: number;
   total_failed: number;
   total_skipped: number;
   distinct_repos: number;
-  total_logs: number;
-  total_size_bytes: number;
-  largest_archive_bytes: number;
-  largest_repository: string;
-  latest_analytics: RepoAnalyticsSnapshot | null;
+  total_size_bytes?: number;
+  largest_archive_bytes?: number;
+  largest_repository?: string;
 }

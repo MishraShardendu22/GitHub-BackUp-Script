@@ -12,8 +12,10 @@ const ChevronIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
     style={{ flexShrink: 0 }}
+    aria-hidden="true"
   >
-    <polyline points="6 9 12 15 18 9"></polyline>
+    <title>Chevron Icon</title>
+    <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
@@ -22,9 +24,12 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
 
   return (
     <div className="ai-tool-activity-card">
-      <div
-        className="ai-tool-activity-header"
+      <button
+        type="button"
+        className="ai-tool-activity-header w-full flex items-center justify-between text-left"
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        aria-label={`Toggle tool activity details for ${tool.name}`}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
           <span
@@ -53,7 +58,7 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
           </span>
           <ChevronIcon />
         </div>
-      </div>
+      </button>
       {expanded && (
         <div className="ai-tool-activity-details">
           <div>

@@ -88,7 +88,9 @@ export function ModelSelector({
   }, [isOpen]);
 
   const activeModelObj = models.find((m) => m.id === selectedModel);
-  const activeDisplayName = activeModelObj ? activeModelObj.name : selectedModel || "Select Model";
+  const activeDisplayName = activeModelObj
+    ? activeModelObj.name
+    : selectedModel || "Select Model";
 
   const filteredModels = models.filter(
     (m) =>
@@ -117,7 +119,9 @@ export function ModelSelector({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden="true"
           >
+            <title>Model Chip Icon</title>
             <rect x="4" y="4" width="16" height="16" rx="2" />
             <rect x="9" y="9" width="6" height="6" />
             <path d="M15 2v2M9 2v2M15 20v2M9 20v2M20 15h2M20 9h2M2 15h2M2 9h2" />
@@ -128,7 +132,9 @@ export function ModelSelector({
           {loading ? (
             <span className="custom-model-status-text">Loading…</span>
           ) : error ? (
-            <span className="custom-model-status-text error">Error loading models</span>
+            <span className="custom-model-status-text error">
+              Error loading models
+            </span>
           ) : (
             activeDisplayName
           )}
@@ -155,7 +161,9 @@ export function ModelSelector({
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
+              <title>Dropdown Arrow</title>
               <path d="M1 1l4 4 4-4" />
             </svg>
           </span>
@@ -178,7 +186,9 @@ export function ModelSelector({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                aria-hidden="true"
               >
+                <title>Search Icon</title>
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
@@ -201,16 +211,15 @@ export function ModelSelector({
               )}
             </div>
             <div className="custom-model-count">
-              {filteredModels.length} free model{filteredModels.length === 1 ? "" : "s"}
+              {filteredModels.length} free model
+              {filteredModels.length === 1 ? "" : "s"}
             </div>
           </div>
 
           {/* Model Options List */}
           <div className="custom-model-list" role="listbox">
             {filteredModels.length === 0 ? (
-              <div className="custom-model-empty">
-                No matching models found
-              </div>
+              <div className="custom-model-empty">No matching models found</div>
             ) : (
               filteredModels.map((m) => {
                 const isSelected = m.id === selectedModel;
@@ -248,7 +257,9 @@ export function ModelSelector({
                             strokeWidth="2.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
+                            aria-hidden="true"
                           >
+                            <title>Check Icon</title>
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
                         </span>

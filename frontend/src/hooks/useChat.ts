@@ -19,12 +19,12 @@ export function useChat(token: string | null, sessionId: string | null) {
     setError(null);
     try {
       const data = await sessionService.getMessages(token, sessionId);
-      const formatted = data.map((msg: any) => ({
-        id: msg.id,
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
+      const formatted = data.map((msg) => ({
+        id: String(msg.id),
+        role: (msg.role as "user" | "assistant") || "assistant",
+        content: String(msg.content ?? ""),
         timestamp: new Date(msg.created_at || Date.now()),
-        toolCalls: msg.tool_calls || [],
+        toolCalls: (msg.tool_calls as Message["toolCalls"]) || [],
       }));
       setMessages((prev) => {
         const formattedIds = new Set(formatted.map((m) => m.id));

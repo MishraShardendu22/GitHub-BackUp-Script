@@ -12,7 +12,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   created_at: string;
-  tool_calls?: any[];
+  tool_calls?: Record<string, unknown>[];
 }
 
 export const sessionService = {

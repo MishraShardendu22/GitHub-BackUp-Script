@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { aiService } from "@/services/ai.service";
 import type { OpenRouterModel } from "@/services/ai.service";
+import { aiService } from "@/services/ai.service";
 
 const STORAGE_KEY = "selected_openrouter_model";
 

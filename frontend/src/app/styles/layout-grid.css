@@ -133,10 +133,18 @@
 }
 
 /* ── Log Levels ──────────────────────────────────────────────────── */
-.log-info  { color: var(--accent); }
-.log-warn  { color: var(--warning); }
-.log-error { color: var(--danger); }
-.log-debug { color: var(--text-muted); }
+.log-info {
+  color: var(--accent);
+}
+.log-warn {
+  color: var(--warning);
+}
+.log-error {
+  color: var(--danger);
+}
+.log-debug {
+  color: var(--text-muted);
+}
 
 /* ── Responsive Breakdowns ───────────────────────────────────────── */
 @media (max-width: 1100px) {

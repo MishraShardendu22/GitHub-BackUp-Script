@@ -295,7 +295,7 @@
   left: calc(100% + 10px);
   top: 50%;
   transform: translateY(-50%) translateX(-6px);
-  background: #F5E9D3;
+  background: #f5e9d3;
   color: #111111;
   border: 1px solid var(--border);
   padding: 7px 12px;
@@ -307,7 +307,9 @@
   opacity: 0;
   white-space: nowrap;
   box-shadow: var(--shadow-md);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
   z-index: 200;
 }
 
@@ -327,7 +329,7 @@
 /* ── Mobile Responsive Drawer ────────────────────────────────────── */
 @media (max-width: 768px) {
   .app-content-wrapper {
-    margin-left: 0 !important;
+    margin-left: 0;
   }
 
   .mobile-header {
@@ -343,8 +345,8 @@
   }
 
   .global-sidebar.mobile-open {
-    transform: translateX(0) !important;
-    width: 280px !important;
+    transform: translateX(0);
+    width: 280px;
   }
 
   .sidebar-overlay {

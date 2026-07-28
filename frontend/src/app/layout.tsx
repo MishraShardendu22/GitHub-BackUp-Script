@@ -36,7 +36,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Systems Lab | GitHub Backup Monitor",
-    description: "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
+    description:
+      "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
     url: "https://github.mishrashardendu22.is-a.dev",
     siteName: "Systems Lab",
     locale: "en_US",
@@ -45,7 +46,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Systems Lab | GitHub Backup Monitor",
-    description: "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
+    description:
+      "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
   },
   robots: {
     index: true,
@@ -59,7 +61,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${instrumentSerif.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
+    <html
+      lang="en"
+      className={`${instrumentSerif.variable} ${inter.variable} ${ibmPlexMono.variable}`}
+    >
       <Analytics />
       <body className="app-shell">
         <a className="skip-link" href="#main-content">

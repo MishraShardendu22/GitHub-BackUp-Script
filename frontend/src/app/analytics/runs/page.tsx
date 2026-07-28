@@ -79,7 +79,9 @@ export default async function RunHistoryPage({
                 <tbody>
                   {runs.map((run) => (
                     <tr key={run.id}>
-                      <td data-label="Run #" style={{ fontWeight: 600 }}>#{run.id}</td>
+                      <td data-label="Run #" style={{ fontWeight: 600 }}>
+                        #{run.id}
+                      </td>
                       <td data-label="Status">
                         <span
                           className={`badge ${
@@ -93,10 +95,15 @@ export default async function RunHistoryPage({
                           {run.status}
                         </span>
                       </td>
-                      <td data-label="Started" style={{ fontSize: 14, color: "var(--text-muted)" }}>
+                      <td
+                        data-label="Started"
+                        style={{ fontSize: 14, color: "var(--text-muted)" }}
+                      >
                         {formatDate(run.started_at)}
                       </td>
-                      <td data-label="Duration">{formatDuration(run.duration_ms)}</td>
+                      <td data-label="Duration">
+                        {formatDuration(run.duration_ms)}
+                      </td>
                       <td data-label="Repos">{run.total_repos}</td>
                       <td data-label="✓ OK" style={{ color: "var(--success)" }}>
                         {run.successful}
@@ -109,7 +116,9 @@ export default async function RunHistoryPage({
                       >
                         {run.failed}
                       </td>
-                      <td data-label="Skipped" className="text-muted">{run.skipped}</td>
+                      <td data-label="Skipped" className="text-muted">
+                        {run.skipped}
+                      </td>
                       <td data-label="Details">
                         <Link
                           href={`/backups/${run.id}`}

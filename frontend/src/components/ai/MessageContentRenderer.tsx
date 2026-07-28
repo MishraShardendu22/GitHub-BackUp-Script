@@ -1,17 +1,20 @@
+import React from "react";
+
 function renderMarkdownInline(text: string): React.ReactNode {
   if (!text) return "";
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/);
   return (
     <>
       {parts.map((part, idx) => {
+        const key = `inline-${idx}-${part.replace(/\s+/g, "_").slice(0, 10)}`;
         if (part.startsWith("**") && part.endsWith("**"))
-          return <strong key={idx}>{part.slice(2, -2)}</strong>;
+          return <strong key={key}>{part.slice(2, -2)}</strong>;
         if (part.startsWith("*") && part.endsWith("*"))
-          return <em key={idx}>{part.slice(1, -1)}</em>;
+          return <em key={key}>{part.slice(1, -1)}</em>;
         if (part.startsWith("`") && part.endsWith("`")) {
           return (
             <code
-              key={idx}
+              key={key}
               style={{
                 fontSize: "11px",
                 background: "rgba(255, 255, 255, 0.08)",
@@ -26,7 +29,7 @@ function renderMarkdownInline(text: string): React.ReactNode {
             </code>
           );
         }
-        return part;
+        return <React.Fragment key={key}>{part}</React.Fragment>;
       })}
     </>
   );
@@ -102,9 +105,10 @@ export function MessageContentRenderer({ content }: { content: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
       {blocks.map((block, idx) => {
+        const blockKey = `block-${idx}-${block.type}-${block.content.slice(0, 8)}`;
         if (block.type === "code") {
           return (
-            <div key={idx}>
+            <div key={blockKey}>
               <div className="ai-code-block-header">
                 <span>{block.language || "code"}</span>
                 <span>Copy</span>
@@ -144,23 +148,30 @@ export function MessageContentRenderer({ content }: { content: string }) {
             )
             .filter((row) => row.length > 0);
           return (
-            <div className="ai-rich-table-container" key={idx}>
+            <div className="ai-rich-table-container" key={blockKey}>
               <table className="ai-rich-table">
                 <thead>
                   <tr>
-                    {headerCells.map((cell, cidx) => (
-                      <th key={cidx}>{renderMarkdownInline(cell)}</th>
+                    {headerCells.map((cell) => (
+                      <th key={`hdr-${cell.replace(/\s+/g, "_")}`}>
+                        {renderMarkdownInline(cell)}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {dataRows.map((row, ridx) => (
-                    <tr key={ridx}>
-                      {row.map((cell, cidx) => (
-                        <td key={cidx}>{renderMarkdownInline(cell)}</td>
-                      ))}
-                    </tr>
-                  ))}
+                  {dataRows.map((row) => {
+                    const rowKey = `row-${row.join("_").slice(0, 20)}`;
+                    return (
+                      <tr key={rowKey}>
+                        {row.map((cell) => (
+                          <td key={`cell-${rowKey}-${cell.slice(0, 10)}`}>
+                            {renderMarkdownInline(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -169,15 +180,16 @@ export function MessageContentRenderer({ content }: { content: string }) {
         const lines = block.content.split("\n");
         return (
           <div
-            key={idx}
+            key={blockKey}
             style={{ display: "flex", flexDirection: "column", gap: "6px" }}
           >
             {lines.map((line, lidx) => {
+              const lineKey = `line-${lidx}-${line.slice(0, 12)}`;
               const trimmed = line.trim();
               if (trimmed.startsWith("# "))
                 return (
                   <h3
-                    key={lidx}
+                    key={lineKey}
                     style={{
                       fontSize: "18px",
                       color: "var(--accent)",
@@ -190,7 +202,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
               if (trimmed.startsWith("## "))
                 return (
                   <h4
-                    key={lidx}
+                    key={lineKey}
                     style={{
                       fontSize: "15px",
                       color: "var(--text)",
@@ -203,7 +215,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
               if (trimmed.startsWith("- ") || trimmed.startsWith("* "))
                 return (
                   <li
-                    key={lidx}
+                    key={lineKey}
                     style={{
                       marginLeft: "16px",
                       fontSize: "13px",
@@ -228,7 +240,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
                       margin: "6px 6px 6px 0",
                       verticalAlign: "top",
                     }}
-                    key={lidx}
+                    key={lineKey}
                   >
                     <span className="ai-metric-val">
                       {emoji ? `${emoji} ` : ""}
@@ -242,7 +254,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
               }
               return (
                 <p
-                  key={lidx}
+                  key={lineKey}
                   style={{ margin: 0, fontSize: "13.5px", lineHeight: "1.6" }}
                 >
                   {renderMarkdownInline(line)}

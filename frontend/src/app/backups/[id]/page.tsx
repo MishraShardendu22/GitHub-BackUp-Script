@@ -30,8 +30,23 @@ export default async function BackupDetailPage({
 
   return (
     <div className="page">
-      <div className="card" style={{ background: "rgba(24, 24, 27, 0.4)", borderLeft: "4px solid var(--accent)", marginBottom: 32 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+      <div
+        className="card"
+        style={{
+          background: "rgba(24, 24, 27, 0.4)",
+          borderLeft: "4px solid var(--accent)",
+          marginBottom: 32,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: 16,
+          }}
+        >
           <div>
             <div className="page-kicker">
               <Link
@@ -42,27 +57,44 @@ export default async function BackupDetailPage({
               </Link>{" "}
               / Investigation
             </div>
-            <h1 className="page-title" style={{ marginTop: 8 }}>Run #{run.id}</h1>
+            <h1 className="page-title" style={{ marginTop: 8 }}>
+              Run #{run.id}
+            </h1>
             <p className="page-subtitle" style={{ marginTop: 8 }}>
               Started {formatDate(run.started_at)} ·{" "}
               {formatDuration(run.duration_ms)}
             </p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Run Status</div>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              Run Status
+            </div>
             <StatusBadge status={run.status} />
           </div>
         </div>
 
         {/* Summary metrics */}
-        <div className="metric-grid metric-grid--four stats-grid" style={{ marginTop: 24 }}>
+        <div
+          className="metric-grid metric-grid--four stats-grid"
+          style={{ marginTop: 24 }}
+        >
           <div className="card-flat" style={{ background: "transparent" }}>
             <div className="stat-label">Total Repos</div>
             <div className="stat-value">{run.total_repos}</div>
           </div>
           <div className="card-flat" style={{ background: "transparent" }}>
             <div className="stat-label">Successful</div>
-            <div className="stat-value stat-value--success">{run.successful}</div>
+            <div className="stat-value stat-value--success">
+              {run.successful}
+            </div>
           </div>
           <div className="card-flat" style={{ background: "transparent" }}>
             <div className="stat-label">Failed</div>
@@ -77,7 +109,9 @@ export default async function BackupDetailPage({
 
       {/* Repository results */}
       <section className="card section-card">
-        <div className="section-title" style={{ marginBottom: 16 }}>Repository Investigation Logs</div>
+        <div className="section-title" style={{ marginBottom: 16 }}>
+          Repository Investigation Logs
+        </div>
         {results.length === 0 ? (
           <p
             style={{
@@ -103,7 +137,9 @@ export default async function BackupDetailPage({
               <tbody>
                 {results.map((result) => (
                   <tr key={result.id}>
-                    <td data-label="Repository" style={{ fontWeight: 500 }}>{result.repo_full_name}</td>
+                    <td data-label="Repository" style={{ fontWeight: 500 }}>
+                      {result.repo_full_name}
+                    </td>
                     <td data-label="Status">
                       <StatusBadge status={result.status} />
                     </td>

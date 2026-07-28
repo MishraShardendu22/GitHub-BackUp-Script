@@ -1,13 +1,18 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { LoginPanel, MessageBubble, ModelSelector, WorkflowDiagram } from "@/components/ai";
+import {
+  LoginPanel,
+  MessageBubble,
+  ModelSelector,
+  WorkflowDiagram,
+} from "@/components/ai";
 import { useAIContext } from "@/components/layout/AIContext";
 import { LoaderPanel, MetricCard, ToolBadge } from "@/components/ui";
 import { LOADING_MESSAGES, PREMADE_PROMPTS } from "@/constants";
 import { useChat } from "@/hooks/useChat";
 import { useModels } from "@/hooks/useModels";
-import { useParams, useRouter } from "next/navigation";
 import { useStats } from "@/hooks/useStats";
 import { useStreamingAgent } from "@/hooks/useStreamingAgent";
 
@@ -43,17 +48,17 @@ export function AIDashboard() {
   } = useAIContext();
 
   const params = useParams();
-  const router = useRouter();
-  
+
   // Local state for seamless navigation after creating a session
   const [localSessionId, setLocalSessionId] = useState<string | null>(null);
 
   // Clear local override when URL params change (e.g. Back/Forward navigation)
   useEffect(() => {
     setLocalSessionId(null);
-  }, [params?.id]);
+  }, []);
 
-  const activeSessionId = localSessionId || (params?.id as string | undefined) || null;
+  const activeSessionId =
+    localSessionId || (params?.id as string | undefined) || null;
   const currentView = activeSessionId ? "chat" : "dashboard";
 
   const {
@@ -143,7 +148,7 @@ export function AIDashboard() {
         );
         sessionId = newSessionId;
         // Soft navigate to preserve chat component state for streaming
-        window.history.replaceState(null, '', `/ai/${newSessionId}`);
+        window.history.replaceState(null, "", `/ai/${newSessionId}`);
         setLocalSessionId(newSessionId);
       }
 
@@ -186,9 +191,7 @@ export function AIDashboard() {
         <header className="ai-agent-header">
           <div className="ai-agent-identity">
             <div className="ai-agent-info">
-              <div className="ai-agent-name">
-                Systems Lab Agent
-              </div>
+              <div className="ai-agent-name">Systems Lab Agent</div>
               <div className="ai-agent-status">
                 <span className={`ai-status-dot ${sending ? "busy" : ""}`} />
                 <span>
@@ -340,7 +343,9 @@ export function AIDashboard() {
                               {tool.name}
                             </td>
                             <td data-label="Invocations">{tool.count} runs</td>
-                            <td data-label="Avg Latency">{tool.avg_duration.toFixed(0)} ms</td>
+                            <td data-label="Avg Latency">
+                              {tool.avg_duration.toFixed(0)} ms
+                            </td>
                             <td data-label="Success Rate">
                               <span
                                 className={`badge ${tool.success_rate > 90 ? "badge-success" : "badge-warning"}`}

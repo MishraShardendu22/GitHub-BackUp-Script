@@ -58,7 +58,7 @@ export default async function SnapshotsPage({
 
       <AnalyticsSubNav />
 
-      {/* ── Latest snapshot summary ─────────────────────────────────── */}
+      {/* -- Latest snapshot summary ----------------------------------- */}
       {latest && (
         <section className="card section-card">
           <div className="section-title">Latest snapshot</div>
@@ -113,7 +113,7 @@ export default async function SnapshotsPage({
         </section>
       )}
 
-      {/* ── History table ───────────────────────────────────────────── */}
+      {/* -- History table --------------------------------------------- */}
       <section className="card section-card">
         <div className="section-title">Full history</div>
 
@@ -167,7 +167,11 @@ export default async function SnapshotsPage({
                       </td>
                       <td
                         data-label="Commit"
-                        style={{ fontSize: 14, fontFamily: "monospace", color: "var(--text-muted)" }}
+                        style={{
+                          fontSize: 14,
+                          fontFamily: "monospace",
+                          color: "var(--text-muted)",
+                        }}
                       >
                         {snap.head_commit ? snap.head_commit.slice(0, 10) : "—"}
                       </td>
@@ -183,8 +187,12 @@ export default async function SnapshotsPage({
                       <td data-label="Branches">{snap.branch_count}</td>
                       <td data-label="Tags">{snap.tag_count}</td>
                       <td data-label="Files">{snap.tracked_files}</td>
-                      <td data-label="Blob size">{formatBytes(snap.total_blob_size_bytes)}</td>
-                      <td data-label="Archive size">{formatBytes(snap.total_archive_size_bytes)}</td>
+                      <td data-label="Blob size">
+                        {formatBytes(snap.total_blob_size_bytes)}
+                      </td>
+                      <td data-label="Archive size">
+                        {formatBytes(snap.total_archive_size_bytes)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { backupService } from "@/services/backup.service";
-import { formatDate, formatDuration } from "@/lib/utils";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { PaginationBar } from "@/components/analytics/pagination-bar";
-import type { BackupRun, BackupFix } from "@/types";
+import { formatDate, formatDuration } from "@/lib/utils";
+import { backupService } from "@/services/backup.service";
+import type { BackupFix, BackupRun } from "@/types";
 
 interface BackupsClientProps {
   initialData: {
@@ -28,7 +29,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
 
   // Modal states
   const [activeFix, setActiveFix] = useState<BackupFix | null>(null);
-  const [createFixForRun, setCreateFixForRun] = useState<BackupRun | null>(null);
+  const [createFixForRun, setCreateFixForRun] = useState<BackupRun | null>(
+    null,
+  );
 
   // Form states for Create Fix
   const [formTitle, setFormTitle] = useState("");
@@ -47,7 +50,8 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
   const [editAuthor, setEditAuthor] = useState("");
   const [editAffected, setEditAffected] = useState<number[]>([]);
 
-  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("agent_token");
+  const hasToken =
+    typeof window !== "undefined" && !!localStorage.getItem("agent_token");
 
   // Fetch runs on page change
   const fetchPage = async (page: number) => {
@@ -59,7 +63,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
       setPagination(result.pagination);
       setCurrentPage(page);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to load backups");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to load backups",
+      );
     } finally {
       setLoading(false);
     }
@@ -117,7 +123,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
       // Refresh list to show updated fixes/badges
       await fetchPage(currentPage);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to create fix");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to create fix",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -130,7 +138,8 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
 
   // Find other failed runs in the current loaded page (excluding current one) to display as checkboxes
   const otherFailedRuns = runs.filter(
-    (run) => isFailedRun(run) && createFixForRun && run.id !== createFixForRun.id
+    (run) =>
+      isFailedRun(run) && createFixForRun && run.id !== createFixForRun.id,
   );
 
   // Edit Fix handlers
@@ -171,7 +180,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
       // Refresh list to show updated fixes/badges
       await fetchPage(currentPage);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to update fix");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to update fix",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +232,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
             {errorMessage}
           </p>
         ) : loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text-secondary)" }}>
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: "var(--text-secondary)",
+            }}
+          >
             <span className="loading-state">Loading runs...</span>
           </div>
         ) : runs.length === 0 ? (
@@ -245,7 +262,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <th>Failed</th>
                   <th>Skipped</th>
                   <th>Fix Status</th>
-                  <th style={{ textAlign: "right", minWidth: "160px" }}>Actions</th>
+                  <th style={{ textAlign: "right", minWidth: "160px" }}>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -264,21 +283,30 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                             run.status === "completed"
                               ? "badge-success"
                               : run.status === "running"
-                              ? "badge-running"
-                              : "badge-error"
+                                ? "badge-running"
+                                : "badge-error"
                           }`}
                         >
                           {run.status}
                         </span>
                       </td>
-                      <td data-label="Date" style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                      <td
+                        data-label="Date"
+                        style={{
+                          color: "var(--text-secondary)",
+                          fontSize: "14px",
+                        }}
+                      >
                         {formatDate(run.started_at)}
                       </td>
                       <td data-label="Duration">
                         {formatDuration(run.duration_ms)}
                       </td>
                       <td data-label="Total">{run.total_repos}</td>
-                      <td data-label="Success" style={{ color: "var(--success)" }}>
+                      <td
+                        data-label="Success"
+                        style={{ color: "var(--success)" }}
+                      >
                         {run.successful}
                       </td>
                       <td
@@ -297,7 +325,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                           hasFixes ? (
                             <button
                               type="button"
-                              onClick={() => setActiveFix(run.fixes![0])}
+                              onClick={() =>
+                                setActiveFix(run.fixes?.[0] ?? null)
+                              }
                               className="badge"
                               style={{
                                 background: "rgba(16, 185, 129, 0.15)",
@@ -333,11 +363,28 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                             </span>
                           )
                         ) : (
-                          <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>—</span>
+                          <span
+                            style={{
+                              color: "var(--text-muted)",
+                              fontSize: "13px",
+                            }}
+                          >
+                            —
+                          </span>
                         )}
                       </td>
-                      <td data-label="Actions" style={{ textAlign: "right", minWidth: "160px" }}>
-                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", alignItems: "center" }}>
+                      <td
+                        data-label="Actions"
+                        style={{ textAlign: "right", minWidth: "160px" }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            justifyContent: "flex-end",
+                            alignItems: "center",
+                          }}
+                        >
                           {failed && !hasFixes && (
                             <button
                               type="button"
@@ -357,7 +404,9 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                           {failed && hasFixes && (
                             <button
                               type="button"
-                              onClick={() => setActiveFix(run.fixes![0])}
+                              onClick={() =>
+                                setActiveFix(run.fixes?.[0] ?? null)
+                              }
                               className="btn btn-outline"
                               style={{
                                 padding: "6px 12px",
@@ -373,7 +422,11 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                           <Link
                             href={`/backups/${run.id}`}
                             className="btn btn-ghost"
-                            style={{ padding: "6px 10px", fontSize: "13px", whiteSpace: "nowrap" }}
+                            style={{
+                              padding: "6px 10px",
+                              fontSize: "13px",
+                              whiteSpace: "nowrap",
+                            }}
                           >
                             View →
                           </Link>
@@ -399,17 +452,43 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
         )}
       </div>
 
-      {/* ── Modal dialog: View / Edit Fix Details ───────────────────────────── */}
+      {/* -- Modal dialog: View / Edit Fix Details ----------------------------- */}
       {activeFix && (
-        <div className="modal-overlay" onClick={() => { setActiveFix(null); setIsEditing(false); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
+        <button
+          type="button"
+          aria-label="Close modal overlay backdrop"
+          className="modal-overlay block w-full border-none p-0 text-left"
+          onClick={() => {
+            setActiveFix(null);
+            setIsEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setActiveFix(null);
+              setIsEditing(false);
+            }
+          }}
+        >
+          <div className="modal-content" role="dialog" aria-modal="true">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <h3
+                style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}
+              >
                 {isEditing ? "Edit Resolution Details" : "Resolution Details"}
               </h3>
               <button
                 type="button"
-                onClick={() => { setActiveFix(null); setIsEditing(false); }}
+                onClick={() => {
+                  setActiveFix(null);
+                  setIsEditing(false);
+                }}
                 style={{
                   background: "transparent",
                   border: "none",
@@ -423,11 +502,20 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
             </div>
 
             {isEditing ? (
-              <form onSubmit={handleEditFixSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <form
+                onSubmit={handleEditFixSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
                 <div>
                   <label
                     htmlFor="edit-fix-title"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-secondary)",
+                      fontWeight: 600,
+                      display: "block",
+                      marginBottom: 6,
+                    }}
                   >
                     Title <span style={{ color: "var(--danger)" }}>*</span>
                   </label>
@@ -444,7 +532,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 <div>
                   <label
                     htmlFor="edit-fix-desc"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-secondary)",
+                      fontWeight: 600,
+                      display: "block",
+                      marginBottom: 6,
+                    }}
                   >
                     Description
                   </label>
@@ -456,11 +550,23 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 16,
+                  }}
+                >
                   <div>
                     <label
                       htmlFor="edit-fix-commit"
-                      style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                      style={{
+                        fontSize: 13,
+                        color: "var(--text-secondary)",
+                        fontWeight: 600,
+                        display: "block",
+                        marginBottom: 6,
+                      }}
                     >
                       Commit Hash
                     </label>
@@ -476,7 +582,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <div>
                     <label
                       htmlFor="edit-fix-author"
-                      style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                      style={{
+                        fontSize: 13,
+                        color: "var(--text-secondary)",
+                        fontWeight: 600,
+                        display: "block",
+                        marginBottom: 6,
+                      }}
                     >
                       Author
                     </label>
@@ -491,9 +603,17 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-secondary)",
+                      fontWeight: 600,
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
                     Select Affected Failed Runs
-                  </label>
+                  </span>
                   <div
                     style={{
                       maxHeight: 120,
@@ -509,19 +629,37 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   >
                     {allAvailableFailedRuns.length > 0 ? (
                       allAvailableFailedRuns.map((run) => (
-                        <label key={run.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                        <label
+                          key={run.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            fontSize: 14,
+                            cursor: "pointer",
+                          }}
+                        >
                           <input
                             type="checkbox"
                             checked={editAffected.includes(run.id)}
                             onChange={() => toggleEditAffectedRun(run.id)}
                           />
                           <span>
-                            Run #{run.id} {run.started_at ? `(${formatDate(run.started_at)})` : "(Linked Run)"}
+                            Run #{run.id}{" "}
+                            {run.started_at
+                              ? `(${formatDate(run.started_at)})`
+                              : "(Linked Run)"}
                           </span>
                         </label>
                       ))
                     ) : (
-                      <div style={{ fontSize: 12.5, color: "var(--text-muted)", padding: "4px 0" }}>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          color: "var(--text-muted)",
+                          padding: "4px 0",
+                        }}
+                      >
                         No failed runs available to select.
                       </div>
                     )}
@@ -529,12 +667,25 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 </div>
 
                 {submitError && (
-                  <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
+                  <div
+                    style={{
+                      color: "var(--danger)",
+                      fontSize: 14,
+                      fontWeight: 500,
+                    }}
+                  >
                     ⚠️ {submitError}
                   </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 12,
+                    marginTop: 12,
+                  }}
+                >
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
@@ -556,27 +707,93 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               </form>
             ) : (
               <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 16 }}
+                >
                   <div>
-                    <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Title</label>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: "#10b981", marginTop: 4 }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        color: "var(--text-muted)",
+                        fontWeight: 600,
+                        display: "block",
+                      }}
+                    >
+                      Title
+                    </span>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 500,
+                        color: "#10b981",
+                        marginTop: 4,
+                      }}
+                    >
                       {activeFix.title}
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Description</label>
-                    <p style={{ fontSize: 14.5, color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        color: "var(--text-muted)",
+                        fontWeight: 600,
+                        display: "block",
+                      }}
+                    >
+                      Description
+                    </span>
+                    <p
+                      style={{
+                        fontSize: 14.5,
+                        color: "var(--text-secondary)",
+                        marginTop: 4,
+                        lineHeight: 1.6,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
                       {activeFix.description || "No description provided."}
                     </p>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 16,
+                    }}
+                  >
                     <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Commit Hash</label>
-                      <div style={{ fontSize: 14, fontFamily: "monospace", color: "var(--text)", marginTop: 4 }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          textTransform: "uppercase",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        Commit Hash
+                      </span>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontFamily: "monospace",
+                          color: "var(--text)",
+                          marginTop: 4,
+                        }}
+                      >
                         {activeFix.commit_hash ? (
-                          <span style={{ background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                          <span
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                            }}
+                          >
                             {activeFix.commit_hash}
                           </span>
                         ) : (
@@ -586,25 +803,81 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Author</label>
-                      <div style={{ fontSize: 14.5, color: "var(--text)", marginTop: 4 }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          textTransform: "uppercase",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        Author
+                      </span>
+                      <div
+                        style={{
+                          fontSize: 14.5,
+                          color: "var(--text)",
+                          marginTop: 4,
+                        }}
+                      >
                         {activeFix.author || "—"}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 16,
+                    }}
+                  >
                     <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Created At</label>
-                      <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          textTransform: "uppercase",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        Created At
+                      </span>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "var(--text-secondary)",
+                          marginTop: 4,
+                        }}
+                      >
                         {formatDate(activeFix.created_at)}
                       </div>
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600 }}>Affected Runs</label>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-                        {activeFix.affected_runs && activeFix.affected_runs.length > 0 ? (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          textTransform: "uppercase",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        Affected Runs
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          marginTop: 4,
+                        }}
+                      >
+                        {activeFix.affected_runs &&
+                        activeFix.affected_runs.length > 0 ? (
                           activeFix.affected_runs.map((runId) => (
                             <Link
                               key={runId}
@@ -624,20 +897,36 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                             </Link>
                           ))
                         ) : (
-                          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>None linked</span>
+                          <span
+                            style={{ fontSize: 13, color: "var(--text-muted)" }}
+                          >
+                            None linked
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 12,
+                    marginTop: 24,
+                  }}
+                >
                   {hasToken && (
                     <button
                       type="button"
                       onClick={startEditing}
                       className="btn btn-outline"
-                      style={{ padding: "8px 16px", fontSize: 14, borderColor: "rgba(139, 92, 246, 0.4)", color: "var(--accent)" }}
+                      style={{
+                        padding: "8px 16px",
+                        fontSize: 14,
+                        borderColor: "rgba(139, 92, 246, 0.4)",
+                        color: "var(--accent)",
+                      }}
                     >
                       Edit Fix
                     </button>
@@ -654,15 +943,32 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               </>
             )}
           </div>
-        </div>
+        </button>
       )}
 
-      {/* ── Modal dialog: Create Fix ─────────────────────────────────── */}
+      {/* -- Modal dialog: Create Fix ----------------------------------- */}
       {createFixForRun && (
-        <div className="modal-overlay" onClick={() => setCreateFixForRun(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
+        <button
+          type="button"
+          aria-label="Close create fix modal overlay backdrop"
+          className="modal-overlay block w-full border-none p-0 text-left"
+          onClick={() => setCreateFixForRun(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setCreateFixForRun(null);
+          }}
+        >
+          <div className="modal-content" role="dialog" aria-modal="true">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <h3
+                style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}
+              >
                 Create Resolution Fix for Run #{createFixForRun.id}
               </h3>
               <button
@@ -680,11 +986,20 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               </button>
             </div>
 
-            <form onSubmit={handleCreateFixSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <form
+              onSubmit={handleCreateFixSubmit}
+              style={{ display: "flex", flexDirection: "column", gap: 16 }}
+            >
               <div>
                 <label
                   htmlFor="fix-title"
-                  style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    fontWeight: 600,
+                    display: "block",
+                    marginBottom: 6,
+                  }}
                 >
                   Title <span style={{ color: "var(--danger)" }}>*</span>
                 </label>
@@ -702,7 +1017,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               <div>
                 <label
                   htmlFor="fix-desc"
-                  style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    fontWeight: 600,
+                    display: "block",
+                    marginBottom: 6,
+                  }}
                 >
                   Description
                 </label>
@@ -715,11 +1036,23 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                }}
+              >
                 <div>
                   <label
                     htmlFor="fix-commit"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-secondary)",
+                      fontWeight: 600,
+                      display: "block",
+                      marginBottom: 6,
+                    }}
                   >
                     Commit Hash (Optional)
                   </label>
@@ -736,7 +1069,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 <div>
                   <label
                     htmlFor="fix-author"
-                    style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 6 }}
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-secondary)",
+                      fontWeight: 600,
+                      display: "block",
+                      marginBottom: 6,
+                    }}
                   >
                     Author
                   </label>
@@ -752,9 +1091,17 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               </div>
 
               <div>
-                <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, display: "block", marginBottom: 8 }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    fontWeight: 600,
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
                   Select Affected Failed Runs
-                </label>
+                </span>
                 <div
                   style={{
                     maxHeight: 120,
@@ -769,19 +1116,38 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   }}
                 >
                   {/* Current run is preselected and locked or toggleable */}
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 14,
+                      cursor: "pointer",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={true}
                       disabled={true}
                       style={{ cursor: "not-allowed" }}
                     />
-                    <span style={{ fontWeight: 600, color: "var(--accent)" }}>Run #{createFixForRun.id} (Current Run)</span>
+                    <span style={{ fontWeight: 600, color: "var(--accent)" }}>
+                      Run #{createFixForRun.id} (Current Run)
+                    </span>
                   </label>
 
                   {otherFailedRuns.length > 0 ? (
                     otherFailedRuns.map((run) => (
-                      <label key={run.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                      <label
+                        key={run.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 14,
+                          cursor: "pointer",
+                        }}
+                      >
                         <input
                           type="checkbox"
                           checked={formAffected.includes(run.id)}
@@ -793,7 +1159,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       </label>
                     ))
                   ) : (
-                    <div style={{ fontSize: 12.5, color: "var(--text-muted)", padding: "4px 0" }}>
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        color: "var(--text-muted)",
+                        padding: "4px 0",
+                      }}
+                    >
                       No other failed runs on this page to select.
                     </div>
                   )}
@@ -801,17 +1173,37 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               </div>
 
               {submitError && (
-                <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
+                <div
+                  style={{
+                    color: "var(--danger)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                  }}
+                >
                   ⚠️ {submitError}
                 </div>
               )}
               {!hasToken && (
-                <div style={{ color: "var(--danger)", fontSize: 14, fontWeight: 500 }}>
-                  ⚠️ You must be logged into the Systems Lab to submit a resolution. (Please login using the sidebar/assistant first).
+                <div
+                  style={{
+                    color: "var(--danger)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                  }}
+                >
+                  ⚠️ You must be logged into the Systems Lab to submit a
+                  resolution. (Please login using the sidebar/assistant first).
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 12,
+                  marginTop: 12,
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setCreateFixForRun(null)}
@@ -832,7 +1224,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               </div>
             </form>
           </div>
-        </div>
+        </button>
       )}
 
       {/* Modal / overlay helper CSS */}

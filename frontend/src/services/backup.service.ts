@@ -1,5 +1,10 @@
 import { fetchAPI } from "@/lib/api";
-import type { BackupResult, BackupRun, BackupFix, PaginatedResponse } from "@/types";
+import type {
+  BackupFix,
+  BackupResult,
+  BackupRun,
+  PaginatedResponse,
+} from "@/types";
 
 export const backupService = {
   getRuns: (page = 1, limit = 50) =>
@@ -12,11 +17,9 @@ export const backupService = {
 
   getLatest: () => fetchAPI<{ run: BackupRun | null }>("/api/backups/latest"),
 
-  getFixes: () =>
-    fetchAPI<BackupFix[]>("/api/backup-fixes"),
+  getFixes: () => fetchAPI<BackupFix[]>("/api/backup-fixes"),
 
-  getFix: (id: number) =>
-    fetchAPI<BackupFix>(`/api/backup-fixes/${id}`),
+  getFix: (id: number) => fetchAPI<BackupFix>(`/api/backup-fixes/${id}`),
 
   createFix: (data: {
     title: string;
@@ -25,8 +28,12 @@ export const backupService = {
     author: string;
     affectedRuns: number[];
   }) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("agent_token") : null;
-    const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("agent_token")
+        : null;
+    const AGENT_URL =
+      process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
 
     return fetch(`${AGENT_URL}/backup-fixes`, {
       method: "POST",
@@ -37,22 +44,31 @@ export const backupService = {
       body: JSON.stringify(data),
     }).then(async (res) => {
       if (!res.ok) {
-        const error = await res.json().catch(() => ({ detail: res.statusText }));
+        const error = await res
+          .json()
+          .catch(() => ({ detail: res.statusText }));
         throw new Error(error.detail || res.statusText);
       }
       return res.json() as Promise<BackupFix>;
     });
   },
 
-  updateFix: (id: number, data: {
-    title?: string;
-    description?: string;
-    commitHash?: string;
-    author?: string;
-    affectedRuns?: number[];
-  }) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("agent_token") : null;
-    const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
+  updateFix: (
+    id: number,
+    data: {
+      title?: string;
+      description?: string;
+      commitHash?: string;
+      author?: string;
+      affectedRuns?: number[];
+    },
+  ) => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("agent_token")
+        : null;
+    const AGENT_URL =
+      process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
 
     return fetch(`${AGENT_URL}/backup-fixes/${id}`, {
       method: "PUT",
@@ -63,7 +79,9 @@ export const backupService = {
       body: JSON.stringify(data),
     }).then(async (res) => {
       if (!res.ok) {
-        const error = await res.json().catch(() => ({ detail: res.statusText }));
+        const error = await res
+          .json()
+          .catch(() => ({ detail: res.statusText }));
         throw new Error(error.detail || res.statusText);
       }
       return res.json() as Promise<BackupFix>;
