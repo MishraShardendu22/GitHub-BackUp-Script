@@ -79,6 +79,11 @@ export function useStreamingAgent({
 
                 if (event.type === "info" || event.type === "agent_reasoning") {
                   setActiveStep("agent");
+                  if (event.type === "info" && event.sources) {
+                    onMessageUpdate(assistantMsg.id, {
+                      sources: event.sources,
+                    });
+                  }
                   if (event.type === "agent_reasoning") {
                     onMessageUpdate(assistantMsg.id, {
                       iteration: event.iteration,

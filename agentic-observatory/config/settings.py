@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     REPORT_TEMP_DIR: str | None = None
     REPORT_OUTPUT_DIR: str | None = None
 
+    OPENROUTER_API_BASE: str = "https://openrouter.ai/api/v1"
+
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

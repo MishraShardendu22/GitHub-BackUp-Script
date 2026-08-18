@@ -138,7 +138,37 @@ async def init_db() -> None:
     # if engine is None, it means DATABASE_URL is not set and we should skip database initialization
     if engine is None:
         return
-    
-    # run the engine.begin() 
+
+    # 1. Create SQLAlchemy tables
     async with engine.begin() as conn:
         await conn.run_sync(metadata.create_all)
+
+    # 2. Fast check: if embedding_chunks table exists, skip running raw DDL loop
+    async with engine.begin() as conn:
+        res = await conn.execute(text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'embedding_chunks')"))
+        exists = res.scalar()
+        if exists:
+            return
+
+    # 3. Fallback: Execute schema.sql DDL statements if first run
+    from pathlib import Path
+    possible_paths = [
+        Path(__file__).resolve().parent.parent.parent / "backend" / "db" / "schema.sql",
+        Path("schema.sql"),
+        Path("../backend/db/schema.sql"),
+    ]
+    schema_path = next((p for p in possible_paths if p.exists()), None)
+    if schema_path:
+        sql_content = schema_path.read_text()
+        statements = [s.strip() for s in sql_content.split(";") if s.strip()]
+        async with engine.begin() as conn:
+            for stmt in statements:
+                lines = [l for l in stmt.split("\n") if not l.strip().startswith("--")]
+                clean_stmt = "\n".join(lines).strip()
+                if clean_stmt:
+                    try:
+                        await conn.execute(text(clean_stmt))
+                    except Exception:
+                        pass
+
+

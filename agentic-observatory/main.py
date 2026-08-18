@@ -13,9 +13,13 @@ from utils.reports import (
 from datetime import datetime
 from pydantic import BaseModel
 from utils.response import success_response
+from utils.logging import logger
 from agent import invoke_agent, stream_agent
 from agent.models import fetch_free_text_models, validate_model_id
 from data.persistence import persistence_store
+from data.embedding_models import fetch_free_embedding_models, fetch_free_reranking_models
+from data import embeddings as embedding_service
+from data.search import hybrid_search
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +31,7 @@ from utils.auth import authenticate_user, create_access_token, get_current_user,
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await embedding_service.run_migration()
     yield
 
 
@@ -64,6 +69,28 @@ class RenameSessionRequest(BaseModel):
 class ConfirmRequest(BaseModel):
     confirm_id: str
     approve: bool
+
+
+class StartGenerationRequest(BaseModel):
+    model_id: str
+
+
+class ProcessBatchRequest(BaseModel):
+    generation_id: int
+    batch_size: int | None = None
+
+
+class SwitchModelRequest(BaseModel):
+    model_id: str
+
+
+class SearchRequest(BaseModel):
+    query: str
+    source_types: list[str] | None = None
+    limit: int = 20
+    rerank_model_id: str | None = None
+    fts_weight: float = 0.3
+    semantic_weight: float = 0.7
 
 
 @app.get("/health")
@@ -580,3 +607,102 @@ async def update_backup_fix(
             )
 
 
+# =============================================================================
+# Embedding & Search endpoints
+# =============================================================================
+
+
+@app.get("/api/embedding-models")
+async def list_embedding_models():
+    models = await fetch_free_embedding_models()
+    return success_response(data=models, message="Available embedding models")
+
+
+@app.get("/api/reranking-models")
+async def list_reranking_models():
+    models = await fetch_free_reranking_models()
+    return success_response(data=models, message="Available reranking models")
+
+
+
+@app.post("/embeddings/start-generation")
+async def start_embedding_generation(
+    request: StartGenerationRequest,
+    current_user: str = Depends(get_current_user),
+):
+    try:
+        result = await embedding_service.start_generation(request.model_id)
+        return success_response(data=result, message="Embedding generation started")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to start generation: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to start generation: {e!s}")
+
+
+@app.post("/embeddings/process-batch")
+async def process_embedding_batch(
+    request: ProcessBatchRequest,
+    current_user: str = Depends(get_current_user),
+):
+    try:
+        result = await embedding_service.process_batch(request.generation_id, request.batch_size)
+        return success_response(data=result, message="Batch processed")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Batch processing failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Batch processing failed: {e!s}")
+
+
+@app.get("/embeddings/status")
+async def get_embedding_status(
+    generation_id: int | None = Query(None),
+    current_user: str = Depends(get_current_user),
+):
+    result = await embedding_service.get_generation_status(generation_id)
+    if not result:
+        return success_response(data=None, message="No embedding generations found")
+    return success_response(data=result, message="Generation status retrieved")
+
+
+@app.post("/embeddings/switch-model")
+async def switch_embedding_model(
+    request: SwitchModelRequest,
+    current_user: str = Depends(get_current_user),
+):
+    try:
+        result = await embedding_service.switch_model(request.model_id)
+        return success_response(data=result, message="Model switch initiated")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/embeddings/activate")
+async def activate_embedding_generation(
+    generation_id: int = Query(...),
+    current_user: str = Depends(get_current_user),
+):
+    success = await embedding_service.activate_generation(generation_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to activate generation")
+    return success_response(
+        data={"generation_id": generation_id, "status": "ACTIVE"},
+        message="Generation activated",
+    )
+
+
+@app.post("/search")
+async def search_embeddings(
+    request: SearchRequest,
+    current_user: str = Depends(get_current_user),
+):
+    result = await hybrid_search(
+        query=request.query,
+        source_types=request.source_types,
+        limit=request.limit,
+        fts_weight=request.fts_weight,
+        semantic_weight=request.semantic_weight,
+        rerank_model_id=request.rerank_model_id,
+    )
+    return success_response(data=result, message="Search results")

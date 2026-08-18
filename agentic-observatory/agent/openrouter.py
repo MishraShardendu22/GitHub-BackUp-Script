@@ -75,6 +75,33 @@ def get_bound_llm(model: str | None = None):
     return get_llm(model=model).bind_tools(TOOLS, strict=True)
 
 
+async def _retrieve_hybrid_context(question: str) -> tuple[str, list[dict]]:
+    """Retrieve database context using hybrid search (FTS + Vector + RRF)."""
+    try:
+        from data.search import hybrid_search
+        search_res = await hybrid_search(question, limit=5)
+        results = search_res.get("results", [])
+        if not results:
+            return SYSTEM_PROMPT, []
+
+        formatted = []
+        for r in results:
+            formatted.append(
+                f"- [{r.get('source_type')} | ID: {r.get('source_id')} | Score: {r.get('score')}]\n  {r.get('content')}"
+            )
+
+        rag_prompt = (
+            SYSTEM_PROMPT
+            + "\n\n=== RETRIEVED HYBRID SEARCH CONTEXT (FTS + pgvector + RRF) ===\n"
+            + "\n".join(formatted)
+            + "\n========================================================"
+        )
+        return rag_prompt, results
+    except Exception as e:
+        logger.warning(f"Hybrid search context retrieval failed: {e}")
+        return SYSTEM_PROMPT, []
+
+
 # Main function to invoke the agent with a user question,
 # handle tool calls, and return the final answer
 async def invoke_agent(
@@ -86,6 +113,9 @@ async def invoke_agent(
     request_id = request_id or create_request_id()
     start = time.perf_counter()
     llm = get_bound_llm(model=model)
+
+    # Retrieve hybrid search RAG context
+    system_prompt_content, retrieved_sources = await _retrieve_hybrid_context(question)
 
     # Load history messages if session_id is provided
     history_messages = []
@@ -105,7 +135,7 @@ async def invoke_agent(
 
     # initialize the conversation with a system prompt, history, and the user's question
     messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=system_prompt_content),
     ]
     messages.extend(history_messages)
     messages.append(HumanMessage(content=question))
@@ -130,7 +160,9 @@ async def invoke_agent(
                 answer=response.content or "",
                 tool_calls=executed_tools,
                 tool_results=[tool.dict() for tool in executed_tools],
+                retrieved_sources=retrieved_sources,
             )
+
             
         logger.info(f"[request_id={request_id}] Turn {iteration + 1} Tool calls: {response.tool_calls}")
 
@@ -268,8 +300,16 @@ async def stream_agent(
     # get the LLM instance with tools bound to it
     llm = get_bound_llm(model=model)
 
-    # Yield info event first
-    yield json.dumps({"type": "info", "request_id": request_id, "session_id": session_id})
+    # Retrieve hybrid search RAG context
+    system_prompt_content, retrieved_sources = await _retrieve_hybrid_context(question)
+
+    # Yield info event first with retrieved hybrid search sources
+    yield json.dumps({
+        "type": "info",
+        "request_id": request_id,
+        "session_id": session_id,
+        "sources": retrieved_sources,
+    })
 
     # Load history messages if session_id is provided
     history_messages = []
@@ -289,8 +329,9 @@ async def stream_agent(
 
     # initialize the conversation with a system prompt, history, and the user's question
     messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=system_prompt_content),
     ]
+
     messages.extend(history_messages)
     messages.append(HumanMessage(content=question))
 
