@@ -30,16 +30,16 @@ ai_chat_sessions = Table(
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
     Column("session_name", String, nullable=True),
-    Column("metadata", JSONB, nullable=True),
 )
 
 ai_session_metadata = Table(
     "ai_session_metadata",
     metadata,
-    Column("session_id", PG_UUID(as_uuid=True), ForeignKey("ai_chat_sessions.id", ondelete="CASCADE"), primary_key=True),
-    Column("key", String, primary_key=True),
-    Column("value", Text, nullable=False),
+    Column("id", PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column("session_id", PG_UUID(as_uuid=True), ForeignKey("ai_chat_sessions.id", ondelete="CASCADE"), unique=True, nullable=False),
+    Column("metadata", JSONB, nullable=False, default=dict),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
 )
 Index("idx_ai_session_metadata_session", ai_session_metadata.c.session_id)
 

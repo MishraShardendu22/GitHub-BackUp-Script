@@ -2,16 +2,51 @@
 -- Migration 002: Schema Normalization & Embedding Lifecycle
 -- =============================================================================
 
-CREATE TABLE IF NOT EXISTS ai_session_metadata (
-    session_id  UUID NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
-    key         TEXT NOT NULL,
-    value       TEXT NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (session_id, key)
-);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ai_session_metadata' AND column_name = 'key'
+    ) THEN
+        CREATE TEMP TABLE tmp_session_meta AS
+        SELECT session_id, jsonb_object_agg(key, value) AS metadata, MIN(created_at) AS created_at
+        FROM ai_session_metadata
+        GROUP BY session_id;
+
+        DROP TABLE ai_session_metadata CASCADE;
+
+        CREATE TABLE ai_session_metadata (
+            id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            session_id  UUID NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
+            metadata    JSONB NOT NULL DEFAULT '{}',
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT uq_ai_session_metadata_session UNIQUE (session_id)
+        );
+
+        INSERT INTO ai_session_metadata (session_id, metadata, created_at, updated_at)
+        SELECT session_id, metadata, created_at, created_at
+        FROM tmp_session_meta
+        ON CONFLICT (session_id) DO NOTHING;
+
+        DROP TABLE tmp_session_meta;
+    ELSE
+        CREATE TABLE IF NOT EXISTS ai_session_metadata (
+            id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            session_id  UUID NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
+            metadata    JSONB NOT NULL DEFAULT '{}',
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT uq_ai_session_metadata_session UNIQUE (session_id)
+        );
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_ai_session_metadata_session
     ON ai_session_metadata (session_id);
+
+-- Drop obsolete metadata column from ai_chat_sessions if present
+ALTER TABLE ai_chat_sessions DROP COLUMN IF EXISTS metadata;
 
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors
     ON backup_results (run_id, status)

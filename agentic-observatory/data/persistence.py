@@ -159,12 +159,11 @@ class InvestigationStore:
             row = existing.mappings().first()
             if row:
                 res_dict = dict(row)
-                if not res_dict.get("metadata"):
-                    meta_res = await session.execute(
-                        select(ai_session_metadata.c.key, ai_session_metadata.c.value)
-                        .where(ai_session_metadata.c.session_id == s_id)
-                    )
-                    res_dict["metadata"] = {m["key"]: m["value"] for m in meta_res.mappings().all()}
+                meta_res = await session.execute(
+                    select(ai_session_metadata.c.metadata)
+                    .where(ai_session_metadata.c.session_id == s_id)
+                )
+                res_dict["metadata"] = meta_res.scalar() or {}
                 return jsonable_encoder(res_dict)
 
             result = await session.execute(
@@ -172,7 +171,6 @@ class InvestigationStore:
                 .values(
                     id=s_id,
                     session_name=name,
-                    metadata=None,
                     created_at=now,
                     updated_at=now,
                 )
@@ -181,15 +179,15 @@ class InvestigationStore:
 
             # Insert into normalized ai_session_metadata table if metadata provided
             if metadata:
-                for k, v in metadata.items():
-                    await session.execute(
-                        insert(ai_session_metadata).values(
-                            session_id=s_id,
-                            key=str(k),
-                            value=str(v),
-                            created_at=now,
-                        )
+                await session.execute(
+                    insert(ai_session_metadata).values(
+                        id=uuid.uuid4(),
+                        session_id=s_id,
+                        metadata=metadata,
+                        created_at=now,
+                        updated_at=now,
                     )
+                )
 
             await session.commit()
             created_row = result.mappings().first()
@@ -201,15 +199,23 @@ class InvestigationStore:
         await self._check()
         async with self.session_factory() as session:
             result = await session.execute(
-                select(ai_chat_sessions)
+                select(
+                    ai_chat_sessions.c.id,
+                    ai_chat_sessions.c.session_name,
+                    ai_chat_sessions.c.created_at,
+                    ai_chat_sessions.c.updated_at,
+                    ai_session_metadata.c.metadata,
+                )
+                .outerjoin(ai_session_metadata, ai_chat_sessions.c.id == ai_session_metadata.c.session_id)
                 .order_by(ai_chat_sessions.c.updated_at.desc())
                 .limit(limit)
                 .offset(offset)
             )
-            sessions_list = [dict(row) for row in result.mappings().all()]
-            for s in sessions_list:
-                if not s.get("metadata"):
-                    s["metadata"] = {}
+            sessions_list = []
+            for row in result.mappings().all():
+                d = dict(row)
+                d["metadata"] = d.get("metadata") or {}
+                sessions_list.append(d)
             return jsonable_encoder(sessions_list)
 
     async def get_session(self, session_id: str) -> dict[str, Any] | None:
@@ -223,12 +229,11 @@ class InvestigationStore:
             if not row:
                 return None
             res_dict = dict(row)
-            if not res_dict.get("metadata"):
-                meta_res = await session.execute(
-                    select(ai_session_metadata.c.key, ai_session_metadata.c.value)
-                    .where(ai_session_metadata.c.session_id == s_id)
-                )
-                res_dict["metadata"] = {m["key"]: m["value"] for m in meta_res.mappings().all()}
+            meta_res = await session.execute(
+                select(ai_session_metadata.c.metadata)
+                .where(ai_session_metadata.c.session_id == s_id)
+            )
+            res_dict["metadata"] = meta_res.scalar() or {}
             return jsonable_encoder(res_dict)
 
     async def rename_session(self, session_id: str, session_name: str) -> dict[str, Any] | None:
