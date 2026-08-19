@@ -175,7 +175,7 @@ func CreateJobsBatch(ctx context.Context, generationID int, jobs []struct{ Sourc
 
 	var valueStrings []string
 	var valueArgs []interface{}
-	
+
 	valueArgs = append(valueArgs, generationID)
 	argIndex := 2
 

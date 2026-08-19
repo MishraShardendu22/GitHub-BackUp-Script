@@ -32,11 +32,11 @@ func (s GenerationStatus) Valid() bool {
 type SourceType string
 
 const (
-	SourceTypeChatMessage  SourceType = "chat_message"
-	SourceTypeExecutionLog SourceType = "execution_log"
+	SourceTypeChatMessage   SourceType = "chat_message"
+	SourceTypeExecutionLog  SourceType = "execution_log"
 	SourceTypeInvestigation SourceType = "investigation"
-	SourceTypeBackupResult SourceType = "backup_result"
-	SourceTypeBackupFix    SourceType = "backup_fix"
+	SourceTypeBackupResult  SourceType = "backup_result"
+	SourceTypeBackupFix     SourceType = "backup_fix"
 )
 
 // Valid returns true if the source type is one of the defined source types.

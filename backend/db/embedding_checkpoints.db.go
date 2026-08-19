@@ -20,14 +20,14 @@ func GetCheckpoint(ctx context.Context, sourceType string) (int64, error) {
 		FROM embedding_indexing_checkpoints 
 		WHERE source_type = $1
 	`, sourceType).Scan(&lastIndexedID)
-	
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("failed to get checkpoint for source_type %s: %w", sourceType, err)
 	}
-	
+
 	return lastIndexedID, nil
 }
 
@@ -43,10 +43,10 @@ func UpdateCheckpoint(ctx context.Context, sourceType string, lastIndexedID int6
 		SET last_indexed_id = EXCLUDED.last_indexed_id,
 		    updated_at = NOW()
 	`, sourceType, lastIndexedID)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to update checkpoint for source_type %s: %w", sourceType, err)
 	}
-	
+
 	return nil
 }

@@ -22,7 +22,11 @@ ctx, cancel := context.WithTimeout(
 defer cancel()
 */
 func GetDashboardStats(c *fiber.Ctx) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 15*time.Second)
 	defer cancel()
 
 	_, _ = db.FinalizeStaleRunningRuns(ctx, 30*time.Minute)
@@ -57,25 +61,10 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	stats.TotalFailed = totalFailed
 	stats.TotalSkipped = totalSkipped
 
-	// Calculate success rate as average of per-run success rates
-	// This accounts for recovered failures in subsequent runs
-	// _ = db.Pool.QueryRow(ctx, `
-	// 	SELECT COALESCE(AVG(
-	// 		CASE 
-	// 			WHEN (successful + failed) > 0 
-	// 			THEN (successful::float / (successful + failed) * 100)
-	// 			ELSE 0
-	// 		END
-	// 	), 0)
-	// 	FROM backup_runs
-	// `).Scan(&stats.SuccessRate)
-
-	// Success rate is calculated later, after DistinctRepos is fetched.
-
 	// Query to get average duration of runs
 	// Note: AVG() returns NUMERIC in PostgreSQL, must cast to BIGINT for int64 scan
 	if stats.AvgDurationMs == 0 {
-		_ = db.Pool.QueryRow( ctx, `SELECT COALESCE(AVG(duration_ms)::BIGINT, 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
+		_ = db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(duration_ms)::BIGINT, 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
 	}
 
 	// Query to get status of last run
@@ -161,81 +150,3 @@ func loadLatestAnalytics(ctx context.Context) (*models.RepoAnalyticsSnapshot, er
 
 	return &snapshot, nil
 }
-
-
-
-/*
-Older version was having lots of queries from same table which was in efficient
-func GetDashboardStats(c *fiber.Ctx) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
-		_ = err
-	}
-
-	var stats models.DashboardStats
-	var (
-		wg sync.WaitGroup
-
-		totalRuns    int
-		totalSuccess int
-		totalFailed  int
-		totalSkipped int
-	)
-
-	wg.Add(2)
-
-	// find total runs basically
-	go func() {
-		defer wg.Done()
-		db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM backup_runs`).Scan(&totalRuns)
-	}()
-
-	// find successfull, skipped nad failed runs
-	go func() {
-		defer wg.Done()
-		db.Pool.QueryRow(
-			ctx,
-			`SELECT COALESCE(SUM(successful), 0), COALESCE(SUM(failed), 0), COALESCE(SUM(skipped), 0)
-			FROM backup_runs`,
-		).Scan(&totalSuccess, &totalFailed, &totalSkipped)
-	}()
-
-	wg.Wait()
-
-	stats.TotalRuns = totalRuns
-	stats.TotalSuccessful = totalSuccess
-	stats.TotalFailed = totalFailed
-	stats.TotalSkipped = totalSkipped
-
-	if stats.TotalRepos > 0 {
-		stats.SuccessRate = 100.0 - (float64(totalFailed) / float64(stats.TotalRepos) * 100.0)
-	}
-
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(total_repos), 0) FROM backup_runs`).Scan(&stats.TotalRepos)
-	db.Pool.QueryRow(ctx, `SELECT status, started_at FROM backup_runs ORDER BY started_at DESC LIMIT 1`).Scan(&stats.LastRunStatus, &stats.LastRunAt)
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(NULLIF(duration_ms, 0))::BIGINT, 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
-
-	if stats.AvgDurationMs == 0 {
-		db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(duration_ms)::BIGINT, 0) FROM backup_runs`).Scan(&stats.AvgDurationMs)
-	}
-
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(COUNT(DISTINCT repo_full_name), 0) FROM backup_results`).Scan(&stats.DistinctRepos)
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(COUNT(*), 0) FROM execution_logs`).Scan(&stats.TotalLogs)
-	db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(archive_size_bytes), 0), COALESCE(MAX(archive_size_bytes), 0), COALESCE((SELECT repo_full_name FROM backup_results ORDER BY archive_size_bytes DESC, created_at DESC LIMIT 1), '') FROM backup_results`).Scan(&stats.TotalSizeBytes, &stats.LargestArchiveBytes, &stats.LargestRepository)
-
-	latestAnalytics, _ := loadLatestAnalytics(ctx)
-	stats.LatestAnalytics = latestAnalytics
-	if stats.DistinctRepos == 0 && latestAnalytics != nil {
-		stats.DistinctRepos = latestAnalytics.TrackedFiles
-	}
-	if stats.TotalSizeBytes == 0 && latestAnalytics != nil {
-		stats.TotalSizeBytes = latestAnalytics.TotalArchiveSizeBytes
-		stats.LargestArchiveBytes = latestAnalytics.LargestArchiveSizeBytes
-		stats.LargestRepository = latestAnalytics.LargestArchivePath
-	}
-
-	return c.JSON(stats)
-}
-*/ 

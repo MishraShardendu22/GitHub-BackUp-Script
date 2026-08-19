@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/MishraShardendu22/github-backup/backend/config"
 	"github.com/MishraShardendu22/github-backup/backend/db"
+	"github.com/MishraShardendu22/github-backup/backend/logger"
 	"github.com/MishraShardendu22/github-backup/backend/middleware"
 	"github.com/MishraShardendu22/github-backup/backend/routes"
 	"github.com/MishraShardendu22/github-backup/backend/websocket"
@@ -16,33 +19,47 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
+
+	cfg, err := config.LoadAndValidate()
+	if err != nil {
+		logger.InitLogger("info")
+		logger.Log.Error("Configuration validation failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	logger.InitLogger(cfg.LogLevel)
+	logger.Log.Info("Configuration validated successfully",
+		slog.String("port", cfg.ServerPort),
+		slog.Int("db_max_conns", int(cfg.DBMaxConns)),
+		slog.Int("db_min_conns", int(cfg.DBMinConns)),
+	)
 
 	if err := db.Connect(); err != nil {
-		log.Fatalf("Failed to connect to PostgreSQL: %v", err)
+		logger.Log.Error("Failed to connect to PostgreSQL", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := db.RunMigrations(); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		logger.Log.Error("Failed to run database migrations", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	log.Println("PostgreSQL connected and migrations applied")
+	logger.Log.Info("PostgreSQL connected and schema migrations applied")
 
 	app := fiber.New(fiber.Config{
 		AppName:      "GitHub Backup Monitor",
-		BodyLimit:    10 * 1024 * 1024,
+		BodyLimit:    config.MaxBodyLimitBytes,
 		ServerHeader: "GBM",
+		ErrorHandler: middleware.CustomErrorHandler,
 	})
 
+	app.Use(middleware.RequestIDMiddleware())
 	app.Use(middleware.SetupCORS())
-	app.Use(middleware.SetupLogger())
+	app.Use(middleware.StructuredLoggerMiddleware())
 
 	app.Options("/*", func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
-	})
-
-	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
@@ -50,25 +67,22 @@ func main() {
 
 	websocket.DefaultHub.StartPolling()
 
-	port := "8080"
-	if port == "" {
-		port = "8080"
-	}
-
 	go func() {
-		if err := app.Listen(":" + port); err != nil {
-			log.Fatalf("Server error: %v", err)
+		if err := app.Listen(":" + cfg.ServerPort); err != nil && err != http.ErrServerClosed {
+			logger.Log.Error("Server error", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 	}()
 
-	fmt.Printf("🚀 Backend server running on http://localhost:%s\n", port)
+	fmt.Printf("🚀 Backend server running on http://localhost:%s\n", cfg.ServerPort)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
-	app.Shutdown()
+	logger.Log.Info("Shutting down server gracefully...")
+	websocket.DefaultHub.Stop()
+	_ = app.Shutdown()
 	db.Close()
-	log.Println("Server stopped")
+	logger.Log.Info("Server stopped")
 }

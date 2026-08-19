@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"time"
 
+	"github.com/MishraShardendu22/github-backup/backend/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -13,7 +15,7 @@ func SetupCORS() fiber.Handler {
 	return cors.New(cors.Config{
 		AllowOrigins:     "https://github.mishrashardendu22.is-a.dev,http://localhost:3000",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Authorization",
+		AllowHeaders:     "Origin, Content-Type, Authorization, X-Internal-Secret",
 		AllowCredentials: true,
 	})
 }
@@ -33,9 +35,29 @@ func RateLimitDefault() fiber.Handler {
 			return c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "rate limit exceeded. try again later.",
-			})
+			return SendError(c, fiber.StatusTooManyRequests, "RATE_LIMITED", "rate limit exceeded. try again later.")
 		},
 	})
+}
+
+// InternalAuthMiddleware verifies the X-Internal-Secret header against the internal secret in config.
+// Uses constant-time comparison to prevent timing attacks.
+func InternalAuthMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		expectedSecret := config.GetInternalSecret()
+		if expectedSecret == "" {
+			return SendError(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "INTERNAL_SECRET is not configured on server")
+		}
+
+		providedSecret := c.Get("X-Internal-Secret")
+		if providedSecret == "" {
+			return SendError(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "missing X-Internal-Secret header")
+		}
+
+		if subtle.ConstantTimeCompare([]byte(providedSecret), []byte(expectedSecret)) != 1 {
+			return SendError(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "invalid internal secret")
+		}
+
+		return c.Next()
+	}
 }

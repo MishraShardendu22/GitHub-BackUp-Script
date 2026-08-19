@@ -11,7 +11,7 @@ import (
 func Setup(app *fiber.App) {
 	api := app.Group("/api")
 	api.Use(middleware.RateLimitDefault())
-	
+
 	// backup handler
 	api.Get("/backups", handlers.GetBackupRuns)
 	api.Get("/backups/latest", handlers.GetLatestBackup)
@@ -36,6 +36,33 @@ func Setup(app *fiber.App) {
 	api.Get("/analytics/history", handlers.GetAnalyticsRuns)
 	api.Get("/analytics/latest", handlers.GetAnalyticsForLatestRun)
 	api.Get("/analytics/:id", handlers.GetAnalyticsForSpecificRun)
+	api.Get("/analytics/run/:id", handlers.GetAnalyticsForSpecificRun)
+
+	// Health & Metrics Endpoints
+	app.Get("/health", handlers.LivenessCheck)
+	app.Get("/healthz", handlers.LivenessCheck)
+	app.Get("/ready", handlers.ReadinessCheck)
+	app.Get("/readyz", handlers.ReadinessCheck)
+	app.Get("/metrics", handlers.GetSystemMetrics)
+
+	// Protected internal & administrative routes (requires X-Internal-Secret)
+	internal := api.Group("/internal", middleware.InternalAuthMiddleware())
+	internal.Get("/backups", handlers.GetBackupRuns)
+	internal.Get("/backups/latest", handlers.GetLatestBackup)
+	internal.Get("/backups/:id", handlers.GetBackupRun)
+	internal.Get("/dashboard/stats", handlers.GetDashboardStats)
+	internal.Get("/metrics", handlers.GetMetrics)
+	internal.Get("/metrics/system", handlers.GetSystemMetrics)
+	internal.Get("/health/ready", handlers.ReadinessCheck)
+	internal.Get("/logs", handlers.GetLogs)
+	internal.Get("/repos", handlers.GetRepos)
+	internal.Get("/backup-fixes", handlers.GetBackupFixes)
+	internal.Get("/backup-fixes/:id", handlers.GetBackupFix)
+	internal.Get("/backup-runs/:id/fixes", handlers.GetBackupRunFixes)
+	internal.Get("/analytics/history", handlers.GetAnalyticsRuns)
+	internal.Get("/analytics/latest", handlers.GetAnalyticsForLatestRun)
+	internal.Get("/analytics/:id", handlers.GetAnalyticsForSpecificRun)
+	internal.Get("/analytics/run/:id", handlers.GetAnalyticsForSpecificRun)
 
 	// checks the /ws routes whether the incoming request is asking for a WebSocket upgrade.
 	app.Use("/ws", func(c *fiber.Ctx) error {
@@ -62,5 +89,5 @@ func Setup(app *fiber.App) {
 	- /abc/ws/live
 	- /api/ws/live
 	- /foo/bar/ws
-	
+
 */

@@ -23,7 +23,11 @@ func GetRepos(c *fiber.Ctx) error {
 	}
 	offset := (page - 1) * limit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 20*time.Second)
 	defer cancel()
 
 	var totalItems int

@@ -8,10 +8,10 @@ import "time"
 //
 // Field order is intentionally optimized for struct alignment.
 type EmbeddingJob struct {
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	ClaimedAt    *time.Time `json:"claimed_at"`
-	CompletedAt  *time.Time `json:"completed_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	ClaimedAt   *time.Time `json:"claimed_at"`
+	CompletedAt *time.Time `json:"completed_at"`
 
 	SourceType   string `json:"source_type"`
 	SourceID     string `json:"source_id"`

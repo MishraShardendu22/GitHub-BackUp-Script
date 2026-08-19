@@ -570,7 +570,7 @@ func TestForeignKeyEnforcement(t *testing.T) {
 	ctx := testSetup(t)
 
 	chunk := &models.EmbeddingChunk{
-		GenerationID: 999999,  // Non-existent generation
+		GenerationID: 999999, // Non-existent generation
 		SourceType:   models.SourceTypeBackupFix,
 		SourceID:     "1",
 		ChunkIndex:   0,
@@ -753,7 +753,7 @@ func TestChunkNullEmbedding(t *testing.T) {
 		ChunkIndex:   0,
 		Content:      "fix without embedding yet",
 		ContentHash:  contentHash("fix without embedding yet"),
-		Embedding:    nil,  // No embedding
+		Embedding:    nil, // No embedding
 		Metadata:     map[string]interface{}{},
 	}
 
