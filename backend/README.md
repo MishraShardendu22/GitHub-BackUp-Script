@@ -20,14 +20,14 @@ The backend is a Go-based web server that provides the REST API and WebSocket co
 Create a `.env` file in the `backend/` directory with the following variables:
 
 ```env
-# Required: The full Postgres connection string
-POSTGRES_URL=postgres://user:password@localhost:5432/dbname?sslmode=disable
+# Required: PostgreSQL connection string (Secret)
+DATABASE_URL=postgres://user:password@localhost:5432/dbname?sslmode=disable
 
-# Optional: Server port (defaults to 8080)
-SERVER_PORT=8080
+# Optional: Shared secret for internal API protection
+INTERNAL_SECRET=generate_a_random_32_plus_char_secret_here
 ```
 
-*Note: Ensure the database specified in `POSTGRES_URL` exists. The backend will automatically handle schema migrations on startup.*
+*Note: Ensure the database specified in `DATABASE_URL` exists. The backend automatically applies migrations non-destructively on startup.*
 
 ### Running the Server
 

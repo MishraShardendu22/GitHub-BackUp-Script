@@ -1,59 +1,157 @@
-# GitHub Backup Observatory
+# GitHub Backup Observatory & Management System
 
-## Overview
+[![CI Pipeline](https://github.com/MishraShardendu22/github-backup/actions/workflows/ci.yml/badge.svg)](https://github.com/MishraShardendu22/github-backup/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go)](https://go.dev/)
+[![Python Version](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python)](https://python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 
-The GitHub Backup Observatory is a compact, multi-service architecture designed to clone, archive, and consolidate GitHub repositories into a singular, unified backup repository. Built for reliability and observability, the system integrates a Go-based CLI worker, a Go and PostgreSQL-powered REST API and WebSocket backend, a Next.js frontend dashboard for real-time monitoring, and an AI-driven Agentic Observatory.
+A distributed backup automation and AI-driven telemetry observatory. The system automates repository archiving, stores historical analytics in PostgreSQL, provides live WebSocket streaming, performs hybrid search using pgvector and full-text search, and hosts an AI Agentic Observatory for automated incident analysis and report generation.
+
+---
 
 ## Live Resources
 
-- **Live Dashboard**: [github.mishrashardendu22.is-a.dev](https://github.mishrashardendu22.is-a.dev)
-- **Video Demonstration**: [YouTube](https://www.youtube.com/watch?v=be0UBwk2asc)
+- **Production Dashboard**: [github.mishrashardendu22.is-a.dev](https://github.mishrashardendu22.is-a.dev)
+- **API Documentation**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
+- **Video Walkthrough**: [YouTube Demonstration](https://www.youtube.com/watch?v=be0UBwk2asc)
 
-## Architecture Overview
+---
 
-This repository operates as a monorepo containing the following core services:
+## Architecture & Deployment Model
 
-1. **Worker (CLI)**: The root-level Go application responsible for the core logic. It traverses target GitHub accounts, deduplicates repositories, verifies remote HEAD hashes, executes shallow clones, and archives the repositories to a centralized `_Repos` Git repository.
-2. **Backend API (`backend/`)**: A Go-based web server integrated with PostgreSQL. It serves operational metrics, historical run data, and real-time logs via REST APIs and WebSockets.
-3. **Frontend Dashboard (`frontend/`)**: A Next.js application providing a comprehensive, real-time user interface for monitoring backup executions, performance metrics, and system logs.
-4. **Agentic Observatory (`agentic-observatory/`)**: A Python-based agentic layer utilizing FastAPI and OpenRouter to autonomously analyze and interact with the backup data.
+The system is organized into modular services deployed across **Vercel** and **Render**:
 
-## Core Engine: Worker (CLI)
+```mermaid
+graph TD
+    Client[Web Browser / User] -->|HTTPS| Frontend[Next.js Dashboard - Vercel]
+    Client -->|HTTPS| PythonAgent[Python Observatory - Vercel]
+    Client -->|HTTPS / WSS| GoBackend[Go Fiber Backend - Render]
 
-The primary backup engine resides in the root directory. It leverages a lightweight SQLite database for local state management and metadata tracking.
+    GoBackend -->|pgxpool / SQL| PG[(PostgreSQL + pgvector)]
+    PythonAgent -->|SQLAlchemy async| PG
+    PythonAgent -->|X-Internal-Secret| GoBackend
+    PythonAgent -->|HTTPS| OpenRouter[OpenRouter AI / Embeddings]
 
-### Operational Phases
-
-- **Phase 1: Hash Verification**: Concurrently computes the remote HEAD to determine if repository changes have occurred since the last backup.
-- **Phase 2: Clone and Archive**: Performs shallow clones of modified repositories, removes `.git` directories to prevent nested repository issues, and generates `tar.gz` archives.
-- **Phase 3: Commit and Push**: Commits the generated archives to the central `_Repos` Git repository and pushes the updates to the remote origin.
-
-### Configuration
-
-Environment variables must be configured prior to execution. Create a `.env` file in the root directory based on the provided `sample.env`:
-
-- `ORG_ACCOUNT` / `PROJECT_ACCOUNT`: Target GitHub accounts for the backup process.
-- `DB_PATH`: Absolute or relative path for the SQLite database file (defaults to `./app.db`).
-- `BACKUP_REPO_PATH`: The remote Git URL for the centralized `_Repos` directory.
-- `GITHUB_TOKEN_PRIVATE` / `GITHUB_TOKEN_PERSONAL`: Authentication tokens for GitHub API access.
-
-### Execution
-
-Ensure the Go toolchain, `git`, and `tar` are installed on the host system.
-
-```bash
-# Configure .env or export environment variables
-go run main.go
+    Worker[Go CLI Worker] -->|Archives| GitRepos[Central Git Repository]
+    Worker -->|Log / Metrics| PG
 ```
 
-## Service Documentation
+### Components
 
-For detailed instructions concerning the deployment, configuration, and development of individual services, refer to their respective documentation:
+| Service | Technology | Hosting Platform | Description |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | Next.js 16, React 19, Tailwind CSS | **Vercel** | Interactive dashboard with real-time WebSocket feeds, analytics charts, and AI chat playground. |
+| **Observatory** | FastAPI, Python 3.12, SQLAlchemy, LangChain | **Vercel** | AI telemetry service with OpenRouter LLM integration, hybrid vector + full-text search, and automated reports. |
+| **Backend API** | Go 1.24, Fiber v2, pgxpool | **Render** | High-performance REST and WebSocket API with connection pooling, structured logging (`slog`), and versioned SQL migrations. |
+| **Worker Engine** | Go 1.24 CLI | **Local / Cron Worker** | Autonomous CLI backup engine with incremental SHA-HEAD verification, concurrency controls, and `.tar.gz` archiving. |
+| **Database** | PostgreSQL 16 + `pgvector` | **Cloud Managed DB** | Persistent relational storage for backup runs, execution logs, analytics snapshots, and embedding vectors. |
 
-- **[Backend Documentation](./backend/README.md)**
-- **[Frontend Documentation](./frontend/README.md)**
-- **[Agentic Observatory Documentation](./agentic-observatory/README.md)**
+---
 
-## Contributing
+## Local Development Workflow
 
-Contributors are expected to adhere to the established coding conventions. Refer to `CONTRIBUTING.md` for guidelines on submitting improvements and modifications.
+Run individual services or the unified development environment using the provided `Makefile`:
+
+```bash
+# 1. Start all 3 services concurrently (Go: 8080, Python: 8000, Frontend: 3000)
+make dev
+
+# 2. Run all test suites across Go and Python
+make test
+
+# 3. Run linters across Go, Python, and TypeScript
+make lint
+
+# 4. Build Go binaries and Next.js frontend
+make build
+```
+
+### Default Port Mappings
+- **Frontend Dashboard**: `http://localhost:3000`
+- **Go REST API & Metrics**: `http://localhost:8080` (Metrics: `http://localhost:8080/metrics`)
+- **Python Observatory**: `http://localhost:8000` (Metrics: `http://localhost:8000/metrics`)
+
+---
+
+## Deployment Configuration
+
+### 1. Frontend (Vercel)
+- **Root Directory**: `frontend/`
+- **Build Command**: `pnpm run build`
+- **Output Directory**: Next.js default (`.next`)
+- **Environment Variables**:
+  - `NEXT_PUBLIC_API_URL`: Your Render Go backend public URL (e.g. `https://your-backend.onrender.com`)
+  - `NEXT_PUBLIC_AGENT_URL`: Your Vercel Python observatory public URL (e.g. `https://your-observatory.vercel.app`)
+
+### 2. Python Observatory (Vercel)
+- **Root Directory**: `agentic-observatory/`
+- **Environment Variables**:
+  - `GO_BACKEND_URL`: URL to your Go Backend on Render
+  - `DATABASE_URL`: PostgreSQL async connection string (`postgresql+asyncpg://...`)
+  - `INTERNAL_SECRET`: Shared secret matching Go Backend `INTERNAL_SECRET`
+  - `OPENROUTER_API_KEY`: OpenRouter API key for LLM and embeddings
+  - `JWT_SECRET`: Secret key for JWT session tokens
+  - `CHAT_USERNAME` / `CHAT_PASSWORD`: Admin credentials for chat authentication
+
+### 3. Go Backend (Render)
+- **Environment**: Go Native Web Service
+- **Build Command**: `cd backend && go build -o app main.go`
+- **Start Command**: `./backend/app`
+- **Environment Variables**:
+  - `DATABASE_URL`: PostgreSQL connection string (`postgresql://...`)
+  - `INTERNAL_SECRET`: Shared secret for protected endpoints
+
+---
+
+## Database Migrations & Versioning
+
+The Go backend features an embedded versioned migration runner (`backend/db/migrator.go`):
+
+| Version | Migration File | Description |
+| :--- | :--- | :--- |
+| `000001` | `000001_initial_schema.up.sql` | Core tables (`backup_runs`, `backup_results`, `execution_logs`, `analytics_snapshots`, `backup_fixes`) |
+| `000002` | `000002_embeddings_and_search.up.sql` | Extensions `vector` & `pg_trgm`, tables `embedding_generations`, `embedding_chunks`, `embedding_jobs` |
+
+Migrations use non-destructive `CREATE TABLE IF NOT EXISTS` statements and preserve all existing historical data.
+
+---
+
+## Backup & Disaster Recovery
+
+Automate database backups with SHA256 integrity checks:
+
+```bash
+# Run backup script (saves to backups/postgres/ with 14-day retention)
+make backup-db
+
+# Restore from a backup archive
+make restore-db BACKUP_FILE=backups/postgres/gbm_pg_backup_YYYYMMDD_HHMMSS.sql.gz
+```
+
+---
+
+## Configuration Reference (Secrets & Endpoints)
+
+| Environment Variable | Service | Purpose | Type |
+| :--- | :--- | :--- | :--- |
+| `DATABASE_URL` | Backend, Observatory, Worker | PostgreSQL connection string | Secret |
+| `INTERNAL_SECRET` | Backend, Observatory | Shared secret for internal API auth | Secret |
+| `OPENROUTER_API_KEY` | Observatory | API key for OpenRouter AI | Secret |
+| `JWT_SECRET` | Observatory | Secret key for JWT signing | Secret |
+| `CHAT_USERNAME` / `CHAT_PASSWORD` | Observatory | Admin credentials for dashboard chat | Secret |
+| `GO_BACKEND_URL` | Observatory | URL to deployed Go Backend API | Endpoint |
+| `NEXT_PUBLIC_API_URL` | Frontend | URL to deployed Go Backend API | Endpoint |
+| `NEXT_PUBLIC_AGENT_URL` | Frontend | URL to deployed Python Observatory | Endpoint |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Observatory | SMTP email credentials for report dispatch | Secret |
+| `SMTP_FROM` / `SMTP_TO` | Observatory | Sender and recipient email addresses | Config |
+| `GITHUB_TOKEN_PRIVATE` | Worker CLI | Token for private repo discovery/cloning | Secret |
+| `GITHUB_TOKEN_PERSONAL` | Worker CLI | Token for GitHub API rate limits | Secret |
+
+---
+
+## Contributing & License
+
+Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
+
+Distributed under the MIT License. See `LICENSE` for more information.

@@ -1,0 +1,82 @@
+# Repository Rules for AI Agents
+
+Welcome to the **GitHub Backup Automation System** repository. When working on, modifying, or improving this codebase, you MUST adhere to the following rules:
+
+---
+
+## 1. Architecture & Deployment Boundaries
+
+* **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel**.
+* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel**.
+* **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render**.
+* **Backup Worker**: Go CLI -> Local / Scheduled Cron.
+
+> **CRITICAL RULE**: Do **NOT** introduce Docker, Docker Compose, Kubernetes, Helm, Nginx, Prometheus servers, Grafana containers, or container registries. All deployments use serverless Vercel and Render native runtimes.
+
+---
+
+## 2. Tool-Calling RAG & Vector Search Architecture
+
+* **Dual-Layer RAG Pipeline**:
+  1. **Pre-Turn Retrieval**: Queries pgvector & Full-Text Search (FTS) to inject top relevance chunks into system context.
+  2. **Dynamic Tool Calling**: The agent dynamically calls `hybrid_search_knowledge_base` during reasoning loops to retrieve additional targeted chunks across `execution_logs`, `backup_results`, `backup_fixes`, `investigations`, and `chat_messages`.
+* **Dynamic OpenRouter Model Registry**:
+  * Free models are queried dynamically via OpenRouter API with modality filters (`output_modalities=embeddings`, `output_modalities=rerank`) and cached in-memory with fallback.
+* **Vector Index Generations**:
+  * Blue-Green style index generation (`BUILDING` -> `READY` -> `ACTIVE` -> `RETIRED`).
+  * Chunking uses sliding window (default 500 chars, 50 overlap) and SHA-256 content hashing.
+
+---
+
+## 3. Database & Data Integrity
+
+* **Never Drop Tables**: This system has been running in production with months of backup history. **Never** run destructive schema drops (`DROP TABLE`, `TRUNCATE`).
+* **Migrations**: All migrations in `backend/db/migrations/` and `agentic-observatory/data/migrations/` MUST be idempotent using `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS`.
+* **Database Connection**: Always use `DATABASE_URL` (supports SSL with Neon PostgreSQL). In Python, `data/db.py` normalizes asyncpg URL formats automatically.
+
+---
+
+## 4. Configuration & Environment Variables
+
+* **Centralized Extractors Only**:
+  * **Go Backend**: `backend/config/config.go` (`config.Get()`).
+  * **Python Observatory**: `agentic-observatory/config/settings.py` & `agentic-observatory/utils/env.py`.
+  * **Frontend**: `frontend/src/config/env.ts` (`@/config/env`).
+* **Secrets vs Hardcoded Defaults**:
+  * Keep `.env` and `.env.example` strictly for **secrets** and **dynamic deployment URLs**.
+  * Keep operational constants (timeouts, buffer limits, retry counts, page sizes) hardcoded in the centralized config files.
+
+---
+
+## 5. Multi-Key OpenRouter Failover
+
+* `OPENROUTER_API_KEY` can contain comma-separated API keys.
+* Always route OpenRouter operations through `utils.openrouter_keys` in Python and `EmbeddingClient` in Go. If an API key encounters `401`, `402`, or `429`, it automatically rotates to the next available key without failing user requests.
+
+---
+
+## 6. Human-In-The-Loop (HITL) Protocol
+
+* Any sensitive destructive or outward-facing agent action (e.g. `send_report_email`, applying migrations, database hotfixes) MUST trigger the HITL confirmation protocol:
+  1. Agent yields SSE event `{"type": "confirm_required", "confirm_id": "<uuid>", "name": "<tool_name>", "args": {...}}`.
+  2. UI displays modal to user. User responds via `POST /chat/confirm`.
+  3. Rejection or timeout (120s) gracefully feeds rejection message into LLM reasoning without crashing the session.
+
+---
+
+## 7. Verification Checklist
+
+Before finishing any task, you MUST run:
+```bash
+# 1. Run all unit, integration, and AI agent test suites
+make test
+
+# 2. Run dedicated AI Agent & Tool-Calling RAG Test Suite
+make test-agents
+
+# 3. Run Python static type check
+cd agentic-observatory && uv run --with pyright pyright
+
+# 4. Run Frontend lint and Turbopack build
+cd frontend && pnpm run lint && pnpm run build
+```
