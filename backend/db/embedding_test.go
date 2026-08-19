@@ -765,3 +765,90 @@ func TestChunkNullEmbedding(t *testing.T) {
 		t.Fatal("expected non-zero ID")
 	}
 }
+
+// TestPromoteGenerationToActive verifies atomic promotion to ACTIVE and demotion of old active.
+func TestPromoteGenerationToActive(t *testing.T) {
+	ctx := testSetup(t)
+
+	// Create Gen 1 and promote to ACTIVE
+	gen1, err := CreateGeneration(ctx, "model-v1", 1536)
+	if err != nil {
+		t.Fatalf("CreateGeneration 1: %v", err)
+	}
+	if err := PromoteGenerationToActive(ctx, gen1); err != nil {
+		t.Fatalf("PromoteGenerationToActive 1: %v", err)
+	}
+
+	active, err := GetActiveGeneration(ctx)
+	if err != nil || active == nil || active.ID != gen1 {
+		t.Fatalf("expected active generation %d, got %v", gen1, active)
+	}
+
+	// Create Gen 2 and promote to ACTIVE
+	gen2, err := CreateGeneration(ctx, "model-v2", 1536)
+	if err != nil {
+		t.Fatalf("CreateGeneration 2: %v", err)
+	}
+	if err := PromoteGenerationToActive(ctx, gen2); err != nil {
+		t.Fatalf("PromoteGenerationToActive 2: %v", err)
+	}
+
+	active2, err := GetActiveGeneration(ctx)
+	if err != nil || active2 == nil || active2.ID != gen2 {
+		t.Fatalf("expected active generation %d, got %v", gen2, active2)
+	}
+
+	// Gen 1 should now be RETIRED
+	g1, err := GetGenerationByID(ctx, gen1)
+	if err != nil || g1 == nil || g1.Status != models.GenerationStatusRetired {
+		t.Fatalf("expected gen 1 status RETIRED, got %v", g1)
+	}
+}
+
+// TestPruneStaleGenerations verifies that RETIRED/FAILED generations are pruned and cascade-delete chunks.
+func TestPruneStaleGenerations(t *testing.T) {
+	ctx := testSetup(t)
+
+	// Create Gen 1 (ACTIVE)
+	gen1, _ := CreateGeneration(ctx, "model-active", 1536)
+	_ = PromoteGenerationToActive(ctx, gen1)
+
+	// Create Gen 2 (FAILED)
+	gen2, _ := CreateGeneration(ctx, "model-failed", 1536)
+	_ = UpdateGenerationStatus(ctx, gen2, models.GenerationStatusFailed)
+
+	// Add chunk to Gen 2
+	chunk := &models.EmbeddingChunk{
+		GenerationID: gen2,
+		SourceType:   models.SourceTypeChatMessage,
+		SourceID:     "msg-fail",
+		ChunkIndex:   0,
+		Content:      "stale chunk",
+		ContentHash:  contentHash("stale chunk"),
+		Embedding:    []float32{0.1, 0.2, 0.3},
+		Metadata:     map[string]interface{}{},
+	}
+	_, _ = InsertChunk(ctx, chunk)
+
+	// Prune
+	pruned, err := PruneStaleGenerations(ctx)
+	if err != nil {
+		t.Fatalf("PruneStaleGenerations: %v", err)
+	}
+	if pruned == 0 {
+		t.Errorf("expected at least 1 pruned generation, got 0")
+	}
+
+	// Gen 1 must still exist and be active
+	g1, _ := GetGenerationByID(ctx, gen1)
+	if g1 == nil || g1.Status != models.GenerationStatusActive {
+		t.Errorf("active generation %d was unexpectedly removed or altered", gen1)
+	}
+
+	// Gen 2 must be deleted
+	g2, _ := GetGenerationByID(ctx, gen2)
+	if g2 != nil {
+		t.Errorf("expected gen 2 to be deleted, got %v", g2)
+	}
+}
+

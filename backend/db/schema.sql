@@ -87,6 +87,11 @@ CREATE TABLE IF NOT EXISTS backup_run_fixes (
 CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_run ON backup_run_fixes(run_id);
 CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_fix ON backup_run_fixes(fix_id);
 
+CREATE INDEX IF NOT EXISTS idx_backup_results_errors ON backup_results (run_id, status) WHERE error_message IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_backup_runs_errors ON backup_runs (status) WHERE error_message IS NOT NULL OR status = 'failed';
+CREATE INDEX IF NOT EXISTS idx_backup_results_commit ON backup_results (commit_hash) WHERE commit_hash IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit ON backup_fixes (commit_hash) WHERE commit_hash IS NOT NULL;
+
 -- =============================================================================
 -- Phase 1: Retrieval Foundation (pgvector + FTS + pg_trgm)
 -- =============================================================================

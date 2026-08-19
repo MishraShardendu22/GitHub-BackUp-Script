@@ -276,32 +276,33 @@ async def embed_texts(texts: list[str], model_id: str) -> list[list[float]]:
 # ---------------------------------------------------------------------------
 
 async def run_migration() -> None:
-    """Run the embedding jobs migration SQL on startup (idempotent).
+    """Run all embedding and schema migration SQL files on startup (idempotent).
 
     asyncpg does not allow multiple commands in a single prepared statement,
-    so we split the file on ';' and execute each statement individually.
+    so we split each file on ';' and execute each statement individually.
     """
     if async_session is None:
         return
-    sql_path = Path(__file__).parent / "migrations" / "001_add_embedding_jobs.sql"
-    if not sql_path.exists():
-        logger.warning("Migration file not found: %s", sql_path)
+    migrations_dir = Path(__file__).parent / "migrations"
+    if not migrations_dir.exists():
+        logger.warning("Migrations directory not found: %s", migrations_dir)
         return
-    sql = sql_path.read_text()
-    # Split into individual statements and execute each separately
-    statements = [s.strip() for s in sql.split(";") if s.strip()]
+
+    sql_files = sorted(migrations_dir.glob("*.sql"))
     async with async_session() as session:
-        for stmt in statements:
-            # Skip comment-only blocks
-            lines = [ln for ln in stmt.splitlines() if not ln.strip().startswith("--")]
-            clean = "\n".join(lines).strip()
-            if clean:
-                try:
-                    await session.execute(text(clean))
-                except Exception as exc:
-                    logger.warning("Migration statement skipped (%s): %.120s", exc, clean)
+        for sql_path in sql_files:
+            sql = sql_path.read_text()
+            statements = [s.strip() for s in sql.split(";") if s.strip()]
+            for stmt in statements:
+                lines = [ln for ln in stmt.splitlines() if not ln.strip().startswith("--")]
+                clean = "\n".join(lines).strip()
+                if clean:
+                    try:
+                        await session.execute(text(clean))
+                    except Exception as exc:
+                        logger.warning("Migration statement skipped (%s): %.120s", exc, clean)
         await session.commit()
-    logger.info("Embedding jobs migration applied")
+    logger.info("All database schema migrations applied")
 
 
 # ---------------------------------------------------------------------------
@@ -527,12 +528,7 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                     "job": job,
                     "content": c_str,
                     "chunk_index": c_idx,
-                    "metadata": {
-                        **row_meta,
-                        "source_type": source_type,
-                        "source_id": str(job["source_id"]),
-                        "chunk_index": c_idx,
-                    },
+                    "metadata": row_meta or {},
                 })
 
     if not texts_to_embed:
@@ -556,11 +552,7 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                 chunk_index = item["chunk_index"]
                 embedding = embeddings[i]
                 c_hash = content_hash(content)
-                metadata_payload = item.get("metadata", {
-                    "source_type": job["source_type"],
-                    "source_id": str(job["source_id"]),
-                    "chunk_index": chunk_index,
-                })
+                metadata_payload = item.get("metadata", {})
 
                 try:
                     await session.execute(
@@ -668,23 +660,33 @@ async def _fail_job(job_id: int, message: str) -> None:
 # ---------------------------------------------------------------------------
 
 async def activate_generation(generation_id: int) -> bool:
-    """Transition a generation to ACTIVE, and prune all older retired/failed generations."""
+    """Transition a generation to ACTIVE, demoting the previous active generation to RETIRED,
+    and prune older retired/failed generations safely."""
     if async_session is None:
         return False
     async with async_session() as session:
-        # 1. Activate the specified generation
+        # 1. Demote any existing ACTIVE generation to RETIRED
         await session.execute(
             text(
-                "UPDATE embedding_generations SET status = 'ACTIVE', activated_at = NOW() "
+                "UPDATE embedding_generations SET status = 'RETIRED', retired_at = NOW() "
+                "WHERE status = 'ACTIVE' AND id != :id"
+            ),
+            {"id": generation_id},
+        )
+        # 2. Activate the specified generation
+        await session.execute(
+            text(
+                "UPDATE embedding_generations SET status = 'ACTIVE', activated_at = NOW(), "
+                "completed_at = COALESCE(completed_at, NOW()) "
                 "WHERE id = :id"
             ),
             {"id": generation_id},
         )
-        # 2. Transactionally delete older generations (cascades deletion of old embedding_chunks & jobs)
+        # 3. Transactionally delete older retired/failed generations (cascades deletion of old embedding_chunks & jobs)
         await session.execute(
             text(
                 "DELETE FROM embedding_generations "
-                "WHERE id != :id AND status IN ('RETIRED', 'FAILED', 'BUILDING')"
+                "WHERE id != :id AND status IN ('RETIRED', 'FAILED')"
             ),
             {"id": generation_id},
         )

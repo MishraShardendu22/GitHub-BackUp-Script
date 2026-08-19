@@ -210,3 +210,72 @@ func CountChunksForGeneration(ctx context.Context, generationID int) (int, error
 	}
 	return count, nil
 }
+
+// PromoteGenerationToActive transactionally transitions a generation to ACTIVE,
+// demoting any currently ACTIVE generation to RETIRED, and setting appropriate timestamps.
+func PromoteGenerationToActive(ctx context.Context, generationID int) error {
+	tx, err := Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin promotion tx: %w", err)
+	}
+	defer tx.Rollback(ctx) // nolint:errcheck
+
+	now := time.Now().UTC()
+
+	// Demote current active generation if any
+	_, err = tx.Exec(ctx,
+		`UPDATE embedding_generations
+		 SET status = 'RETIRED', retired_at = $1
+		 WHERE status = 'ACTIVE' AND id != $2`,
+		now, generationID,
+	)
+	if err != nil {
+		return fmt.Errorf("demote active generation: %w", err)
+	}
+
+	// Promote new generation to active
+	tag, err := tx.Exec(ctx,
+		`UPDATE embedding_generations
+		 SET status = 'ACTIVE', activated_at = $1, completed_at = COALESCE(completed_at, $1)
+		 WHERE id = $2`,
+		now, generationID,
+	)
+	if err != nil {
+		return fmt.Errorf("promote generation %d to active: %w", generationID, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("generation %d not found", generationID)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit promotion tx: %w", err)
+	}
+
+	return nil
+}
+
+// PruneStaleGenerations deletes all RETIRED and FAILED generations.
+// Chunks and jobs are automatically removed via ON DELETE CASCADE.
+func PruneStaleGenerations(ctx context.Context) (int64, error) {
+	tag, err := Pool.Exec(ctx,
+		`DELETE FROM embedding_generations WHERE status IN ('RETIRED', 'FAILED')`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("prune stale generations: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
+// PruneStaleEmbeddingJobs deletes failed jobs older than the specified duration.
+func PruneStaleEmbeddingJobs(ctx context.Context, olderThan time.Duration) (int64, error) {
+	threshold := time.Now().UTC().Add(-olderThan)
+	tag, err := Pool.Exec(ctx,
+		`DELETE FROM embedding_jobs WHERE status = 'failed' AND updated_at < $1`,
+		threshold,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("prune stale embedding jobs: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+

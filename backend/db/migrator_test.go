@@ -21,16 +21,17 @@ func TestLoadMigrations(t *testing.T) {
 		}
 	}
 
-	// Verify first migration has UpSQL
-	if migrations[0].Version != 1 {
-		t.Errorf("expected first migration to be version 1, got %d", migrations[0].Version)
+	if len(migrations) < 5 {
+		t.Errorf("expected at least 5 migrations, got %d", len(migrations))
 	}
 
-	if len(migrations[0].UpSQL) == 0 {
-		t.Errorf("migration 1 has empty UpSQL")
-	}
-
-	if len(migrations[0].DownSQL) == 0 {
-		t.Errorf("migration 1 has empty DownSQL")
+	// Verify each migration has non-empty UpSQL and DownSQL
+	for _, m := range migrations {
+		if len(m.UpSQL) == 0 {
+			t.Errorf("migration %d (%s) has empty UpSQL", m.Version, m.Name)
+		}
+		if len(m.DownSQL) == 0 {
+			t.Errorf("migration %d (%s) has empty DownSQL", m.Version, m.Name)
+		}
 	}
 }
