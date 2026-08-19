@@ -62,14 +62,32 @@ ai_tool_calls = Table(
     Column("id", PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
     Column("request_id", PG_UUID(as_uuid=True), nullable=False),
     Column("name", String, nullable=False),
-    Column("args", JSONB, nullable=True),
     Column("result", JSONB, nullable=True),
     Column("success", Boolean, nullable=False, default=False),
     Column("duration_ms", Float, nullable=True),
-    Column("error", Text, nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
 )
 Index("idx_ai_tool_calls_request_id", ai_tool_calls.c.request_id)
+
+ai_tool_call_args = Table(
+    "ai_tool_call_args",
+    metadata,
+    Column("id", PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column("tool_call_id", PG_UUID(as_uuid=True), ForeignKey("ai_tool_calls.id", ondelete="CASCADE"), nullable=False, unique=True),
+    Column("args", JSONB, nullable=False, default=dict),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+)
+Index("idx_ai_tool_call_args_tool", ai_tool_call_args.c.tool_call_id)
+
+ai_tool_call_errors = Table(
+    "ai_tool_call_errors",
+    metadata,
+    Column("id", PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column("tool_call_id", PG_UUID(as_uuid=True), ForeignKey("ai_tool_calls.id", ondelete="CASCADE"), nullable=False, unique=True),
+    Column("error", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+)
+Index("idx_ai_tool_call_errors_tool", ai_tool_call_errors.c.tool_call_id)
 
 
 investigations = Table(

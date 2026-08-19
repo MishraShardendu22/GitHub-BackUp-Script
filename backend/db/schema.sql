@@ -80,6 +80,33 @@ CREATE TABLE IF NOT EXISTS ai_session_metadata (
 );
 CREATE INDEX IF NOT EXISTS idx_ai_session_metadata_session ON ai_session_metadata (session_id);
 
+CREATE TABLE IF NOT EXISTS ai_tool_calls (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id  UUID NOT NULL,
+    name        TEXT NOT NULL,
+    result      JSONB,
+    success     BOOLEAN NOT NULL DEFAULT TRUE,
+    duration_ms DOUBLE PRECISION DEFAULT 0.0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_request_id ON ai_tool_calls(request_id);
+
+CREATE TABLE IF NOT EXISTS ai_tool_call_args (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tool_call_id  UUID NOT NULL UNIQUE REFERENCES ai_tool_calls(id) ON DELETE CASCADE,
+    args          JSONB NOT NULL DEFAULT '{}',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_tool_call_args_tool ON ai_tool_call_args(tool_call_id);
+
+CREATE TABLE IF NOT EXISTS ai_tool_call_errors (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tool_call_id  UUID NOT NULL UNIQUE REFERENCES ai_tool_calls(id) ON DELETE CASCADE,
+    error         TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_tool_call_errors_tool ON ai_tool_call_errors(tool_call_id);
+
 CREATE TABLE IF NOT EXISTS backup_fixes (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -100,7 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_run ON backup_run_fixes(run_id);
 CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_fix ON backup_run_fixes(fix_id);
 
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors ON backup_results (run_id, status) WHERE error_message IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_backup_runs_errors ON backup_runs (status) WHERE error_message IS NOT NULL OR status = 'failed';
+CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed ON backup_runs (status) WHERE status = 'failed';
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit ON backup_results (commit_hash) WHERE commit_hash IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit ON backup_fixes (commit_hash) WHERE commit_hash IS NOT NULL;
 

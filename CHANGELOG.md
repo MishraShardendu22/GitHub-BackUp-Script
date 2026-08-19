@@ -27,10 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dropped redundant `ai_chat_sessions.metadata` and created dedicated `ai_session_metadata` entity (`id UUID PK`, `session_id UUID FK UNIQUE`, `metadata JSONB`)
   - Normalized `analytics_snapshots` by removing duplicate surrogate sequence `id` and establishing `run_id` as primary key
   - Normalized `backup_runs` error data into dedicated `backup_run_errors` table (`id`, `run_id FK UNIQUE`, `error_message`) and dropped nullable `error_message` column from `backup_runs`
+  - Normalized `ai_tool_calls` by extracting non-empty parameters and failures into dedicated `ai_tool_call_args` and `ai_tool_call_errors` tables, dropping nullable `args` and `error` columns from `ai_tool_calls`
   - Normalized `embedding_jobs.error_message` from `NOT NULL DEFAULT 'EMPTY_STRING'` to nullable SQL `NULL` with partial index `WHERE error_message IS NOT NULL`
   - Normalized `embedding_chunks.metadata` to eliminate duplicate relational keys and convert empty `{}` objects to SQL `NULL`
   - Enforced generation lifecycle timestamps (`completed_at` set and `retired_at` cleared to `NULL` on `ACTIVE` generations)
-  - Partial indexing on error states across `backup_results`, `backup_run_errors`, `investigations`, `ai_tool_calls`, `embedding_jobs`
+  - Partial indexing on failure states across `backup_results`, `backup_run_errors`, `investigations`, `ai_tool_calls`, `embedding_jobs`
   - Partial indexing on commit hashes for `backup_results` and `backup_fixes`
   - Transactional blue-green embedding generation promotion (`BUILDING` -> `READY` -> `ACTIVE` -> `RETIRED`)
   - Safe cascade pruning of obsolete embedding generations and stale jobs without removing source records

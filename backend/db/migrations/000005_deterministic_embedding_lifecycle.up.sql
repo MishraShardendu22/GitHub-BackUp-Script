@@ -116,18 +116,53 @@ BEGIN
     END IF;
 END $$;
 
--- 5. Normalize ai_tool_calls: convert empty JSON objects and empty strings to clean SQL NULL
-UPDATE ai_tool_calls
-SET args = NULL
-WHERE args = '{}'::jsonb;
+-- 5. Normalize ai_tool_calls: extract into ai_tool_call_args and ai_tool_call_errors
+CREATE TABLE IF NOT EXISTS ai_tool_call_args (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tool_call_id UUID NOT NULL UNIQUE REFERENCES ai_tool_calls(id) ON DELETE CASCADE,
+    args JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_tool_call_args_tool ON ai_tool_call_args(tool_call_id);
 
-UPDATE ai_tool_calls
-SET result = NULL
-WHERE result = '{}'::jsonb;
+CREATE TABLE IF NOT EXISTS ai_tool_call_errors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tool_call_id UUID NOT NULL UNIQUE REFERENCES ai_tool_calls(id) ON DELETE CASCADE,
+    error TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_tool_call_errors_tool ON ai_tool_call_errors(tool_call_id);
 
-UPDATE ai_tool_calls
-SET error = NULL
-WHERE error = '' OR error = 'null' OR error = 'EMPTY_STRING';
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ai_tool_calls' AND column_name = 'args'
+    ) THEN
+        INSERT INTO ai_tool_call_args (tool_call_id, args)
+        SELECT id, args
+        FROM ai_tool_calls
+        WHERE args IS NOT NULL AND args != '{}'::jsonb
+        ON CONFLICT (tool_call_id) DO UPDATE
+        SET args = EXCLUDED.args;
+
+        ALTER TABLE ai_tool_calls DROP COLUMN IF EXISTS args;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ai_tool_calls' AND column_name = 'error'
+    ) THEN
+        INSERT INTO ai_tool_call_errors (tool_call_id, error)
+        SELECT id, error
+        FROM ai_tool_calls
+        WHERE error IS NOT NULL AND error != '' AND error != 'null' AND error != 'EMPTY_STRING'
+        ON CONFLICT (tool_call_id) DO UPDATE
+        SET error = EXCLUDED.error;
+
+        ALTER TABLE ai_tool_calls DROP COLUMN IF EXISTS error;
+    END IF;
+END $$;
 
 UPDATE investigations
 SET error = NULL
@@ -150,9 +185,9 @@ CREATE INDEX IF NOT EXISTS idx_investigations_errors
     ON investigations (status)
     WHERE error IS NOT NULL OR status = 'failed';
 
-CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_errors
-    ON ai_tool_calls (name, success)
-    WHERE error IS NOT NULL OR success = FALSE;
+CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_success_false
+    ON ai_tool_calls (name)
+    WHERE success = FALSE;
 
 -- 7. Partial indexes for commit hash lookups
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit

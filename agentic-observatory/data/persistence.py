@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from data.db import (
     ai_tool_calls,
+    ai_tool_call_args,
+    ai_tool_call_errors,
     ai_reports,
     async_session,
     investigations,
@@ -71,8 +73,9 @@ class InvestigationStore:
 
                 tool_calls = payload.get("tool_calls", []) or []
                 for tool_call in tool_calls:
+                    tc_id = uuid.uuid4()
                     args_val = tool_call.get("args")
-                    # Clean NULL normalization: store None if args is empty
+                    # Store args in dedicated normalized table if non-empty
                     if not args_val or args_val == {}:
                         args_val = None
 
@@ -82,16 +85,31 @@ class InvestigationStore:
 
                     await session.execute(
                         insert(ai_tool_calls).values(
+                            id=tc_id,
                             request_id=req_uuid,
                             name=tool_call.get("name"),
-                            args=args_val,
                             result=tool_call.get("result"),
                             success=tool_call.get("success", False),
                             duration_ms=tool_call.get("duration_ms"),
-                            error=err_val,
                             created_at=datetime.now(timezone.utc),
                         )
                     )
+
+                    if args_val is not None:
+                        await session.execute(
+                            insert(ai_tool_call_args).values(
+                                tool_call_id=tc_id,
+                                args=args_val,
+                            )
+                        )
+
+                    if err_val is not None:
+                        await session.execute(
+                            insert(ai_tool_call_errors).values(
+                                tool_call_id=tc_id,
+                                error=err_val,
+                            )
+                        )
 
                 messages = payload.get("messages", []) or []
                 for message in messages:
@@ -285,13 +303,28 @@ class InvestigationStore:
             if not message_rows:
                 return []
             
-            # Fetch all tool calls for these request IDs
+            # Fetch all tool calls for these request IDs with left joins on normalized args and errors
             req_ids = [row["request_id"] for row in message_rows]
-            tool_calls_res = await session.execute(
-                select(ai_tool_calls)
+            tool_calls_stmt = (
+                select(
+                    ai_tool_calls.c.id,
+                    ai_tool_calls.c.request_id,
+                    ai_tool_calls.c.name,
+                    ai_tool_calls.c.result,
+                    ai_tool_calls.c.success,
+                    ai_tool_calls.c.duration_ms,
+                    ai_tool_call_args.c.args,
+                    ai_tool_call_errors.c.error,
+                )
+                .select_from(
+                    ai_tool_calls
+                    .outerjoin(ai_tool_call_args, ai_tool_calls.c.id == ai_tool_call_args.c.tool_call_id)
+                    .outerjoin(ai_tool_call_errors, ai_tool_calls.c.id == ai_tool_call_errors.c.tool_call_id)
+                )
                 .where(ai_tool_calls.c.request_id.in_(req_ids))
                 .order_by(ai_tool_calls.c.created_at.asc())
             )
+            tool_calls_res = await session.execute(tool_calls_stmt)
             tool_calls_rows = [dict(row) for row in tool_calls_res.mappings().all()]
             
             # Map tool calls to their request IDs
@@ -302,11 +335,11 @@ class InvestigationStore:
                     tool_calls_by_req[req_id] = []
                 tool_calls_by_req[req_id].append({
                     "name": tc["name"],
-                    "args": tc["args"],
+                    "args": tc.get("args") or {},
                     "result": tc["result"],
                     "success": tc["success"],
                     "duration_ms": tc["duration_ms"],
-                    "error": tc["error"]
+                    "error": tc.get("error")
                 })
                 
             # Populate messages with tool calls
