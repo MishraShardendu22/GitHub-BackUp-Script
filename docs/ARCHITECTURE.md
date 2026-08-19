@@ -149,8 +149,33 @@ The search engine implements a robust 3-stage retrieval pipeline:
 
 ---
 
-## 5. Security & Deployment Constraints
+## 5. Database Schema & Migration Architecture
+
+PostgreSQL serves as the central data store across all services. The Go backend and Python Observatory run idempotent versioned migrations:
+
+### Core Relational & Telemetry Models
+1. `backup_runs`: Execution batches, totals, durations, status, and error messages.
+2. `backup_results`: Individual repository outcomes, archive sizes, and per-repo commit hashes.
+3. `execution_logs`: Structured step-by-step logs with run associations and timestamp indices.
+4. `analytics_snapshots`: 1-to-1 repository Git analytics and blob metrics per backup run.
+5. `backup_fixes` & `backup_run_fixes`: Incident resolutions and commit tags.
+6. `ai_chat_sessions` & `ai_session_metadata`: Multi-turn chat sessions with normalized key-value metadata.
+7. `ai_chat_messages` & `ai_tool_calls`: Chat history and granular tool execution telemetry.
+8. `investigations`: Saved agent investigation traces, questions, answers, and error state.
+9. `embedding_generations`, `embedding_chunks`, `embedding_jobs`: pgvector vector store and durable work queue.
+
+### Versioned Migration History
+* **`000001_initial_schema`**: Core telemetry tables (`backup_runs`, `backup_results`, `execution_logs`, `analytics_snapshots`, `backup_fixes`).
+* **`000002_embeddings_and_search`**: Extensions `vector` & `pg_trgm`, tables `embedding_generations`, `embedding_chunks`, `embedding_jobs`, `embedding_indexing_checkpoints`.
+* **`000003_normalize_schema_and_metadata`**: Normalized `ai_session_metadata` table, unique index on analytics `run_id`, empty string cleanup to SQL `NULL`.
+* **`000004_cleanup_stale_embeddings_and_errors`**: Obsolete generation pruning and failed job cleanup.
+* **`000005_deterministic_embedding_lifecycle`**: Partial indexes for fast failure/error lookups (`idx_backup_results_errors`, `idx_backup_runs_errors`, `idx_investigations_errors`, `idx_ai_tool_calls_errors`), commit hash indexes (`idx_backup_results_commit`, `idx_backup_fixes_commit`), chunk metadata normalization, and transactional blue-green promotion.
+
+---
+
+## 6. Security & Deployment Constraints
 
 * **No Docker / Containers in Production**: Deployment strictly relies on **Vercel** serverless functions and **Render** native Go execution.
 * **Non-Destructive Database Migrations**: All migrations must be idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) and preserve historical data.
 * **Failover Resilience**: Multi-key rotation ensures continuous uptime against LLM provider rate limits.
+

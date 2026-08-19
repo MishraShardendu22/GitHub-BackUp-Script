@@ -81,11 +81,13 @@ This skill provides an overview of the system architecture, data models, communi
 
 ## 3. Database Schema
 
-1. `backup_runs`: Stores each backup batch (ID, status, total repos, duration, timestamps).
-2. `backup_results`: Per-repository outcome (status, error messages, sizes).
+1. `backup_runs`: Stores each backup batch (ID, status, total repos, duration, timestamps, error_message).
+2. `backup_results`: Per-repository outcome (status, error_message, sizes, commit_hash).
 3. `execution_logs`: Structured step-by-step logs.
-4. `analytics_snapshots`: Aggregated metrics over time.
+4. `analytics_snapshots`: Aggregated metrics and commit snapshots over time (1-to-1 unique with backup_runs).
 5. `backup_fixes` & `backup_run_fixes`: Historical failure resolutions and commit tags.
-6. `ai_chat_sessions` & `ai_chat_messages`: Persistent conversation history for AI assistant.
-7. `investigations`: Saved agent investigation traces, tool calls, and results.
-8. `embedding_generations`, `embedding_jobs`, `embedding_chunks`: Vector index and chunk storage with pgvector.
+6. `ai_chat_sessions` & `ai_session_metadata`: Normalized conversation sessions and key-value metadata.
+7. `ai_chat_messages` & `ai_tool_calls`: Chat history and granular tool execution telemetry.
+8. `investigations`: Saved agent investigation traces, tool calls, and results.
+9. `embedding_generations`, `embedding_jobs`, `embedding_chunks`: Vector index and chunk storage with pgvector and deterministic blue-green lifecycle management.
+

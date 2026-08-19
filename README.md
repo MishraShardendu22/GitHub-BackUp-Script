@@ -113,6 +113,7 @@ The Go backend features an embedded versioned migration runner (`backend/db/migr
 | `000002` | `000002_embeddings_and_search.up.sql` | Extensions `vector` & `pg_trgm`, tables `embedding_generations`, `embedding_chunks`, `embedding_jobs` |
 | `000003` | `000003_normalize_schema_and_metadata.up.sql` | Creates `ai_session_metadata`, enforces 1-to-1 run analytics index, cleans legacy empty strings to SQL `NULL` |
 | `000004` | `000004_cleanup_stale_embeddings_and_errors.up.sql` | Cascading deletion of `RETIRED`/`FAILED` generations and stale jobs, cleans investigation errors |
+| `000005` | `000005_deterministic_embedding_lifecycle.up.sql` | Partial indexes on errors/commits, chunk metadata normalization, blue-green promotion |
 
 Migrations use non-destructive `CREATE TABLE IF NOT EXISTS` statements and preserve all existing historical data.
 
