@@ -1,6 +1,5 @@
 # GitHub Backup Observatory & Management System
 
-[![CI Pipeline](https://github.com/MishraShardendu22/github-backup/actions/workflows/ci.yml/badge.svg)](https://github.com/MishraShardendu22/github-backup/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go)](https://go.dev/)
 [![Python Version](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python)](https://python.org/)
@@ -112,6 +111,8 @@ The Go backend features an embedded versioned migration runner (`backend/db/migr
 | :--- | :--- | :--- |
 | `000001` | `000001_initial_schema.up.sql` | Core tables (`backup_runs`, `backup_results`, `execution_logs`, `analytics_snapshots`, `backup_fixes`) |
 | `000002` | `000002_embeddings_and_search.up.sql` | Extensions `vector` & `pg_trgm`, tables `embedding_generations`, `embedding_chunks`, `embedding_jobs` |
+| `000003` | `000003_normalize_schema_and_metadata.up.sql` | Creates `ai_session_metadata`, enforces 1-to-1 run analytics index, cleans legacy empty strings to SQL `NULL` |
+| `000004` | `000004_cleanup_stale_embeddings_and_errors.up.sql` | Cascading deletion of `RETIRED`/`FAILED` generations and stale jobs, cleans investigation errors |
 
 Migrations use non-destructive `CREATE TABLE IF NOT EXISTS` statements and preserve all existing historical data.
 

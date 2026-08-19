@@ -15,8 +15,10 @@ This document describes the HTTP API exposed by the backup dashboard backend ser
 4. [Repositories](#repositories)
 5. [Logs](#logs)
 6. [WebSocket](#websocket)
-7. [Error Handling](#error-handling)
-8. [Data Models](#data-models)
+7. [Vector Embeddings & Hybrid Search](#vector-embeddings--hybrid-search)
+8. [AI Observatory & Agentic Chat](#ai-observatory--agentic-chat)
+9. [Error Handling](#error-handling)
+10. [Data Models](#data-models)
 
 ---
 
@@ -475,6 +477,296 @@ ws.onclose = () => {
     "repository": "octocat/Hello-World",
     "timestamp": "2024-06-17T10:30:20Z"
   }
+}
+```
+
+---
+
+## Vector Embeddings & Hybrid Search
+
+The Python Observatory provides high-performance vector search combining PostgreSQL Full-Text Search (FTS) and `pgvector` semantic embeddings with Reciprocal Rank Fusion (RRF) and live table fallbacks.
+
+### Hybrid Search
+**Endpoint:** `POST /search` (Python Observatory: `http://localhost:8000/search`)
+
+Execute a dual-layer hybrid search across embedding chunks and raw database tables.
+
+**Request Body:**
+```json
+{
+  "query": "authentication timeout during clone",
+  "source_types": ["execution_log", "backup_result", "investigation"],
+  "limit": 10,
+  "fts_weight": 0.3,
+  "semantic_weight": 0.7,
+  "rerank_model_id": "cohere/rerank-v3.5:free"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "results": [
+    {
+      "id": 42,
+      "source_type": "execution_log",
+      "source_id": "402",
+      "content": "[ERROR] Network timeout during clone (repo: octocat/Spoon-Knife)",
+      "score": 0.892154,
+      "metadata": {
+        "repository": "octocat/Spoon-Knife",
+        "level": "ERROR",
+        "run_id": 1
+      },
+      "reranked": true
+    }
+  ],
+  "generation_id": 1,
+  "model_id": "google/text-embedding-004",
+  "total": 1
+}
+```
+
+---
+
+### List Free Embedding Models
+**Endpoint:** `GET /embeddings/models`
+
+Retrieve dynamic list of 100% free embedding models fetched from OpenRouter with in-memory caching.
+
+**Response:** `200 OK`
+```json
+{
+  "models": [
+    {
+      "id": "google/text-embedding-004",
+      "name": "Google: Text Embedding 004",
+      "context_length": 2048,
+      "dimensions": 768,
+      "is_free": true
+    }
+  ],
+  "cached": true,
+  "active_model_id": "google/text-embedding-004"
+}
+```
+
+---
+
+### List Free Reranking Models
+**Endpoint:** `GET /embeddings/models/rerank`
+
+Retrieve dynamic list of 100% free reranking models available via OpenRouter.
+
+**Response:** `200 OK`
+```json
+{
+  "models": [
+    {
+      "id": "cohere/rerank-v3.5:free",
+      "name": "Cohere: Rerank 3.5 (Free)",
+      "context_length": 4096,
+      "is_free": true
+    }
+  ],
+  "cached": true
+}
+```
+
+---
+
+### Get Embedding Status
+**Endpoint:** `GET /embeddings/status`
+
+Retrieve generation health, vector coverage, and pending/failed job progress.
+
+**Response:** `200 OK`
+```json
+{
+  "active_generation": {
+    "id": 1,
+    "model_id": "google/text-embedding-004",
+    "status": "ACTIVE",
+    "dimensions": 768,
+    "chunk_count": 1250
+  },
+  "progress": {
+    "total": 1250,
+    "processed": 1250,
+    "failed": 0,
+    "percentage": 100.0
+  },
+  "pending_jobs": 0,
+  "failed_jobs": 0
+}
+```
+
+---
+
+### Switch Embedding Model
+**Endpoint:** `POST /embeddings/switch`
+
+Create a new `BUILDING` generation for a model, scan source records, chunk content, and enqueue background embedding jobs.
+
+**Request Body:**
+```json
+{
+  "model_id": "google/text-embedding-004",
+  "dimensions": 768,
+  "chunk_size": 500,
+  "chunk_overlap": 50
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "generation_id": 2,
+  "model_id": "google/text-embedding-004",
+  "status": "BUILDING",
+  "total_jobs_enqueued": 450,
+  "message": "Switched to model and enqueued source records"
+}
+```
+
+---
+
+### Process Embedding Jobs Batch
+**Endpoint:** `POST /embeddings/process`
+
+Process the next batch of queued embedding jobs with multi-key failover and batch vector persistence.
+
+**Request Body:**
+```json
+{
+  "batch_size": 50
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "processed": 50,
+  "remaining": 400,
+  "failed": 0
+}
+```
+
+---
+
+### Activate Embedding Generation
+**Endpoint:** `POST /embeddings/activate`
+
+Promote a `READY` generation to `ACTIVE` status and automatically cascade-delete obsolete `RETIRED` or `FAILED` generations to conserve storage.
+
+**Request Body:**
+```json
+{
+  "generation_id": 2
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "generation_id": 2,
+  "status": "ACTIVE",
+  "pruned_generations": [1],
+  "message": "Generation 2 activated and stale generations pruned successfully"
+}
+```
+
+---
+
+### Prune Stale Embedding Generations
+**Endpoint:** `POST /embeddings/prune`
+
+Manually clean up obsolete `RETIRED` and `FAILED` generations and their associated chunks/jobs.
+
+**Response:** `200 OK`
+```json
+{
+  "deleted_generations": [1],
+  "count": 1,
+  "message": "Pruned 1 stale generation(s)"
+}
+```
+
+---
+
+## AI Observatory & Agentic Chat
+
+The AI Observatory provides an autonomous agent with LangChain tool-calling RAG, SSE streaming, and Human-In-The-Loop (HITL) approval workflows.
+
+### Chat Stream (Server-Sent Events)
+**Endpoint:** `POST /chat/stream` or `GET /chat/stream?session_id=...&question=...`
+
+Initiate a streaming agent investigation loop. Streams tool invocation events, tokens, and status updates over SSE.
+
+**Request Body:**
+```json
+{
+  "session_id": "session-uuid",
+  "question": "Investigate clone failure in repo octocat/Spoon-Knife",
+  "model": "deepseek/deepseek-chat"
+}
+```
+
+**SSE Event Types:**
+- `{"type": "start", "request_id": "..."}` — Investigation started.
+- `{"type": "thought", "content": "Querying logs and hybrid search..."}` — Agent reasoning step.
+- `{"type": "tool_call", "name": "hybrid_search_knowledge_base", "args": {...}}` — Tool execution started.
+- `{"type": "tool_result", "name": "hybrid_search_knowledge_base", "result": [...]}` — Tool execution completed.
+- `{"type": "confirm_required", "confirm_id": "uuid", "name": "send_report_email", "args": {...}}` — HITL approval required.
+- `{"type": "token", "content": "..."}` — Output markdown token.
+- `{"type": "done", "request_id": "..."}` — Investigation complete.
+
+---
+
+### Human-In-The-Loop Confirmation
+**Endpoint:** `POST /chat/confirm`
+
+Submit user approval or rejection for a pending sensitive tool action (e.g. sending emails or applying fixes).
+
+**Request Body:**
+```json
+{
+  "confirm_id": "uuid",
+  "approved": true
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "status": "acknowledged",
+  "confirm_id": "uuid",
+  "approved": true
+}
+```
+
+---
+
+### List Chat Sessions
+**Endpoint:** `GET /chat/sessions`
+
+Retrieve all active and archived chat sessions with normalized key-value metadata.
+
+**Response:** `200 OK`
+```json
+{
+  "sessions": [
+    {
+      "id": "session-uuid",
+      "title": "Investigate clone failure in octocat/Spoon-Knife",
+      "created_at": "2024-06-17T10:30:00Z",
+      "message_count": 4,
+      "metadata": {
+        "model": "deepseek/deepseek-chat",
+        "topic": "backup_investigation"
+      }
+    }
+  ]
 }
 ```
 

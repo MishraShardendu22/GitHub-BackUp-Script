@@ -1,37 +1,156 @@
-# Architecture
+# System Architecture & Technical Specifications
 
-This document gives a concise overview of components, responsibilities and data flow.
+This document outlines the distributed architecture, component boundaries, data flow, vector search pipeline, and deployment topology of the **GitHub Backup Automation & Observatory System**.
 
-Components:
-- Worker (CLI): `main.go` -> `service.RunBackupFlow`
-  - Responsibilities: discover repositories, decide which changed, clone/archive, commit & push to `_Repos`, update SQLite metadata and log failures.
+---
 
-- Backend (Dashboard/API): `backend/main.go`
-  - Responsibilities: connect to PostgreSQL, apply migrations, provide REST endpoints for runs/metrics/analytics/logs, and a WebSocket endpoint for live logs.
+## 1. High-Level Architecture Topology
 
-Key packages and responsibilities:
-- `controller/` — GitHub API client wrappers (uses `resty`) to fetch paginated lists of repositories.
-- `service/` — high-level orchestration. Important files:
-  - `backup.service.go` — orchestrates the full flow including DB initialization and repository discovery.
-  - `process.service.go` — heavy-lifting: parallel hash checking, parallel clone+archive, serial commit+push, DB upserts and cleanup.
-- `service/helper` — shell interactions for `git`, `tar` and related filesystem operations. These commands are executed via `os/exec` and must run on a POSIX shell.
-- `database/` — SQLite persistence for repo metadata and failure logs. Contains SQL statements for schema and operations.
-- `backend/db` — Postgres connection and migration SQL used by dashboard endpoints.
-- `backend/handlers` — HTTP handlers that map DB queries to API responses consumed by the frontend UI.
+```mermaid
+graph TD
+    subgraph Client Layer
+        Browser[Web Browser / User]
+    end
 
-Data flow (simplified):
-1. Worker loads config and opens SQLite database.
-2. Worker queries GitHub (controller) to build a list of repo full names.
-3. Worker compares remote HEAD hashes (via `git ls-remote`) with the previously stored hash in SQLite.
-4. For changed repos: shallow clone -> remove `.git` -> tar.gz -> git add/commit/push (in `_Repos`).
-5. Worker updates SQLite with latest commit hash and logs any failure in `failed_logs`.
-6. Backend connects to PostgreSQL (separate DB) and exposes historical runs, metrics, analytics snapshots, and live logs which the UI renders.
+    subgraph Hosting: Vercel Serverless Edge
+        Frontend[Next.js 16 App Router UI]
+        Observatory[Python FastAPI AI Observatory]
+    end
 
-Concurrency model:
-- Hash checking: concurrent up to `hashCheckWorkers`.
-- Cloning/archiving: limited concurrent workers `cloneWorkers`.
-- Commit & push: performed serially per repository to avoid git conflicts inside the `_Repos` repo.
+    subgraph Hosting: Render Native Runtime
+        Backend[Go Fiber v2 API Server]
+    end
 
-Operational constraints:
-- The backup remote must permit pushing from the machine running the worker (SSH key or HTTPS auth).
-- Worker uses shell tools and relies on available disk and network I/O. Consider running on a machine with sufficient storage for temporary archives.
+    subgraph Hosting: Local / Scheduled Cron
+        Worker[Go CLI Backup Worker Engine]
+    end
+
+    subgraph Cloud Storage & Intelligence
+        NeonDB[(Neon PostgreSQL + pgvector)]
+        GitCentral[Central Backup Git Repository]
+        OpenRouter[OpenRouter AI / Free Embedding Registry]
+    end
+
+    Browser -->|HTTPS / SSE| Frontend
+    Browser -->|SSE Chat / Search| Observatory
+    Browser -->|REST / WebSocket| Backend
+
+    Frontend -->|Client Fetch / SSE| Observatory
+    Frontend -->|Client Fetch / WS| Backend
+
+    Observatory -->|Async SQLAlchemy / pgvector| NeonDB
+    Observatory -->|HTTP Multi-Key Failover| OpenRouter
+    Observatory -->|X-Internal-Secret| Backend
+
+    Backend -->|pgxpool / SQL| NeonDB
+
+    Worker -->|Incremental Archiving| GitCentral
+    Worker -->|Log / Metrics Ingest| NeonDB
+```
+
+---
+
+## 2. Core Service Components & Responsibilities
+
+### Tier 1: Frontend Dashboard (Next.js 16 App Router)
+* **Hosting**: **Vercel** (Turbopack, Serverless Functions).
+* **Role**: Single-pane-of-glass operations console.
+* **Key Features**:
+  * **Real-time Live Logs**: WebSocket streaming from Go backend (`/ws/live`).
+  * **Search Playground**: Live hybrid query testing with model selection, generation status badges, and score breakdowns.
+  * **AI Chat & Investigation Console**: Multi-turn agentic chat with SSE token streaming, thinking visualization, and Human-in-the-Loop (HITL) approval modals.
+  * **Analytics & Metrics**: Visual charts for repository sizes, run durations, success rates, and commit trends.
+
+### Tier 2: AI Agentic Observatory (FastAPI + LangChain)
+* **Hosting**: **Vercel** (Python Serverless Runtime).
+* **Role**: Cognitive telemetry, vector embeddings, and autonomous incident investigation.
+* **Key Features**:
+  * **Tool-Calling RAG Pipeline**: Multi-turn agent with dynamic tool invocation (`hybrid_search_knowledge_base`, `fetch_backup_metrics`, `list_backup_runs`, `send_report_email`).
+  * **Dynamic OpenRouter Model Registry**: Fetches 100% free embedding and reranking models dynamically with in-memory caching and fallback definitions.
+  * **Multi-Key OpenRouter Failover**: Seamless rotation across comma-separated `OPENROUTER_API_KEY`s upon encountering `401`, `402`, or `429`.
+  * **Vector Lifecycle Engine**: Blue-Green style index generation (`BUILDING` -> `READY` -> `ACTIVE` -> `RETIRED`) with automatic cascade deletion of stale generations.
+  * **Human-In-The-Loop (HITL)**: Sensitive actions yield confirmation tokens (`confirm_id`) requiring user approval before execution.
+
+### Tier 3: High-Performance Backend API (Go 1.24 + Fiber v2)
+* **Hosting**: **Render** (Native Linux Web Service).
+* **Role**: Central data ingest, monitoring REST API, and WebSocket distribution.
+* **Key Features**:
+  * **Connection Pooling**: `pgxpool` with strict connection limits and timeouts.
+  * **Versioned Migrations**: Embedded SQL migration engine (`backend/db/migrator.go`) for zero-downtime idempotent schema updates.
+  * **Structured Logging & Metrics**: `log/slog` structured logging and native Prometheus metrics (`/metrics`).
+  * **WebSocket Hub**: Concurrent pub-sub hub for broadcasting live worker logs to connected dashboard clients.
+
+### Tier 4: Autonomous Backup Worker (Go 1.24 CLI)
+* **Hosting**: **Local Machine / Scheduled Cron Runner**.
+* **Role**: Repository discovery, delta detection, and secure archiving.
+* **Key Features**:
+  * **Incremental Sync**: Queries remote repository HEAD hashes via `git ls-remote` and compares with local SQLite state.
+  * **Parallel Execution**: Concurrent hash verification and cloning with configurable worker pools (`hashCheckWorkers`, `cloneWorkers`).
+  * **Deterministic Archiving**: Shallow clones, `.git` directory stripping, `.tar.gz` compression, and atomic serial commits to the central backup repository.
+  * **PostgreSQL Telemetry**: Direct batch telemetry logging to PostgreSQL (`execution_logs`, `backup_results`, `backup_runs`).
+
+---
+
+## 3. Vector Search & Tool-Calling RAG Pipeline
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User / Admin
+    participant UI as Frontend (Next.js)
+    participant Agent as Python Observatory
+    participant DB as PostgreSQL + pgvector
+    participant LLM as OpenRouter AI
+
+    User->>UI: Submit inquiry ("Analyze clone failures")
+    UI->>Agent: POST /chat/stream (SSE)
+    
+    rect rgb(240, 245, 255)
+        Note over Agent,DB: Pre-Turn Context Enrichment
+        Agent->>DB: Query top relevance chunks (pgvector + FTS)
+        DB-->>Agent: Ingest initial context
+    end
+
+    Agent->>LLM: Turn 1: System prompt + User question + Injected context
+    LLM-->>Agent: Emit tool call: hybrid_search_knowledge_base("clone timeout")
+    
+    rect rgb(240, 255, 240)
+        Note over Agent,DB: Dynamic Tool-Calling RAG
+        Agent->>DB: Execute FTS + pgvector Cosine Search + RRF
+        alt Chunks not indexed
+            Agent->>DB: Query raw live tables directly
+        end
+        DB-->>Agent: Ranked source chunks
+    end
+
+    Agent->>LLM: Turn 2: Feed tool results back to LLM
+    LLM-->>Agent: Emit final response tokens
+    Agent-->>UI: Stream SSE tokens to UI
+    UI-->>User: Display markdown-formatted answer
+```
+
+---
+
+## 4. Hybrid Search Architecture
+
+The search engine implements a robust 3-stage retrieval pipeline:
+
+1. **Full-Text Search (FTS) & Trigram Matching**:
+   * Utilizes PostgreSQL `tsvector` (`content_tsv`) with `ts_rank_cd` scoring for keyword accuracy.
+   * Includes `ILIKE` substring fallback for technical symbols and error codes.
+2. **pgvector Semantic Similarity**:
+   * Uses cosine distance operator `<=>` against generation-specific embedding vectors.
+3. **Reciprocal Rank Fusion (RRF)**:
+   * Merges FTS and semantic results using reciprocal rank scoring:
+     $$\text{Score}(d) = \frac{w_{\text{fts}}}{k + r_{\text{fts}}(d) + 1} + \frac{w_{\text{sem}}}{k + r_{\text{sem}}(d) + 1}$$
+   * Smooths ranking discrepancies and eliminates threshold tuning dependencies.
+4. **Live Table Fallback**:
+   * If vector index generations are pending or unindexed, automatically falls back to live SQL queries across `execution_logs`, `backup_results`, `investigations`, `backup_fixes`, and `ai_chat_messages`.
+
+---
+
+## 5. Security & Deployment Constraints
+
+* **No Docker / Containers in Production**: Deployment strictly relies on **Vercel** serverless functions and **Render** native Go execution.
+* **Non-Destructive Database Migrations**: All migrations must be idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) and preserve historical data.
+* **Failover Resilience**: Multi-key rotation ensures continuous uptime against LLM provider rate limits.
