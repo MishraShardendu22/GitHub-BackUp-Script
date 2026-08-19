@@ -127,7 +127,15 @@ WHERE result = '{}'::jsonb;
 
 UPDATE ai_tool_calls
 SET error = NULL
-WHERE error = '' OR error = 'null';
+WHERE error = '' OR error = 'null' OR error = 'EMPTY_STRING';
+
+UPDATE investigations
+SET error = NULL
+WHERE error = '' OR error = 'null' OR error = 'EMPTY_STRING';
+
+UPDATE ai_reports
+SET error_message = NULL
+WHERE error_message = '' OR error_message = 'null' OR error_message = 'EMPTY_STRING';
 
 -- 6. Partial indexes for fast failure and error lookups without scanning successful rows
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors
