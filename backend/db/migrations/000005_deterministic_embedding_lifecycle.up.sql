@@ -155,10 +155,14 @@ CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit
     ON backup_fixes (commit_hash)
     WHERE commit_hash IS NOT NULL;
 
--- 8. Clean redundant keys (source_type, source_id, chunk_index) from embedding_chunks.metadata JSONB
+-- 8. Clean redundant keys and empty JSON objects from embedding_chunks.metadata JSONB
 UPDATE embedding_chunks
 SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
 WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
+
+UPDATE embedding_chunks
+SET metadata = NULL
+WHERE metadata = '{}'::jsonb;
 
 -- 9. Safe transactional pruning of obsolete retired/failed generations
 DELETE FROM embedding_generations

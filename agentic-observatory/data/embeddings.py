@@ -552,7 +552,8 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                 chunk_index = item["chunk_index"]
                 embedding = embeddings[i]
                 c_hash = content_hash(content)
-                metadata_payload = item.get("metadata", {})
+                metadata_payload = item.get("metadata") or None
+                metadata_str = json.dumps(metadata_payload) if metadata_payload else None
 
                 try:
                     await session.execute(
@@ -576,7 +577,7 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                             "content": content,
                             "content_hash": c_hash,
                             "embedding": str(embedding),
-                            "metadata": json.dumps(metadata_payload),
+                            "metadata": metadata_str,
                         },
                     )
 

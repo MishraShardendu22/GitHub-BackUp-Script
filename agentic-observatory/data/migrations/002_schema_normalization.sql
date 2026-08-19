@@ -128,3 +128,12 @@ CREATE INDEX IF NOT EXISTS idx_backup_results_commit
 CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit
     ON backup_fixes (commit_hash)
     WHERE commit_hash IS NOT NULL;
+
+-- Normalize embedding_chunks metadata: clean redundant relational keys and set empty JSON objects to SQL NULL
+UPDATE embedding_chunks
+SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
+WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
+
+UPDATE embedding_chunks
+SET metadata = NULL
+WHERE metadata = '{}'::jsonb;

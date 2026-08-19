@@ -112,9 +112,13 @@ func UpdateGenerationCounts(ctx context.Context, id int, total, processed, faile
 
 // InsertChunk inserts a new embedding chunk. Returns the new chunk's ID.
 func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error) {
-	metadataJSON, err := json.Marshal(chunk.Metadata)
-	if err != nil {
-		return 0, fmt.Errorf("marshal metadata: %w", err)
+	var metadataArg interface{}
+	if len(chunk.Metadata) > 0 {
+		metadataJSON, err := json.Marshal(chunk.Metadata)
+		if err != nil {
+			return 0, fmt.Errorf("marshal metadata: %w", err)
+		}
+		metadataArg = metadataJSON
 	}
 
 	var embeddingArg interface{}
@@ -123,7 +127,7 @@ func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 	}
 
 	var id int
-	err = Pool.QueryRow(ctx,
+	err := Pool.QueryRow(ctx,
 		`INSERT INTO embedding_chunks
 		 (generation_id, source_type, source_id, chunk_index, content, content_hash, embedding, metadata, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
@@ -135,7 +139,7 @@ func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 		chunk.Content,
 		chunk.ContentHash,
 		embeddingArg,
-		metadataJSON,
+		metadataArg,
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("insert chunk: %w", err)
@@ -147,9 +151,13 @@ func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 // (matched by generation_id + source_type + source_id + chunk_index).
 // Returns the chunk ID.
 func UpsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error) {
-	metadataJSON, err := json.Marshal(chunk.Metadata)
-	if err != nil {
-		return 0, fmt.Errorf("marshal metadata: %w", err)
+	var metadataArg interface{}
+	if len(chunk.Metadata) > 0 {
+		metadataJSON, err := json.Marshal(chunk.Metadata)
+		if err != nil {
+			return 0, fmt.Errorf("marshal metadata: %w", err)
+		}
+		metadataArg = metadataJSON
 	}
 
 	var embeddingArg interface{}
@@ -158,7 +166,7 @@ func UpsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 	}
 
 	var id int
-	err = Pool.QueryRow(ctx,
+	err := Pool.QueryRow(ctx,
 		`INSERT INTO embedding_chunks
 		 (generation_id, source_type, source_id, chunk_index, content, content_hash, embedding, metadata, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
@@ -177,7 +185,7 @@ func UpsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 		chunk.Content,
 		chunk.ContentHash,
 		embeddingArg,
-		metadataJSON,
+		metadataArg,
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("upsert chunk: %w", err)
