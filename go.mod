@@ -8,6 +8,7 @@ require (
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/mattn/go-sqlite3 v1.14.45
+	github.com/pgvector/pgvector-go v0.4.1
 	go.uber.org/zap v1.28.0
 )
 
@@ -23,7 +24,6 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.24 // indirect
-	github.com/pgvector/pgvector-go v0.4.1 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20250924091648-bce9a52d7761 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect

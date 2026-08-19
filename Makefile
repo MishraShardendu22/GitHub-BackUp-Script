@@ -1,37 +1,57 @@
-.PHONY: help dev start backend agent frontend test
+.PHONY: help dev test test-go test-py test-agents lint build backup-db restore-db
 
 help:
 	@echo "======================================================================"
-	@echo "  GitHub Backup & Agentic Observatory System"
+	@echo "  GitHub Backup & Agentic Observatory System — Developer CLI"
 	@echo "======================================================================"
-	@echo "  make dev      - Start all services concurrently (Go: 8080, Agent: 8000, Frontend: 3000)"
-	@echo "  make backend  - Run Go backend server (http://localhost:8080)"
-	@echo "  make agent    - Run Python Agentic Observatory (http://localhost:8000)"
-	@echo "  make frontend - Run Next.js frontend (http://localhost:3000)"
-	@echo "  make test     - Run End-to-End verification test suite"
+	@echo "  make dev          - Start Go (8080), Python (8000), and Frontend (3000)"
+	@echo "  make test         - Run all test suites across Go and Python"
+	@echo "  make test-go      - Run Go backend and database unit tests"
+	@echo "  make test-py      - Run Python Observatory unit tests"
+	@echo "  make test-agents  - Run comprehensive AI Agent test suite"
+	@echo "  make lint         - Run linters across Go, Python, and TypeScript"
+	@echo "  make build        - Compile Go binaries and Next.js build"
+	@echo "  make backup-db    - Execute automated PostgreSQL backup"
+	@echo "  make restore-db   - Restore PostgreSQL from backup file"
 	@echo "======================================================================"
-
-backend:
-	@echo "🚀 Starting Go backend on http://localhost:8080..."
-	@cd backend && air
-
-agent:
-	@echo "🚀 Starting Python Agentic Observatory on http://localhost:8000..."
-	@cd agentic-observatory && python3 -m uvicorn main:app --reload --port 8000
-
-frontend:
-	@echo "🚀 Starting Next.js frontend on http://localhost:3000..."
-	@cd frontend && npm run dev
 
 dev:
 	@echo "🚀 Starting Go Backend (8080), Python Agent (8000), and Frontend (3000)..."
 	@npx --yes concurrently -k -p "[{name}]" -n "Go-Backend,Python-Agent,Next-Frontend" -c "cyan.bold,magenta.bold,green.bold" \
-		"cd backend && go run main.go" \
-		"cd agentic-observatory && python3 -m uvicorn main:app --reload --port 8000" \
-		"cd frontend && npm run dev"
+		"cd backend && air" \
+		"cd agentic-observatory && uv run uvicorn main:app --reload --port 8000" \
+		"cd frontend && pnpm run dev"
 
-start: dev
+test: test-go test-py
 
-test:
-	@echo "🧪 Running End-to-End verification tests..."
-	@cd agentic-observatory && python3 e2e_test.py
+test-go:
+	@echo "🧪 Running Go test suite..."
+	@go test -v ./...
+
+test-py:
+	@echo "🧪 Running Python Observatory test suite..."
+	@cd agentic-observatory && uv run python test_observability.py && uv run python test_openrouter_keys.py && uv run python test_agent_template.py && uv run python test_agent_suite.py
+
+test-agents:
+	@echo "🤖 Running AI Agent & Tool-Calling RAG Test Suite..."
+	@cd agentic-observatory && uv run python test_agent_suite.py
+
+lint:
+	@echo "🔍 Running Biome linter on Frontend..."
+	@cd frontend && pnpm run lint
+	@echo "🔍 Running Go vet..."
+	@go vet ./...
+
+build:
+	@echo "🏗️ Building Go binaries..."
+	@go build -v ./...
+	@echo "🏗️ Building Next.js Frontend..."
+	@cd frontend && pnpm run build
+
+backup-db:
+	@echo "💾 Executing PostgreSQL backup..."
+	@./scripts/backup-db.sh
+
+restore-db:
+	@echo "💾 Restoring PostgreSQL from backup..."
+	@./scripts/restore-db.sh $(BACKUP_FILE)
