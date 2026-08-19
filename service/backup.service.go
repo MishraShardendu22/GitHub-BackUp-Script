@@ -16,11 +16,6 @@ import (
 
 /* start and run the backup flow */
 func RunBackupFlow(cfg *model.ConfigModel, db *sql.DB) {
-	// Legacy Code
-	// if err := database.MigrateSchema(db); err != nil {
-	// 	util.Logger().Warn("Schema migration had issues (non-fatal)", zap.Error(err))
-	// }
-
 	// usually not required after first run since they exist
 	if err := database.InitSchema(db); err != nil {
 		util.ErrorHandler(err)

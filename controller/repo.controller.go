@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// resty use karke I am tryna get all the public repos of a user 
+// resty use karke I am tryna get all the public repos of a user
 // and then i will use that list to backup all the repos of that user
 func RepoController(RepoURL string, config model.ConfigModel) []string {
 	client := resty.New()
