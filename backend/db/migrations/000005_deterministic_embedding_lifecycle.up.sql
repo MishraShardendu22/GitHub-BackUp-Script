@@ -252,24 +252,34 @@ BEGIN
     END IF;
 END $$;
 
--- 8. Clean redundant keys and empty JSON objects from embedding_chunks.metadata JSONB
+-- 8. Normalize embedding_chunks: extract metadata into embedding_chunk_metadata
+CREATE TABLE IF NOT EXISTS embedding_chunk_metadata (
+    id SERIAL PRIMARY KEY,
+    chunk_id INT NOT NULL UNIQUE REFERENCES embedding_chunks(id) ON DELETE CASCADE,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_embedding_chunk_metadata_chunk ON embedding_chunk_metadata(chunk_id);
+CREATE INDEX IF NOT EXISTS idx_embedding_chunk_metadata_gin ON embedding_chunk_metadata USING GIN (metadata);
+
 DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'embedding_chunks' AND column_name = 'metadata'
     ) THEN
-        ALTER TABLE embedding_chunks ALTER COLUMN metadata DROP NOT NULL;
-        ALTER TABLE embedding_chunks ALTER COLUMN metadata DROP DEFAULT;
-        ALTER TABLE embedding_chunks ALTER COLUMN metadata SET DEFAULT NULL;
+        DROP INDEX IF EXISTS idx_embedding_chunks_metadata;
 
-        UPDATE embedding_chunks
-        SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
-        WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
+        INSERT INTO embedding_chunk_metadata (chunk_id, metadata)
+        SELECT id, metadata - 'source_type' - 'source_id' - 'chunk_index'
+        FROM embedding_chunks
+        WHERE metadata IS NOT NULL
+          AND metadata != '{}'::jsonb
+          AND (metadata - 'source_type' - 'source_id' - 'chunk_index') != '{}'::jsonb
+        ON CONFLICT (chunk_id) DO UPDATE
+        SET metadata = EXCLUDED.metadata;
 
-        UPDATE embedding_chunks
-        SET metadata = NULL
-        WHERE metadata = '{}'::jsonb;
+        ALTER TABLE embedding_chunks DROP COLUMN IF EXISTS metadata;
     END IF;
 END $$;
 

@@ -30,8 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Normalized `backup_results` error data into dedicated `backup_result_errors` table (`id`, `result_id FK UNIQUE`, `error_message`) and dropped nullable `error_message` column from `backup_results`
   - Normalized `backup_fixes` by extracting optional commit hashes into dedicated `backup_fix_commits` table (`id`, `fix_id FK UNIQUE`, `commit_hash`) and dropping `commit_hash` from `backup_fixes`
   - Normalized `ai_tool_calls` by extracting non-empty parameters and failures into dedicated `ai_tool_call_args` and `ai_tool_call_errors` tables, dropping nullable `args` and `error` columns from `ai_tool_calls`
-  - Normalized `embedding_jobs.error_message` from `NOT NULL DEFAULT 'EMPTY_STRING'` to nullable SQL `NULL` with partial index `WHERE error_message IS NOT NULL`
-  - Normalized `embedding_chunks.metadata` to eliminate duplicate relational keys and convert empty `{}` objects to SQL `NULL`
+  - Normalized `embedding_chunks` metadata into dedicated `embedding_chunk_metadata` table (`id`, `chunk_id FK UNIQUE`, `metadata JSONB`) and dropped `metadata` column from `embedding_chunks`
   - Enforced generation lifecycle timestamps (`completed_at` set and `retired_at` cleared to `NULL` on `ACTIVE` generations)
   - Partial indexing on failure states across `backup_results`, `backup_run_errors`, `backup_result_errors`, `investigations`, `ai_tool_calls`, `embedding_jobs`
   - Partial indexing on commit hashes for `backup_results` and `backup_fix_commits`

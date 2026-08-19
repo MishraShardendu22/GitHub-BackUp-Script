@@ -201,11 +201,19 @@ CREATE TABLE IF NOT EXISTS embedding_chunks (
     content         TEXT NOT NULL,
     content_hash    TEXT NOT NULL,
     embedding       vector,
-    metadata        JSONB DEFAULT NULL,
     content_tsv     tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS embedding_chunk_metadata (
+    id              SERIAL PRIMARY KEY,
+    chunk_id        INT NOT NULL UNIQUE REFERENCES embedding_chunks(id) ON DELETE CASCADE,
+    metadata        JSONB NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_embedding_chunk_metadata_chunk ON embedding_chunk_metadata(chunk_id);
+CREATE INDEX IF NOT EXISTS idx_embedding_chunk_metadata_gin ON embedding_chunk_metadata USING GIN (metadata);
 
 -- Uniqueness: prevent duplicate chunks within a generation.
 -- The same source can exist in multiple generations (required for reindexing).
@@ -232,10 +240,6 @@ CREATE INDEX IF NOT EXISTS idx_embedding_chunks_fts
 -- (repo names, error codes, file paths, URLs, package names)
 CREATE INDEX IF NOT EXISTS idx_embedding_chunks_trgm
     ON embedding_chunks USING GIN (content gin_trgm_ops);
-
--- JSONB: metadata filtering (repository_id, severity, status, user_id, etc.)
-CREATE INDEX IF NOT EXISTS idx_embedding_chunks_metadata
-    ON embedding_chunks USING GIN (metadata);
 
 -- NOTE: Vector (HNSW) indexes are NOT created here.
 -- They are generation-specific partial indexes with fixed dimensions,

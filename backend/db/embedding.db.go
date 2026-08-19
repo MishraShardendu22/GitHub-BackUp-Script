@@ -112,15 +112,6 @@ func UpdateGenerationCounts(ctx context.Context, id int, total, processed, faile
 
 // InsertChunk inserts a new embedding chunk. Returns the new chunk's ID.
 func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error) {
-	var metadataArg interface{}
-	if len(chunk.Metadata) > 0 {
-		metadataJSON, err := json.Marshal(chunk.Metadata)
-		if err != nil {
-			return 0, fmt.Errorf("marshal metadata: %w", err)
-		}
-		metadataArg = metadataJSON
-	}
-
 	var embeddingArg interface{}
 	if len(chunk.Embedding) > 0 {
 		embeddingArg = pgvector.NewVector(chunk.Embedding)
@@ -129,8 +120,8 @@ func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 	var id int
 	err := Pool.QueryRow(ctx,
 		`INSERT INTO embedding_chunks
-		 (generation_id, source_type, source_id, chunk_index, content, content_hash, embedding, metadata, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+		 (generation_id, source_type, source_id, chunk_index, content, content_hash, embedding, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 		 RETURNING id`,
 		chunk.GenerationID,
 		string(chunk.SourceType),
@@ -139,11 +130,26 @@ func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 		chunk.Content,
 		chunk.ContentHash,
 		embeddingArg,
-		metadataArg,
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("insert chunk: %w", err)
 	}
+
+	if len(chunk.Metadata) > 0 {
+		metadataJSON, err := json.Marshal(chunk.Metadata)
+		if err != nil {
+			return 0, fmt.Errorf("marshal metadata: %w", err)
+		}
+		_, err = Pool.Exec(ctx,
+			`INSERT INTO embedding_chunk_metadata (chunk_id, metadata)
+			 VALUES ($1, $2)
+			 ON CONFLICT (chunk_id) DO UPDATE SET metadata = EXCLUDED.metadata`,
+			id, metadataJSON)
+		if err != nil {
+			return 0, fmt.Errorf("insert chunk metadata: %w", err)
+		}
+	}
+
 	return id, nil
 }
 
@@ -151,15 +157,6 @@ func InsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 // (matched by generation_id + source_type + source_id + chunk_index).
 // Returns the chunk ID.
 func UpsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error) {
-	var metadataArg interface{}
-	if len(chunk.Metadata) > 0 {
-		metadataJSON, err := json.Marshal(chunk.Metadata)
-		if err != nil {
-			return 0, fmt.Errorf("marshal metadata: %w", err)
-		}
-		metadataArg = metadataJSON
-	}
-
 	var embeddingArg interface{}
 	if len(chunk.Embedding) > 0 {
 		embeddingArg = pgvector.NewVector(chunk.Embedding)
@@ -168,14 +165,13 @@ func UpsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 	var id int
 	err := Pool.QueryRow(ctx,
 		`INSERT INTO embedding_chunks
-		 (generation_id, source_type, source_id, chunk_index, content, content_hash, embedding, metadata, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+		 (generation_id, source_type, source_id, chunk_index, content, content_hash, embedding, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 		 ON CONFLICT (generation_id, source_type, source_id, chunk_index)
 		 DO UPDATE SET
 		   content = EXCLUDED.content,
 		   content_hash = EXCLUDED.content_hash,
 		   embedding = EXCLUDED.embedding,
-		   metadata = EXCLUDED.metadata,
 		   updated_at = NOW()
 		 RETURNING id`,
 		chunk.GenerationID,
@@ -185,11 +181,28 @@ func UpsertChunk(ctx context.Context, chunk *models.EmbeddingChunk) (int, error)
 		chunk.Content,
 		chunk.ContentHash,
 		embeddingArg,
-		metadataArg,
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("upsert chunk: %w", err)
 	}
+
+	if len(chunk.Metadata) > 0 {
+		metadataJSON, err := json.Marshal(chunk.Metadata)
+		if err != nil {
+			return 0, fmt.Errorf("marshal metadata: %w", err)
+		}
+		_, err = Pool.Exec(ctx,
+			`INSERT INTO embedding_chunk_metadata (chunk_id, metadata)
+			 VALUES ($1, $2)
+			 ON CONFLICT (chunk_id) DO UPDATE SET metadata = EXCLUDED.metadata`,
+			id, metadataJSON)
+		if err != nil {
+			return 0, fmt.Errorf("upsert chunk metadata: %w", err)
+		}
+	} else {
+		_, _ = Pool.Exec(ctx, `DELETE FROM embedding_chunk_metadata WHERE chunk_id = $1`, id)
+	}
+
 	return id, nil
 }
 

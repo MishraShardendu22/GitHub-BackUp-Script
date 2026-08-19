@@ -373,9 +373,10 @@ func TestChunkMetadataJSONB(t *testing.T) {
 	// Query by JSONB metadata
 	var count int
 	err = Pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM embedding_chunks
-		 WHERE metadata @> $1::jsonb
-		   AND generation_id = $2`,
+		`SELECT COUNT(*) FROM embedding_chunks c
+		 JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
+		 WHERE ecm.metadata @> $1::jsonb
+		   AND c.generation_id = $2`,
 		`{"severity": "critical"}`, genID,
 	).Scan(&count)
 	if err != nil {
@@ -388,7 +389,9 @@ func TestChunkMetadataJSONB(t *testing.T) {
 	// Retrieve and verify full metadata
 	var metadataRaw []byte
 	err = Pool.QueryRow(ctx,
-		`SELECT metadata FROM embedding_chunks WHERE generation_id = $1 AND source_id = '55'`,
+		`SELECT ecm.metadata FROM embedding_chunks c
+		 JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
+		 WHERE c.generation_id = $1 AND c.source_id = '55'`,
 		genID,
 	).Scan(&metadataRaw)
 	if err != nil {

@@ -556,18 +556,19 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                 metadata_str = json.dumps(metadata_payload) if metadata_payload else None
 
                 try:
-                    await session.execute(
+                    chunk_res = await session.execute(
                         text(
                             "INSERT INTO embedding_chunks "
                             "(generation_id, source_type, source_id, chunk_index, "
-                            "content, content_hash, embedding, metadata, updated_at) "
+                            "content, content_hash, embedding, updated_at) "
                             "VALUES (:gen_id, :source_type, :source_id, :chunk_index, "
-                            ":content, :content_hash, :embedding, CAST(:metadata AS jsonb), NOW()) "
+                            ":content, :content_hash, :embedding, NOW()) "
                             "ON CONFLICT (generation_id, source_type, source_id, chunk_index) "
                             "DO UPDATE SET content = EXCLUDED.content, "
                             "content_hash = EXCLUDED.content_hash, "
                             "embedding = EXCLUDED.embedding, "
-                            "metadata = EXCLUDED.metadata, updated_at = NOW()"
+                            "updated_at = NOW() "
+                            "RETURNING id"
                         ),
                         {
                             "gen_id": generation_id,
@@ -577,9 +578,24 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                             "content": content,
                             "content_hash": c_hash,
                             "embedding": str(embedding),
-                            "metadata": metadata_str,
                         },
                     )
+                    chunk_id = chunk_res.scalar()
+
+                    if metadata_str and chunk_id:
+                        await session.execute(
+                            text(
+                                "INSERT INTO embedding_chunk_metadata (chunk_id, metadata, created_at) "
+                                "VALUES (:chunk_id, CAST(:metadata AS jsonb), NOW()) "
+                                "ON CONFLICT (chunk_id) DO UPDATE SET metadata = EXCLUDED.metadata"
+                            ),
+                            {"chunk_id": chunk_id, "metadata": metadata_str},
+                        )
+                    elif chunk_id:
+                        await session.execute(
+                            text("DELETE FROM embedding_chunk_metadata WHERE chunk_id = :chunk_id"),
+                            {"chunk_id": chunk_id},
+                        )
 
                     await session.execute(
                         text(

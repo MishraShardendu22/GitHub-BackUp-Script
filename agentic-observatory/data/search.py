@@ -73,13 +73,14 @@ async def hybrid_search(
             async with async_session() as session:
                 # Full-text search + Substring fallback
                 fts_sql = f"""
-                    SELECT id, source_type, source_id, content, metadata,
-                           COALESCE(ts_rank_cd(content_tsv, plainto_tsquery('english', :query)), 0.1) AS fts_score
-                    FROM embedding_chunks
-                    WHERE generation_id = :gen_id
+                    SELECT c.id, c.source_type, c.source_id, c.content, ecm.metadata,
+                           COALESCE(ts_rank_cd(c.content_tsv, plainto_tsquery('english', :query)), 0.1) AS fts_score
+                    FROM embedding_chunks c
+                    LEFT JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
+                    WHERE c.generation_id = :gen_id
                       AND (
-                          content_tsv @@ plainto_tsquery('english', :query)
-                          OR content ILIKE :like_query
+                          c.content_tsv @@ plainto_tsquery('english', :query)
+                          OR c.content ILIKE :like_query
                       )
                       {type_filter}
                     ORDER BY fts_score DESC
@@ -95,13 +96,14 @@ async def hybrid_search(
                 if query_embedding:
                     params["query_vec"] = str(query_embedding)
                     semantic_sql = f"""
-                        SELECT id, source_type, source_id, content, metadata,
-                               1 - (embedding <=> CAST(:query_vec AS vector)) AS semantic_score
-                        FROM embedding_chunks
-                        WHERE generation_id = :gen_id
-                          AND embedding IS NOT NULL
+                        SELECT c.id, c.source_type, c.source_id, c.content, ecm.metadata,
+                               1 - (c.embedding <=> CAST(:query_vec AS vector)) AS semantic_score
+                        FROM embedding_chunks c
+                        LEFT JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
+                        WHERE c.generation_id = :gen_id
+                          AND c.embedding IS NOT NULL
                           {type_filter}
-                        ORDER BY embedding <=> CAST(:query_vec AS vector)
+                        ORDER BY c.embedding <=> CAST(:query_vec AS vector)
                         LIMIT :fetch_limit
                     """
                     try:
