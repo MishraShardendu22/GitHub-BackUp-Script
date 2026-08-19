@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS embedding_jobs (
                     CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
     attempt_count   INT NOT NULL DEFAULT 0,
     max_attempts    INT NOT NULL DEFAULT 3,
-    error_message   TEXT NOT NULL DEFAULT '',
+    error_message   TEXT DEFAULT NULL,
     claimed_at      TIMESTAMPTZ,
     completed_at    TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),

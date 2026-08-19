@@ -146,3 +146,23 @@ WHERE completed_at IS NULL AND status IN ('READY', 'ACTIVE', 'RETIRED');
 UPDATE embedding_generations
 SET retired_at = NULL
 WHERE status = 'ACTIVE' AND retired_at IS NOT NULL;
+
+-- Normalize embedding_jobs error_message: drop NOT NULL, drop DEFAULT, convert EMPTY_STRING/empty strings to SQL NULL
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'embedding_jobs' AND column_name = 'error_message'
+    ) THEN
+        ALTER TABLE embedding_jobs ALTER COLUMN error_message DROP NOT NULL;
+        ALTER TABLE embedding_jobs ALTER COLUMN error_message DROP DEFAULT;
+        ALTER TABLE embedding_jobs ALTER COLUMN error_message SET DEFAULT NULL;
+        UPDATE embedding_jobs
+        SET error_message = NULL
+        WHERE error_message = '' OR error_message = 'EMPTY_STRING' OR error_message = 'null';
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_embedding_jobs_errors
+    ON embedding_jobs (generation_id, status)
+    WHERE error_message IS NOT NULL;

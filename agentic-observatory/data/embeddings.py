@@ -584,7 +584,7 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                     await session.execute(
                         text(
                             "UPDATE embedding_jobs SET status = 'completed', "
-                            "completed_at = NOW(), updated_at = NOW() WHERE id = :id"
+                            "error_message = NULL, completed_at = NOW(), updated_at = NOW() WHERE id = :id"
                         ),
                         {"id": job["id"]},
                     )

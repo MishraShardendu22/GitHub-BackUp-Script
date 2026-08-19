@@ -30,7 +30,7 @@ func ClaimJobs(ctx context.Context, generationID int, batchSize int) ([]models.E
 			LIMIT $2
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING id, generation_id, source_type, source_id, content_hash, status, attempt_count, max_attempts, error_message, claimed_at, completed_at, created_at, updated_at
+		RETURNING id, generation_id, source_type, source_id, content_hash, status, attempt_count, max_attempts, COALESCE(error_message, '') AS error_message, claimed_at, completed_at, created_at, updated_at
 	`
 
 	rows, err := Pool.Query(ctx, query, generationID, batchSize)
@@ -79,6 +79,7 @@ func MarkJobCompleted(ctx context.Context, jobID int64) error {
 	query := `
 		UPDATE embedding_jobs
 		SET status = 'completed',
+		    error_message = NULL,
 		    completed_at = NOW(),
 		    updated_at = NOW()
 		WHERE id = $1
