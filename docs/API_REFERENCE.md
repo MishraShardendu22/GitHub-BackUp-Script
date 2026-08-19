@@ -597,7 +597,7 @@ The API returns standard HTTP status codes and error responses:
 - Timestamps are in ISO 8601 format with UTC timezone.
 - All sizes are in bytes.
 - Durations are in milliseconds.
-- The API relies on PostgreSQL for persistence; ensure `POSTGRES_URL` is configured and the database is running.
+- The API relies on PostgreSQL for persistence; ensure `DATABASE_URL` is configured and the database is running.
 - All `/api` routes are rate-limited. Implement exponential backoff when receiving 429 responses.
 - Response handlers are implemented in [backend/handlers/](../backend/handlers/) directory.
 - Routes are defined in [backend/routes/app.routes.go](../backend/routes/app.routes.go).
