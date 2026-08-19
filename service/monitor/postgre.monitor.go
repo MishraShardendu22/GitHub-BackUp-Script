@@ -150,18 +150,24 @@ func (m *Monitor) LogRepoResult(repoFullName, status, commitHash string, archive
 	if commitHash != "" {
 		commitHashPtr = &commitHash
 	}
-	var errMsgPtr *string
-	if errMsg != "" {
-		errMsgPtr = &errMsg
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err := m.pool.Exec(ctx,
-		`INSERT INTO backup_results (run_id, repo_full_name, status, commit_hash, archive_size_bytes, duration_ms, error_message)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		m.runID, repoFullName, status, commitHashPtr, archiveSize, durationMs, errMsgPtr)
+	var resultID int
+	err := m.pool.QueryRow(ctx,
+		`INSERT INTO backup_results (run_id, repo_full_name, status, commit_hash, archive_size_bytes, duration_ms)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 RETURNING id`,
+		m.runID, repoFullName, status, commitHashPtr, archiveSize, durationMs).Scan(&resultID)
 	if err != nil {
 		util.Logger().Error("Monitor: failed to log repo result", zap.String("repo", repoFullName), zap.Error(err))
+		return
+	}
+
+	if errMsg != "" && resultID > 0 {
+		_, _ = m.pool.Exec(ctx,
+			`INSERT INTO backup_result_errors (result_id, error_message) VALUES ($1, $2)
+			 ON CONFLICT (result_id) DO UPDATE SET error_message = EXCLUDED.error_message`,
+			resultID, errMsg)
 	}
 }
 

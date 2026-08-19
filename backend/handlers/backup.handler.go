@@ -189,8 +189,10 @@ func GetBackupRun(c *fiber.Ctx) error {
 	}
 
 	rows, err := db.Pool.Query(ctx,
-		`SELECT id, run_id, repo_full_name, status, commit_hash, archive_size_bytes, duration_ms, error_message, created_at
-		 FROM backup_results WHERE run_id = $1 ORDER BY created_at`, id)
+		`SELECT r.id, r.run_id, r.repo_full_name, r.status, r.commit_hash, r.archive_size_bytes, r.duration_ms, COALESCE(bre.error_message, ''), r.created_at
+		 FROM backup_results r
+		 LEFT JOIN backup_result_errors bre ON r.id = bre.result_id
+		 WHERE r.run_id = $1 ORDER BY r.created_at`, id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

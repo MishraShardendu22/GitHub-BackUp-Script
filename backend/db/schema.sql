@@ -26,9 +26,16 @@ CREATE TABLE IF NOT EXISTS backup_results (
     commit_hash TEXT DEFAULT '',
     archive_size_bytes BIGINT DEFAULT 0,
     duration_ms BIGINT DEFAULT 0,
-    error_message TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS backup_result_errors (
+    id SERIAL PRIMARY KEY,
+    result_id INT NOT NULL UNIQUE REFERENCES backup_results(id) ON DELETE CASCADE,
+    error_message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_result_errors_result ON backup_result_errors(result_id);
 
 CREATE TABLE IF NOT EXISTS execution_logs (
     id SERIAL PRIMARY KEY,
@@ -133,7 +140,7 @@ CREATE TABLE IF NOT EXISTS backup_run_fixes (
 CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_run ON backup_run_fixes(run_id);
 CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_fix ON backup_run_fixes(fix_id);
 
-CREATE INDEX IF NOT EXISTS idx_backup_results_errors ON backup_results (run_id, status) WHERE error_message IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_backup_results_status_failed ON backup_results (run_id, status) WHERE status = 'failed';
 CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed ON backup_runs (status) WHERE status = 'failed';
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit ON backup_results (commit_hash) WHERE commit_hash IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_backup_fix_commits_hash ON backup_fix_commits (commit_hash);

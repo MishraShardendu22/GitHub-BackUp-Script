@@ -204,10 +204,11 @@ async def _search_raw_sources(
         try:
             res = await session.execute(
                 text(
-                    "SELECT id, repo_full_name, status, error_message, commit_hash, created_at "
-                    "FROM backup_results "
-                    "WHERE repo_full_name ILIKE :q OR status ILIKE :q OR error_message ILIKE :q "
-                    "ORDER BY id DESC LIMIT :limit"
+                    "SELECT r.id, r.repo_full_name, r.status, COALESCE(bre.error_message, '') AS error_message, r.commit_hash, r.created_at "
+                    "FROM backup_results r "
+                    "LEFT JOIN backup_result_errors bre ON r.id = bre.result_id "
+                    "WHERE r.repo_full_name ILIKE :q OR r.status ILIKE :q OR bre.error_message ILIKE :q "
+                    "ORDER BY r.id DESC LIMIT :limit"
                 ),
                 {"q": like_q, "limit": limit},
             )

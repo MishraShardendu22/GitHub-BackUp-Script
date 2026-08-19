@@ -148,9 +148,40 @@ UPDATE ai_reports
 SET error_message = NULL
 WHERE error_message = '' OR error_message = 'null' OR error_message = 'EMPTY_STRING';
 
-CREATE INDEX IF NOT EXISTS idx_backup_results_errors
+-- Normalize backup_results: extract error_message into backup_result_errors
+CREATE TABLE IF NOT EXISTS backup_result_errors (
+    id SERIAL PRIMARY KEY,
+    result_id INT NOT NULL UNIQUE REFERENCES backup_results(id) ON DELETE CASCADE,
+    error_message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_result_errors_result ON backup_result_errors(result_id);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'backup_results' AND column_name = 'error_message'
+    ) THEN
+        DROP INDEX IF EXISTS idx_backup_results_errors;
+
+        INSERT INTO backup_result_errors (result_id, error_message)
+        SELECT id, error_message
+        FROM backup_results
+        WHERE error_message IS NOT NULL
+          AND error_message != ''
+          AND error_message != 'EMPTY_STRING'
+          AND error_message != 'null'
+        ON CONFLICT (result_id) DO UPDATE
+        SET error_message = EXCLUDED.error_message;
+
+        ALTER TABLE backup_results DROP COLUMN IF EXISTS error_message;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_backup_results_status_failed
     ON backup_results (run_id, status)
-    WHERE error_message IS NOT NULL;
+    WHERE status = 'failed';
 
 CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed
     ON backup_runs (status)
