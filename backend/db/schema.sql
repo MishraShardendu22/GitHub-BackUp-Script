@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS embedding_chunks (
     content         TEXT NOT NULL,
     content_hash    TEXT NOT NULL,
     embedding       vector,
-    metadata        JSONB NOT NULL DEFAULT '{}',
+    metadata        JSONB DEFAULT NULL,
     content_tsv     tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()

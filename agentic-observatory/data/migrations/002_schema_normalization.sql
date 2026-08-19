@@ -138,13 +138,25 @@ CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit
     WHERE commit_hash IS NOT NULL;
 
 -- Normalize embedding_chunks metadata: clean redundant relational keys and set empty JSON objects to SQL NULL
-UPDATE embedding_chunks
-SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
-WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'embedding_chunks' AND column_name = 'metadata'
+    ) THEN
+        ALTER TABLE embedding_chunks ALTER COLUMN metadata DROP NOT NULL;
+        ALTER TABLE embedding_chunks ALTER COLUMN metadata DROP DEFAULT;
+        ALTER TABLE embedding_chunks ALTER COLUMN metadata SET DEFAULT NULL;
 
-UPDATE embedding_chunks
-SET metadata = NULL
-WHERE metadata = '{}'::jsonb;
+        UPDATE embedding_chunks
+        SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
+        WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
+
+        UPDATE embedding_chunks
+        SET metadata = NULL
+        WHERE metadata = '{}'::jsonb;
+    END IF;
+END $$;
 
 -- Fix any active/ready/retired generations missing completed_at or having active with retired_at
 UPDATE embedding_generations
