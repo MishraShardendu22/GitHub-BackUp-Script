@@ -26,12 +26,18 @@ async def hybrid_search(
     Optionally re-rank the top results using a dedicated reranking model.
     Falls back to live source tables if chunk embeddings are pending or unindexed.
     """
-    if async_session is None:
-        raise RuntimeError("Database not configured")
-
     clean_query = query.strip()
     if not clean_query:
         return {"results": [], "total": 0, "message": "Empty search query"}
+
+    if async_session is None:
+        return {
+            "results": [],
+            "generation_id": None,
+            "model_id": settings.OPENROUTER_MODEL,
+            "total": 0,
+            "message": "Database not configured",
+        }
 
     # Get active or latest generation with chunks
     active_gen = await get_active_generation()
@@ -63,45 +69,46 @@ async def hybrid_search(
             type_filter = "AND source_type = ANY(:source_types)"
             params["source_types"] = source_types
 
-        async with async_session() as session:
-            # Full-text search + Substring fallback
-            fts_sql = f"""
-                SELECT id, source_type, source_id, content, metadata,
-                       COALESCE(ts_rank_cd(content_tsv, plainto_tsquery('english', :query)), 0.1) AS fts_score
-                FROM embedding_chunks
-                WHERE generation_id = :gen_id
-                  AND (
-                      content_tsv @@ plainto_tsquery('english', :query)
-                      OR content ILIKE :like_query
-                  )
-                  {type_filter}
-                ORDER BY fts_score DESC
-                LIMIT :fetch_limit
-            """
-            try:
-                fts_result = await session.execute(text(fts_sql), params)
-                fts_rows = [dict(r) for r in fts_result.mappings().all()]
-            except Exception as e:
-                logger.warning("FTS query failed: %s", e)
-
-            # Vector semantic search (if query vector embedding is available)
-            if query_embedding:
-                params["query_vec"] = str(query_embedding)
-                semantic_sql = f"""
+        if async_session is not None:
+            async with async_session() as session:
+                # Full-text search + Substring fallback
+                fts_sql = f"""
                     SELECT id, source_type, source_id, content, metadata,
-                           1 - (embedding <=> CAST(:query_vec AS vector)) AS semantic_score
+                           COALESCE(ts_rank_cd(content_tsv, plainto_tsquery('english', :query)), 0.1) AS fts_score
                     FROM embedding_chunks
                     WHERE generation_id = :gen_id
-                      AND embedding IS NOT NULL
+                      AND (
+                          content_tsv @@ plainto_tsquery('english', :query)
+                          OR content ILIKE :like_query
+                      )
                       {type_filter}
-                    ORDER BY embedding <=> CAST(:query_vec AS vector)
+                    ORDER BY fts_score DESC
                     LIMIT :fetch_limit
                 """
                 try:
-                    semantic_result = await session.execute(text(semantic_sql), params)
-                    semantic_rows = [dict(r) for r in semantic_result.mappings().all()]
+                    fts_result = await session.execute(text(fts_sql), params)
+                    fts_rows = [dict(r) for r in fts_result.mappings().all()]
                 except Exception as e:
-                    logger.warning("Semantic vector query failed: %s", e)
+                    logger.warning("FTS query failed: %s", e)
+
+                # Vector semantic search (if query vector embedding is available)
+                if query_embedding:
+                    params["query_vec"] = str(query_embedding)
+                    semantic_sql = f"""
+                        SELECT id, source_type, source_id, content, metadata,
+                               1 - (embedding <=> CAST(:query_vec AS vector)) AS semantic_score
+                        FROM embedding_chunks
+                        WHERE generation_id = :gen_id
+                          AND embedding IS NOT NULL
+                          {type_filter}
+                        ORDER BY embedding <=> CAST(:query_vec AS vector)
+                        LIMIT :fetch_limit
+                    """
+                    try:
+                        semantic_result = await session.execute(text(semantic_sql), params)
+                        semantic_rows = [dict(r) for r in semantic_result.mappings().all()]
+                    except Exception as e:
+                        logger.warning("Semantic vector query failed: %s", e)
 
     # Reciprocal Rank Fusion
     k = 60  # RRF smoothing constant
@@ -136,7 +143,7 @@ async def hybrid_search(
         })
 
     # Direct source fallback if vector/FTS chunks yielded 0 results
-    if not results:
+    if not results and async_session is not None:
         async with async_session() as session:
             results = await _search_raw_sources(session, clean_query, source_types, limit)
 

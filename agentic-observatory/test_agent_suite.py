@@ -303,8 +303,16 @@ class TestAgentComprehensiveSuite(unittest.IsolatedAsyncioTestCase):
     # -------------------------------------------------------------------------
     @patch("data.search._search_raw_sources")
     @patch("data.search.get_active_generation")
-    async def test_hybrid_search_with_raw_source_fallback(self, mock_active_gen, mock_raw_search):
+    @patch("data.search.async_session")
+    async def test_hybrid_search_with_raw_source_fallback(self, mock_async_session, mock_active_gen, mock_raw_search):
         from data.search import hybrid_search
+
+        # Mock async context manager for async_session()
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_async_session.return_value = mock_ctx
 
         # Mock no active vector generation
         mock_active_gen.return_value = None
