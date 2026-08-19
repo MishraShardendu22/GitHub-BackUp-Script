@@ -600,8 +600,12 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                     await session.execute(
                         text(
                             "UPDATE embedding_jobs SET status = 'completed', "
-                            "error_message = NULL, completed_at = NOW(), updated_at = NOW() WHERE id = :id"
+                            "completed_at = NOW(), updated_at = NOW() WHERE id = :id"
                         ),
+                        {"id": job["id"]},
+                    )
+                    await session.execute(
+                        text("DELETE FROM embedding_job_errors WHERE job_id = :id"),
                         {"id": job["id"]},
                     )
                     succeeded += 1
@@ -610,7 +614,15 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                     await session.execute(
                         text(
                             "UPDATE embedding_jobs SET status = 'failed', "
-                            "error_message = :err, updated_at = NOW() WHERE id = :id"
+                            "updated_at = NOW() WHERE id = :id"
+                        ),
+                        {"id": job["id"]},
+                    )
+                    await session.execute(
+                        text(
+                            "INSERT INTO embedding_job_errors (job_id, error_message, created_at) "
+                            "VALUES (:id, :err, NOW()) "
+                            "ON CONFLICT (job_id) DO UPDATE SET error_message = EXCLUDED.error_message"
                         ),
                         {"id": job["id"], "err": str(e)[:500]},
                     )
@@ -636,7 +648,15 @@ async def process_batch(generation_id: int, batch_size: int | None = None) -> di
                 await session.execute(
                     text(
                         "UPDATE embedding_jobs SET status = 'failed', "
-                        "error_message = :err, updated_at = NOW() WHERE id = :id"
+                        "updated_at = NOW() WHERE id = :id"
+                    ),
+                    {"id": job["id"]},
+                )
+                await session.execute(
+                    text(
+                        "INSERT INTO embedding_job_errors (job_id, error_message, created_at) "
+                        "VALUES (:id, :err, NOW()) "
+                        "ON CONFLICT (job_id) DO UPDATE SET error_message = EXCLUDED.error_message"
                     ),
                     {"id": job["id"], "err": str(e)[:500]},
                 )
@@ -665,7 +685,15 @@ async def _fail_job(job_id: int, message: str) -> None:
         await session.execute(
             text(
                 "UPDATE embedding_jobs SET status = 'failed', "
-                "error_message = :err, updated_at = NOW() WHERE id = :id"
+                "updated_at = NOW() WHERE id = :id"
+            ),
+            {"id": job_id},
+        )
+        await session.execute(
+            text(
+                "INSERT INTO embedding_job_errors (job_id, error_message, created_at) "
+                "VALUES (:id, :err, NOW()) "
+                "ON CONFLICT (job_id) DO UPDATE SET error_message = EXCLUDED.error_message"
             ),
             {"id": job_id, "err": message},
         )

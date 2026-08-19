@@ -266,12 +266,19 @@ CREATE TABLE IF NOT EXISTS embedding_jobs (
                     CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
     attempt_count   INT NOT NULL DEFAULT 0,
     max_attempts    INT NOT NULL DEFAULT 3,
-    error_message   TEXT DEFAULT NULL,
     claimed_at      TIMESTAMPTZ,
     completed_at    TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS embedding_job_errors (
+    id              SERIAL PRIMARY KEY,
+    job_id          BIGINT NOT NULL UNIQUE REFERENCES embedding_jobs(id) ON DELETE CASCADE,
+    error_message   TEXT NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_embedding_job_errors_job ON embedding_job_errors(job_id);
 
 -- Unique constraint: one job per source record per generation
 CREATE UNIQUE INDEX IF NOT EXISTS idx_embedding_jobs_unique

@@ -268,22 +268,33 @@ UPDATE embedding_generations
 SET retired_at = NULL
 WHERE status = 'ACTIVE' AND retired_at IS NOT NULL;
 
--- Normalize embedding_jobs error_message: drop NOT NULL, drop DEFAULT, convert EMPTY_STRING/empty strings to SQL NULL
+-- Normalize embedding_jobs: extract error_message into embedding_job_errors
+CREATE TABLE IF NOT EXISTS embedding_job_errors (
+    id SERIAL PRIMARY KEY,
+    job_id BIGINT NOT NULL UNIQUE REFERENCES embedding_jobs(id) ON DELETE CASCADE,
+    error_message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_embedding_job_errors_job ON embedding_job_errors(job_id);
+
 DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'embedding_jobs' AND column_name = 'error_message'
     ) THEN
-        ALTER TABLE embedding_jobs ALTER COLUMN error_message DROP NOT NULL;
-        ALTER TABLE embedding_jobs ALTER COLUMN error_message DROP DEFAULT;
-        ALTER TABLE embedding_jobs ALTER COLUMN error_message SET DEFAULT NULL;
-        UPDATE embedding_jobs
-        SET error_message = NULL
-        WHERE error_message = '' OR error_message = 'EMPTY_STRING' OR error_message = 'null';
+        DROP INDEX IF EXISTS idx_embedding_jobs_errors;
+
+        INSERT INTO embedding_job_errors (job_id, error_message)
+        SELECT id, error_message
+        FROM embedding_jobs
+        WHERE error_message IS NOT NULL
+          AND error_message != ''
+          AND error_message != 'EMPTY_STRING'
+          AND error_message != 'null'
+        ON CONFLICT (job_id) DO UPDATE
+        SET error_message = EXCLUDED.error_message;
+
+        ALTER TABLE embedding_jobs DROP COLUMN IF EXISTS error_message;
     END IF;
 END $$;
-
-CREATE INDEX IF NOT EXISTS idx_embedding_jobs_errors
-    ON embedding_jobs (generation_id, status)
-    WHERE error_message IS NOT NULL;

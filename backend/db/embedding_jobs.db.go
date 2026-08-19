@@ -30,7 +30,7 @@ func ClaimJobs(ctx context.Context, generationID int, batchSize int) ([]models.E
 			LIMIT $2
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING id, generation_id, source_type, source_id, content_hash, status, attempt_count, max_attempts, COALESCE(error_message, '') AS error_message, claimed_at, completed_at, created_at, updated_at
+		RETURNING id, generation_id, source_type, source_id, content_hash, status, attempt_count, max_attempts, claimed_at, completed_at, created_at, updated_at
 	`
 
 	rows, err := Pool.Query(ctx, query, generationID, batchSize)
@@ -52,7 +52,6 @@ func ClaimJobs(ctx context.Context, generationID int, batchSize int) ([]models.E
 			&j.Status,
 			&j.AttemptCount,
 			&j.MaxAttempts,
-			&j.ErrorMessage,
 			&j.ClaimedAt,
 			&j.CompletedAt,
 			&j.CreatedAt,
@@ -79,7 +78,6 @@ func MarkJobCompleted(ctx context.Context, jobID int64) error {
 	query := `
 		UPDATE embedding_jobs
 		SET status = 'completed',
-		    error_message = NULL,
 		    completed_at = NOW(),
 		    updated_at = NOW()
 		WHERE id = $1
@@ -90,6 +88,7 @@ func MarkJobCompleted(ctx context.Context, jobID int64) error {
 		log.Printf("Error marking job %d as completed: %v\n", jobID, err)
 		return fmt.Errorf("failed to mark job as completed: %w", err)
 	}
+	_, _ = Pool.Exec(ctx, `DELETE FROM embedding_job_errors WHERE job_id = $1`, jobID)
 
 	return nil
 }
@@ -102,15 +101,21 @@ func MarkJobFailed(ctx context.Context, jobID int64, errMsg string) error {
 	query := `
 		UPDATE embedding_jobs
 		SET status = 'failed',
-		    error_message = $1,
 		    updated_at = NOW()
-		WHERE id = $2
+		WHERE id = $1
 	`
 
-	_, err := Pool.Exec(ctx, query, errMsg, jobID)
+	_, err := Pool.Exec(ctx, query, jobID)
 	if err != nil {
 		log.Printf("Error marking job %d as failed: %v\n", jobID, err)
 		return fmt.Errorf("failed to mark job as failed: %w", err)
+	}
+
+	if errMsg != "" {
+		_, _ = Pool.Exec(ctx,
+			`INSERT INTO embedding_job_errors (job_id, error_message) VALUES ($1, $2)
+			 ON CONFLICT (job_id) DO UPDATE SET error_message = EXCLUDED.error_message`,
+			jobID, errMsg)
 	}
 
 	return nil
