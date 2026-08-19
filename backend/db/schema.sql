@@ -113,6 +113,29 @@ CREATE TABLE IF NOT EXISTS ai_tool_call_errors (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_ai_tool_call_errors_tool ON ai_tool_call_errors(tool_call_id);
+CREATE TABLE IF NOT EXISTS investigations (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id    UUID NOT NULL UNIQUE,
+    session_id    UUID REFERENCES ai_chat_sessions(id) ON DELETE SET NULL,
+    question      TEXT NOT NULL,
+    answer        TEXT,
+    tool_calls    JSONB NOT NULL DEFAULT '[]',
+    tool_results  JSONB NOT NULL DEFAULT '[]',
+    status        VARCHAR(50) NOT NULL DEFAULT 'completed',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_investigations_request_id ON investigations(request_id);
+CREATE INDEX IF NOT EXISTS idx_investigations_session_id ON investigations(session_id);
+CREATE INDEX IF NOT EXISTS idx_investigations_created_at ON investigations(created_at);
+
+CREATE TABLE IF NOT EXISTS investigation_errors (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    investigation_id  UUID NOT NULL UNIQUE REFERENCES investigations(id) ON DELETE CASCADE,
+    error             TEXT NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_investigation_errors_investigation ON investigation_errors(investigation_id);
 
 CREATE TABLE IF NOT EXISTS backup_fixes (
     id SERIAL PRIMARY KEY,

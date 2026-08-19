@@ -140,9 +140,36 @@ BEGIN
     END IF;
 END $$;
 
-UPDATE investigations
-SET error = NULL
-WHERE error = '' OR error = 'null' OR error = 'EMPTY_STRING';
+-- Normalize investigations: extract error into investigation_errors
+CREATE TABLE IF NOT EXISTS investigation_errors (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    investigation_id  UUID NOT NULL UNIQUE REFERENCES investigations(id) ON DELETE CASCADE,
+    error             TEXT NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_investigation_errors_investigation ON investigation_errors(investigation_id);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'investigations' AND column_name = 'error'
+    ) THEN
+        DROP INDEX IF EXISTS idx_investigations_errors;
+
+        INSERT INTO investigation_errors (investigation_id, error)
+        SELECT id, error
+        FROM investigations
+        WHERE error IS NOT NULL
+          AND error != ''
+          AND error != 'EMPTY_STRING'
+          AND error != 'null'
+        ON CONFLICT (investigation_id) DO UPDATE
+        SET error = EXCLUDED.error;
+
+        ALTER TABLE investigations DROP COLUMN IF EXISTS error;
+    END IF;
+END $$;
 
 UPDATE ai_reports
 SET error_message = NULL
@@ -187,9 +214,9 @@ CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed
     ON backup_runs (status)
     WHERE status = 'failed';
 
-CREATE INDEX IF NOT EXISTS idx_investigations_errors
+CREATE INDEX IF NOT EXISTS idx_investigations_status_failed
     ON investigations (status)
-    WHERE error IS NOT NULL OR status = 'failed';
+    WHERE status = 'failed';
 
 CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_success_false
     ON ai_tool_calls (name)

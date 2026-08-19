@@ -8,6 +8,7 @@ from data.db import (
     ai_reports,
     async_session,
     investigations,
+    investigation_errors,
     ai_chat_messages,
     ai_chat_sessions,
     ai_session_metadata,
@@ -55,9 +56,11 @@ class InvestigationStore:
                 session_id = payload.get("session_id")
                 s_uuid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
                 req_uuid = uuid.UUID(payload["request_id"]) if isinstance(payload["request_id"], str) else payload["request_id"]
+                inv_id = uuid.uuid4()
 
                 await session.execute(
                     insert(investigations).values(
+                        id=inv_id,
                         request_id=req_uuid,
                         session_id=s_uuid,
                         question=payload["question"],
@@ -65,11 +68,20 @@ class InvestigationStore:
                         tool_calls=payload.get("tool_calls", []),
                         tool_results=payload.get("tool_results", []),
                         status=payload.get("status", "completed"),
-                        error=payload.get("error") or None,
                         created_at=parse_dt(payload.get("created_at")),
                         updated_at=parse_dt(payload.get("updated_at")),
                     )
                 )
+
+                err_msg = payload.get("error")
+                if err_msg:
+                    await session.execute(
+                        insert(investigation_errors).values(
+                            investigation_id=inv_id,
+                            error=str(err_msg),
+                            created_at=datetime.now(timezone.utc),
+                        )
+                    )
 
                 tool_calls = payload.get("tool_calls", []) or []
                 for tool_call in tool_calls:
@@ -136,7 +148,9 @@ class InvestigationStore:
         await self._check()
         async with self.session_factory() as session:
             result = await session.execute(
-                select(investigations).where(investigations.c.request_id == request_id)
+                select(investigations, investigation_errors.c.error)
+                .outerjoin(investigation_errors, investigations.c.id == investigation_errors.c.investigation_id)
+                .where(investigations.c.request_id == request_id)
             )
             row = result.mappings().first()
             return dict(row) if row else None
@@ -149,7 +163,8 @@ class InvestigationStore:
         await self._check()
         async with self.session_factory() as session:
             result = await session.execute(
-                select(investigations)
+                select(investigations, investigation_errors.c.error)
+                .outerjoin(investigation_errors, investigations.c.id == investigation_errors.c.investigation_id)
                 .order_by(investigations.c.created_at.desc())
                 .limit(limit)
                 .offset(offset)
@@ -402,7 +417,12 @@ class InvestigationStore:
             total_messages = messages_count_res.scalar() or 0
 
             # 6. Recent activity (last 5 investigations)
-            recent_activity_stmt = select(investigations).order_by(investigations.c.created_at.desc()).limit(5)
+            recent_activity_stmt = (
+                select(investigations, investigation_errors.c.error)
+                .outerjoin(investigation_errors, investigations.c.id == investigation_errors.c.investigation_id)
+                .order_by(investigations.c.created_at.desc())
+                .limit(5)
+            )
             recent_activity_res = await session.execute(recent_activity_stmt)
             recent_activity = [dict(row) for row in recent_activity_res.mappings().all()]
 

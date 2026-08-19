@@ -161,7 +161,7 @@ PostgreSQL serves as the central data store across all services. The Go backend 
 5. `backup_fixes`, `backup_run_fixes`, & `backup_fix_commits`: Incident resolutions, run associations, and optional commit tags.
 6. `ai_chat_sessions` & `ai_session_metadata`: Multi-turn chat sessions with dedicated normalized metadata.
 7. `ai_chat_messages`, `ai_tool_calls`, `ai_tool_call_args`, & `ai_tool_call_errors`: Chat history and granular tool execution telemetry with relational argument and failure tables.
-8. `investigations`: Saved agent investigation traces, questions, answers, and error state.
+8. `investigations` & `investigation_errors`: Saved agent investigation traces, questions, answers, tool calls, and dedicated failure table.
 9. `embedding_generations`, `embedding_chunks`, `embedding_chunk_metadata`, `embedding_jobs`, & `embedding_job_errors`: pgvector vector store and durable work queue with dedicated chunk metadata and failure tables.
 
 ### Versioned Migration History
@@ -169,7 +169,7 @@ PostgreSQL serves as the central data store across all services. The Go backend 
 * **`000002_embeddings_and_search`**: Extensions `vector` & `pg_trgm`, tables `embedding_generations`, `embedding_chunks`, `embedding_jobs`, `embedding_indexing_checkpoints`.
 * **`000003_normalize_schema_and_metadata`**: Normalized `ai_session_metadata` table, unique index on analytics `run_id`, empty string cleanup to SQL `NULL`.
 * **`000004_cleanup_stale_embeddings_and_errors`**: Obsolete generation pruning and failed job cleanup.
-* **`000005_deterministic_embedding_lifecycle`**: Dedicated `ai_session_metadata`, `backup_run_errors`, `backup_result_errors`, `backup_fix_commits`, `embedding_chunk_metadata`, `embedding_job_errors`, `ai_tool_call_args`, and `ai_tool_call_errors` tables, primary key deduplication on `analytics_snapshots`, partial indexes for fast failure/error lookups (`idx_backup_results_status_failed`, `idx_backup_runs_status_failed`, `idx_investigations_errors`, `idx_ai_tool_calls_success_false`), commit hash indexes (`idx_backup_results_commit`, `idx_backup_fix_commits_hash`), and transactional blue-green promotion.
+* **`000005_deterministic_embedding_lifecycle`**: Dedicated `ai_session_metadata`, `backup_run_errors`, `backup_result_errors`, `backup_fix_commits`, `embedding_chunk_metadata`, `embedding_job_errors`, `investigation_errors`, `ai_tool_call_args`, and `ai_tool_call_errors` tables, primary key deduplication on `analytics_snapshots`, partial indexes for fast failure/error lookups (`idx_backup_results_status_failed`, `idx_backup_runs_status_failed`, `idx_investigations_status_failed`, `idx_ai_tool_calls_success_false`), commit hash indexes (`idx_backup_results_commit`, `idx_backup_fix_commits_hash`), and transactional blue-green promotion.
 
 ---
 

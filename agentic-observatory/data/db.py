@@ -101,13 +101,22 @@ investigations = Table(
     Column("tool_calls", JSONB, nullable=False, default=list),
     Column("tool_results", JSONB, nullable=False, default=list),
     Column("status", String, nullable=False, default="completed"),
-    Column("error", Text, nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
 )
 Index("idx_investigations_request_id", investigations.c.request_id)
 Index("idx_investigations_session_id", investigations.c.session_id)
 Index("idx_investigations_created_at", investigations.c.created_at)
+
+investigation_errors = Table(
+    "investigation_errors",
+    metadata,
+    Column("id", PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column("investigation_id", PG_UUID(as_uuid=True), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, unique=True),
+    Column("error", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+)
+Index("idx_investigation_errors_investigation", investigation_errors.c.investigation_id)
 
 ai_reports = Table(
     "ai_reports",

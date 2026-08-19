@@ -32,8 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Normalized `ai_tool_calls` by extracting non-empty parameters and failures into dedicated `ai_tool_call_args` and `ai_tool_call_errors` tables, dropping nullable `args` and `error` columns from `ai_tool_calls`
   - Normalized `embedding_chunks` metadata into dedicated `embedding_chunk_metadata` table (`id`, `chunk_id FK UNIQUE`, `metadata JSONB`) and dropped `metadata` column from `embedding_chunks`
   - Normalized `embedding_jobs` error data into dedicated `embedding_job_errors` table (`id`, `job_id FK UNIQUE`, `error_message`) and dropped nullable `error_message` column from `embedding_jobs`
+  - Normalized `investigations` error data into dedicated `investigation_errors` table (`id`, `investigation_id FK UNIQUE`, `error`) and dropped nullable `error` column from `investigations`
   - Enforced generation lifecycle timestamps (`completed_at` set and `retired_at` cleared to `NULL` on `ACTIVE` generations)
-  - Partial indexing on failure states across `backup_results`, `backup_run_errors`, `backup_result_errors`, `embedding_job_errors`, `investigations`, `ai_tool_calls`
+  - Partial indexing on failure states across `backup_results`, `backup_run_errors`, `backup_result_errors`, `embedding_job_errors`, `investigation_errors`, `ai_tool_calls`
   - Partial indexing on commit hashes for `backup_results` and `backup_fix_commits`
   - Transactional blue-green embedding generation promotion (`BUILDING` -> `READY` -> `ACTIVE` -> `RETIRED`)
   - Safe cascade pruning of obsolete embedding generations and stale jobs without removing source records
