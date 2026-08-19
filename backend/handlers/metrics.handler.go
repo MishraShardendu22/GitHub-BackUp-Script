@@ -17,7 +17,11 @@ import (
 */
 
 func GetMetrics(c *fiber.Ctx) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 10*time.Second)
 	defer cancel()
 
 	days := c.QueryInt("days", 30)
@@ -234,7 +238,7 @@ func GetLogs(c *fiber.Ctx) error {
 
 	countQuery := `SELECT COUNT(*) FROM execution_logs WHERE 1=1`
 	query := `SELECT id, run_id, level, message, repository, created_at FROM execution_logs WHERE 1=1`
-	
+
 	args := []interface{}{}
 	argIdx := 1
 
@@ -254,7 +258,11 @@ func GetLogs(c *fiber.Ctx) error {
 		argIdx++
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 10*time.Second)
 	defer cancel()
 
 	var totalItems int

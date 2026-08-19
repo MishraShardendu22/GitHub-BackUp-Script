@@ -1,4 +1,4 @@
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
+import { AGENT_URL } from "@/config/env";
 
 interface LoginResponse {
   access_token: string;

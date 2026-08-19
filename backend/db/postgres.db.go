@@ -4,13 +4,13 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"os"
-	"time"
 
+	"github.com/MishraShardendu22/github-backup/backend/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // This is not a comment this is why migrations work
+//
 //go:embed schema.sql
 var migrationSQL string
 
@@ -18,23 +18,25 @@ var Pool *pgxpool.Pool
 
 // create a connection
 func Connect() error {
-	url := os.Getenv("POSTGRES_URL")
-	if url == "" {
-		return fmt.Errorf("POSTGRES_URL not set")
+	cfg := config.Get()
+	if cfg == nil || cfg.DatabaseURL == "" {
+		return fmt.Errorf("database configuration is not initialized")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DBConnectTimeout)
 	defer cancel()
 
-	config, err := pgxpool.ParseConfig(url)
+	pgxConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("parse postgres url: %w", err)
 	}
 
-	config.MaxConns = 10
-	config.MinConns = 2
+	pgxConfig.MaxConns = cfg.DBMaxConns
+	pgxConfig.MinConns = cfg.DBMinConns
+	pgxConfig.MaxConnLifetime = config.DBMaxConnLifetime
+	pgxConfig.MaxConnIdleTime = config.DBMaxConnIdleTime
 
-	pool, err := pgxpool.NewWithConfig(ctx, config)
+	pool, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 	if err != nil {
 		return fmt.Errorf("connect to postgres: %w", err)
 	}
@@ -56,12 +58,11 @@ func Close() {
 
 // run the migrations
 func RunMigrations() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DBMigrationTimeout)
 	defer cancel()
 
-	_, err := Pool.Exec(ctx, migrationSQL)
-	if err != nil {
-		return fmt.Errorf("run migration: %w", err)
+	if err := RunVersionedMigrations(ctx, Pool); err != nil {
+		return fmt.Errorf("run versioned migrations: %w", err)
 	}
 
 	return nil

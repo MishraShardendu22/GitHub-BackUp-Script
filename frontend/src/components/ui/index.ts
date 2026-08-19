@@ -1,3 +1,4 @@
+export { Dropdown } from "./Dropdown";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { LoaderPanel } from "./LoaderPanel";

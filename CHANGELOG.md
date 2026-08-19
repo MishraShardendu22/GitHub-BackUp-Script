@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SQLite metadata tracking for repo hash deduplication and failure logging
 - Parallel repository processing with `parallelHashCheck` and `parallelCloneAndArchive`
 - Automatic large-file detection (archives >95MB are skipped)
-
-### Removed
-- AI assistant integrations (OpenRouter risk assessment summaries)
-- PDF report generation and SMTP email notifications (to simplify and focus on core analytics)
+- AI assistant layer (agentic-observatory) with OpenRouter integration and streaming chat
+- Email report delivery via SMTP from the AI agent
+- JWT-authenticated chat API with session management
+- Semantic search over backup metadata using pgvector embeddings

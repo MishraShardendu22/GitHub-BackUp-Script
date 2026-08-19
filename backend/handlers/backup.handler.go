@@ -36,7 +36,13 @@ func GetBackupRuns(c *fiber.Ctx) error {
 	}
 	offset := (page - 1) * limit
 
-	ctx := context.Background()
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 15*time.Second)
+	defer cancel()
+
 	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
 		_ = err
 	}
@@ -86,7 +92,7 @@ func GetBackupRuns(c *fiber.Ctx) error {
 			runMap[runs[i].ID] = &runs[i]
 		}
 
-		// fetch the fixes thing from database
+		// fetch the fixes from database
 		fixesQuery := `
 			SELECT f.id, f.title, f.description, f.commit_hash, f.author, f.created_at, f.updated_at, rf.run_id
 			FROM backup_fixes f
@@ -160,9 +166,15 @@ func GetBackupRuns(c *fiber.Ctx) error {
 
 func GetBackupRun(c *fiber.Ctx) error {
 	id := c.Params("id")
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 15*time.Second)
+	defer cancel()
 
 	var r models.BackupRun
-	err := db.Pool.QueryRow(context.Background(),
+	err := db.Pool.QueryRow(ctx,
 		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms, error_message
 		 FROM backup_runs WHERE id = $1`, id).Scan(
 		&r.ID, &r.Status, &r.StartedAt, &r.CompletedAt, &r.TotalRepos,
@@ -171,7 +183,7 @@ func GetBackupRun(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "run not found"})
 	}
 
-	rows, err := db.Pool.Query(context.Background(),
+	rows, err := db.Pool.Query(ctx,
 		`SELECT id, run_id, repo_full_name, status, commit_hash, archive_size_bytes, duration_ms, error_message, created_at
 		 FROM backup_results WHERE run_id = $1 ORDER BY created_at`, id)
 	if err != nil {
@@ -194,39 +206,56 @@ func GetBackupRun(c *fiber.Ctx) error {
 	}
 
 	// Fetch associated fixes
-	fixesRows, err := db.Pool.Query(context.Background(),
+	fixesRows, err := db.Pool.Query(ctx,
 		`SELECT f.id, f.title, f.description, f.commit_hash, f.author, f.created_at, f.updated_at
 		 FROM backup_fixes f
 		 JOIN backup_run_fixes rf ON f.id = rf.fix_id
 		 WHERE rf.run_id = $1`, r.ID)
 	if err == nil {
 		defer fixesRows.Close()
+		var fixList []models.BackupFix
+		var fixIDs []int
 		for fixesRows.Next() {
 			var f models.BackupFix
 			if err := fixesRows.Scan(&f.ID, &f.Title, &f.Description, &f.CommitHash, &f.Author, &f.CreatedAt, &f.UpdatedAt); err == nil {
-				// Fetch affected runs for this fix
-				var affectedRuns []int
-				rfRows, err := db.Pool.Query(context.Background(), "SELECT run_id FROM backup_run_fixes WHERE fix_id = $1", f.ID)
-				if err == nil {
-					for rfRows.Next() {
-						var runID int
-						if err := rfRows.Scan(&runID); err == nil {
-							affectedRuns = append(affectedRuns, runID)
-						}
-					}
-					rfRows.Close()
-				}
-				f.AffectedRuns = affectedRuns
-				r.Fixes = append(r.Fixes, f)
+				f.AffectedRuns = []int{}
+				fixList = append(fixList, f)
+				fixIDs = append(fixIDs, f.ID)
 			}
 		}
+
+		if len(fixIDs) > 0 {
+			runFixesMap := make(map[int][]int)
+			rfRows, err := db.Pool.Query(ctx, "SELECT fix_id, run_id FROM backup_run_fixes WHERE fix_id = ANY($1)", fixIDs)
+			if err == nil {
+				for rfRows.Next() {
+					var fixID, runID int
+					if err := rfRows.Scan(&fixID, &runID); err == nil {
+						runFixesMap[fixID] = append(runFixesMap[fixID], runID)
+					}
+				}
+				rfRows.Close()
+			}
+			for i := range fixList {
+				if runs, ok := runFixesMap[fixList[i].ID]; ok {
+					fixList[i].AffectedRuns = runs
+				}
+			}
+		}
+		r.Fixes = fixList
 	}
 
 	return c.JSON(fiber.Map{"run": r, "results": results})
 }
 
 func GetLatestBackup(c *fiber.Ctx) error {
-	ctx := context.Background()
+	reqCtx := c.UserContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(reqCtx, 15*time.Second)
+	defer cancel()
+
 	if _, err := db.FinalizeStaleRunningRuns(ctx, 30*time.Minute); err != nil {
 		_ = err
 	}
@@ -248,25 +277,36 @@ func GetLatestBackup(c *fiber.Ctx) error {
 		 WHERE rf.run_id = $1`, r.ID)
 	if err == nil {
 		defer fixesRows.Close()
+		var fixList []models.BackupFix
+		var fixIDs []int
 		for fixesRows.Next() {
 			var f models.BackupFix
 			if err := fixesRows.Scan(&f.ID, &f.Title, &f.Description, &f.CommitHash, &f.Author, &f.CreatedAt, &f.UpdatedAt); err == nil {
-				// Fetch affected runs for this fix
-				var affectedRuns []int
-				rfRows, err := db.Pool.Query(ctx, "SELECT run_id FROM backup_run_fixes WHERE fix_id = $1", f.ID)
-				if err == nil {
-					for rfRows.Next() {
-						var runID int
-						if err := rfRows.Scan(&runID); err == nil {
-							affectedRuns = append(affectedRuns, runID)
-						}
-					}
-					rfRows.Close()
-				}
-				f.AffectedRuns = affectedRuns
-				r.Fixes = append(r.Fixes, f)
+				f.AffectedRuns = []int{}
+				fixList = append(fixList, f)
+				fixIDs = append(fixIDs, f.ID)
 			}
 		}
+
+		if len(fixIDs) > 0 {
+			runFixesMap := make(map[int][]int)
+			rfRows, err := db.Pool.Query(ctx, "SELECT fix_id, run_id FROM backup_run_fixes WHERE fix_id = ANY($1)", fixIDs)
+			if err == nil {
+				for rfRows.Next() {
+					var fixID, runID int
+					if err := rfRows.Scan(&fixID, &runID); err == nil {
+						runFixesMap[fixID] = append(runFixesMap[fixID], runID)
+					}
+				}
+				rfRows.Close()
+			}
+			for i := range fixList {
+				if runs, ok := runFixesMap[fixList[i].ID]; ok {
+					fixList[i].AffectedRuns = runs
+				}
+			}
+		}
+		r.Fixes = fixList
 	}
 
 	return c.JSON(fiber.Map{"run": r})
@@ -295,4 +335,4 @@ QueryRow
 	user by id
 	backup by id
 	latest backup
-*/ 
+*/

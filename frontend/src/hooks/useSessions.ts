@@ -6,10 +6,16 @@ import type { Session } from "@/types";
 
 export function useSessions(token?: string | null) {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async () => {
+    if (!token) {
+      setSessions([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -17,7 +23,6 @@ export function useSessions(token?: string | null) {
       setSessions(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch sessions");
-      console.error("Failed to fetch sessions", e);
     } finally {
       setLoading(false);
     }

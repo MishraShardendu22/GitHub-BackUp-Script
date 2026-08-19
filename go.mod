@@ -8,6 +8,7 @@ require (
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/mattn/go-sqlite3 v1.14.45
+	github.com/pgvector/pgvector-go v0.4.1
 	go.uber.org/zap v1.28.0
 )
 

@@ -2,18 +2,34 @@
 
 import { Radio, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { env, WS_BASE_URL } from "@/config/env";
 import type { WsMessage } from "@/types";
 
 type LiveLog = WsMessage & { clientId: number };
 
 function buildLiveSocketUrl() {
-  const configuredBase =
-    process.env.NEXT_PUBLIC_WS_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:8080";
-  const baseUrl = new URL(configuredBase);
-  const secureProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${secureProtocol}//${baseUrl.host}/ws/live`;
+  const configuredBase = WS_BASE_URL;
+  try {
+    const baseUrl = new URL(
+      configuredBase,
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost:8080",
+    );
+    const secureProtocol =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "wss:"
+        : "ws:";
+    return `${secureProtocol}//${baseUrl.host}/ws/live`;
+  } catch {
+    const secureProtocol =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "wss:"
+        : "ws:";
+    const host =
+      typeof window !== "undefined" ? window.location.host : "localhost:8080";
+    return `${secureProtocol}//${host}/ws/live`;
+  }
 }
 
 function levelColor(level?: string) {
@@ -47,7 +63,11 @@ export function LiveLogStream() {
       ws.onopen = () => setConnected(true);
       ws.onclose = () => {
         setConnected(false);
-        if (!disposed) reconnectTimerRef.current = setTimeout(connect, 3000);
+        if (!disposed)
+          reconnectTimerRef.current = setTimeout(
+            connect,
+            env.WS_RECONNECT_DELAY_MS,
+          );
       };
       ws.onerror = () => ws.close();
       ws.onmessage = (event) => {
@@ -55,7 +75,7 @@ export function LiveLogStream() {
           const msg: WsMessage = JSON.parse(event.data);
           if (msg.type !== "log") return;
           setLogs((prev) => [
-            ...prev.slice(-500),
+            ...prev.slice(-env.MAX_LIVE_LOGS_BUFFER),
             { ...msg, clientId: logSequenceRef.current++ },
           ]);
           window.requestAnimationFrame(() =>

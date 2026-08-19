@@ -1,16 +1,53 @@
-.env*
+# Environment files (preserve examples)
+.env
+.env.*
+!.env.example
 !.env.sample
-go.sum
-_Repos
-app.db
-backup
+!*.env.example
+!sample.env
 
-# Frontend
-frontend/node_modules
-frontend/.next
-frontend/.env.local
+# Dependencies & Virtual Environments
+node_modules
+*/node_modules
+.venv
+*/.venv
+.pnpm-store
 
-# Go binary
+# Build Artifacts
+.next
+*/.next
+dist
+build
+bin
+/bin
+server
 github-backup
+backend/backend
+*.exe
+*.dll
+*.so
+*.dylib
 
+# Python Cache
+__pycache__
+*/__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache
+
+# Database & Local State
+app.db
+*.db
+_Repos
+backup
+backups/postgres
 api_responses
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+tmp/
+scratch/

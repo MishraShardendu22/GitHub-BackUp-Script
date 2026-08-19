@@ -1,0 +1,23 @@
+{
+  "include": [
+    "agentic-observatory"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "agentic-observatory/.venv", "**/.*"
+  ],
+  "extraPaths": [
+    "agentic-observatory"
+  ],
+  "venvPath": "agentic-observatory",
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": "agentic-observatory",
+      "extraPaths": [
+        "agentic-observatory"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
+import { AGENT_URL } from "@/config/env";
 
 export interface OpenRouterModel {
   id: string;
@@ -7,12 +7,16 @@ export interface OpenRouterModel {
 
 export const aiService = {
   async fetchModels(): Promise<OpenRouterModel[]> {
-    const res = await fetch(`${AGENT_URL}/api/models`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch models: ${res.statusText}`);
+    try {
+      const res = await fetch(`${AGENT_URL}/api/models`);
+      if (!res.ok) {
+        return [];
+      }
+      const data = await res.json();
+      return data.data || [];
+    } catch {
+      return [];
     }
-    const data = await res.json();
-    return data.data || [];
   },
 
   async chat(

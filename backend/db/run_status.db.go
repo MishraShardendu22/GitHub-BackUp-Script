@@ -52,7 +52,7 @@ func FinalizeStaleRunningRuns(ctx context.Context, threshold time.Duration) (boo
 		If completed_at already has a value keep it, else mark it as NOW()
 		completed_at = COALESCE(completed_at, NOW()),
 
-		If duration is already recorded keep it else mar it as the calculated value 
+		If duration is already recorded keep it else mar it as the calculated value
 		duration_ms = CASE
 			WHEN duration_ms > 0 THEN duration_ms
 			ELSE calculated_duration
@@ -63,8 +63,8 @@ func FinalizeStaleRunningRuns(ctx context.Context, threshold time.Duration) (boo
 		NOW() - started_at => Calculates the time difference between the current time and started_at. (5min 12.35sec)
 		EXTRACT(EPOCH FROM (...)) => Converts the interval into total seconds. (312.35 sec)
 		* 1000 => converts to milisec
-		::bigint => cast to big int 
-	*/ 
+		::bigint => cast to big int
+	*/
 	_, err = Pool.Exec(ctx,
 		`UPDATE backup_runs
 		 SET status = 'completed',

@@ -20,10 +20,10 @@ func LoadEnv() {
 }
 
 func LoadConfig() *model.ConfigModel {
+	dbURL := util.GetEnv("DATABASE_URL", util.GetEnv("POSTGRES_URL", ""))
 	return &model.ConfigModel{
 		OrgAccount:          util.GetEnv("ORG_ACCOUNT", ""),
-		MainAccount:         util.GetEnv("MAIN_ACCOUNT", ""),
-		PostgreSql:          util.GetEnv("POSTGRES_URL", ""),
+		PostgreSql:          dbURL,
 		DBPath:              util.GetEnv("DB_PATH", "./app.db"),
 		ProjectAccount:      util.GetEnv("PROJECT_ACCOUNT", ""),
 		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),

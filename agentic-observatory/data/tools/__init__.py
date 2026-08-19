@@ -16,6 +16,8 @@ from .backup import (
     fetch_backup_fix_details,
 )
 
+from .search import hybrid_search_knowledge_base
+
 __all__ = [
     "fetch_backup_metrics",
     "list_historical_analytics",
@@ -30,4 +32,5 @@ __all__ = [
     "list_execution_logs",
     "list_tracked_repositories",
     "send_report_email",
+    "hybrid_search_knowledge_base",
 ]

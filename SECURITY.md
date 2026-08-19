@@ -29,7 +29,7 @@ When reporting a vulnerability, please include:
 The following areas are in scope for security review:
 
 - **Worker (CLI)**: Token handling (`GITHUB_TOKEN_PRIVATE`, `GITHUB_TOKEN_PERSONAL`), repository data processing, backup archive integrity.
-- **Backend (Dashboard/API)**: Authentication, database access (`POSTGRES_URL`), WebSocket connections, API rate limiting.
+- **Backend (Dashboard/API)**: Authentication, database access (`DATABASE_URL`), WebSocket connections, API rate limiting.
 - **Configuration**: Environment variable handling, `.env` file management, secret exposure.
 - **Dependencies**: Third-party Go modules, npm packages in the frontend.
 

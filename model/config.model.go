@@ -7,7 +7,6 @@ import (
 
 type ConfigModel struct {
 	OrgAccount          string
-	MainAccount         string
 	BackupRepoPath      string
 	DBPath              string
 	ProjectAccount      string

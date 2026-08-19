@@ -54,8 +54,10 @@ class AgentResponse(BaseModel):
     answer: str
     tool_calls: list[ToolExecution] = Field(default_factory=list)
     tool_results: list[dict[str, Any]] = Field(default_factory=list)
+    retrieved_sources: list[dict[str, Any]] = Field(default_factory=list)
     status: str = "completed"
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 
 class ConversationState(BaseModel):

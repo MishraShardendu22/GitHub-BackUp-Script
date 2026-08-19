@@ -4,7 +4,7 @@ from typing import Any
 from config import settings
 from jose import JWTError, jwt
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 
@@ -27,12 +27,18 @@ def authenticate_user(username: str, password: str) -> bool:
 
 # create a JWT token for the authenticated user
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
+    if not settings.JWT_SECRET:
+        raise RuntimeError("JWT_SECRET is not configured in settings")
+
     # copy the payload
     to_encode = data.copy()
     
-    # expire = datetime.utcnow() + timedelta(minutes=60)
+    expires_minutes = settings.JWT_EXPIRES_MINUTES
+    if not isinstance(expires_minutes, int) or expires_minutes <= 0:
+        expires_minutes = 60
+
     # add time to current time and set it as the expiry time for the token
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.JWT_EXPIRES_MINUTES))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=expires_minutes))
 
     # update the payload with the expiry time
     to_encode.update({"exp": expire})
@@ -44,6 +50,12 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
 # if the token is invalid or expired, it will raise an HTTPException with 401 status code
 # login again to get a valid token
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
+    if not settings.JWT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="JWT_SECRET is not configured on server",
+        )
+
     # create an exception to raise in case of invalid credentials
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,7 +77,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
         raise credentials_exception
 
     # if the username in the token does not match the expected username, raise an exception
-    if token_data.username != settings.CHAT_USERNAME:
+    if not token_data.username or token_data.username != settings.CHAT_USERNAME:
         raise credentials_exception
 
     # if everything is fine, return the username from the token

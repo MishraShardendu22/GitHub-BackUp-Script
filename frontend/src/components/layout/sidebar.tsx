@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Database,
   Edit2,
   FileCode,
   Folder,
@@ -20,6 +21,7 @@ import {
   MessageSquare,
   Plus,
   Radio,
+  Search,
   Terminal,
   Trash2,
 } from "lucide-react";
@@ -104,6 +106,16 @@ const treeData: NavNode[] = [
     label: "Live Monitor",
     href: "/live",
     icon: Radio,
+  },
+  {
+    label: "Search Playground",
+    href: "/search-playground",
+    icon: Search,
+  },
+  {
+    label: "Embeddings",
+    href: "/embeddings",
+    icon: Database,
   },
 ];
 

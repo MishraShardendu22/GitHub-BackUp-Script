@@ -10,6 +10,14 @@ export interface MessageToolCall {
   error?: string;
 }
 
+export interface SearchSource {
+  id?: number | string;
+  source_type: string;
+  source_id: string;
+  content: string;
+  score: number;
+}
+
 export interface Message {
   id: string;
   role: Role;
@@ -17,6 +25,7 @@ export interface Message {
   streaming?: boolean;
   timestamp: Date;
   toolCalls?: MessageToolCall[];
+  sources?: SearchSource[];
   iteration?: number;
 }
 
@@ -30,6 +39,7 @@ export interface StreamEvent {
     | "token"
     | "done";
   iteration?: number;
+  sources?: SearchSource[];
   confirm_id?: string;
   name?: string;
   args?: Record<string, unknown>;

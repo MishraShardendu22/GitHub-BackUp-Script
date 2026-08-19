@@ -3,14 +3,16 @@ from __future__ import annotations
 import uuid
 from data.db import (
     ai_tool_calls,
+    ai_reports,
     async_session,
     investigations,
     ai_chat_messages,
     ai_chat_sessions,
+    ai_session_metadata,
 )
 from typing import Any
 from config import settings
-from datetime import datetime
+from datetime import datetime, timezone
 from utils.logging import logger
 from sqlalchemy.exc import SQLAlchemyError
 from agent.state import InvestigationRecord
@@ -22,42 +24,27 @@ class PersistenceError(RuntimeError):
 
 def parse_dt(val: Any) -> datetime:
     if not val:
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
     if isinstance(val, str):
         val = val.replace("Z", "+00:00")
         try:
             return datetime.fromisoformat(val)
         except Exception:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
     if isinstance(val, datetime):
         return val
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 # This class is responsible for all interactions with the database related to investigations and reports. 
 # basically filling the database tables with the data we want to store and also fetching that data when needed.
 class InvestigationStore:
-    # session factory is passed in the constructor, which allows us to create database sessions when needed.
-    # Connection Pool - Creates and reuses DATABASE CONNECTIONS
-    # A session is:
-    #   - query state
-    #   - transaction state
-    #   - ORM identity map
-    #   - pending changes
-
-    # When the session actually needs to talk to PostgreSQL, it borrows a connection from the pool.
     def __init__(self, session_factory):
         self.session_factory = session_factory
 
-    # This is a helper method to check if the database is configured before performing any operations. 
-    # It raises a PersistenceError if the session_factory is not set, 
-    # which indicates that the database is not configured. 
-    # This method is called at the beginning of each public method to ensure 
-    # that we don't attempt to interact with the database if it's not set up.
     async def _check(self):
         if self.session_factory is None:
             raise PersistenceError("Database is not configured. Set DATABASE_URL.")
 
-    # This method saves an investigation record to the database. 
     async def save_investigation(self, record: InvestigationRecord) -> dict[str, Any]:
         await self._check()
         payload = jsonable_encoder(record)
@@ -76,7 +63,7 @@ class InvestigationStore:
                         tool_calls=payload.get("tool_calls", []),
                         tool_results=payload.get("tool_results", []),
                         status=payload.get("status", "completed"),
-                        error=payload.get("error"),
+                        error=payload.get("error") or None,
                         created_at=parse_dt(payload.get("created_at")),
                         updated_at=parse_dt(payload.get("updated_at")),
                     )
@@ -84,16 +71,25 @@ class InvestigationStore:
 
                 tool_calls = payload.get("tool_calls", []) or []
                 for tool_call in tool_calls:
+                    args_val = tool_call.get("args")
+                    # Clean NULL normalization: store None if args is empty
+                    if not args_val or args_val == {}:
+                        args_val = None
+
+                    err_val = tool_call.get("error")
+                    if not err_val or err_val == "":
+                        err_val = None
+
                     await session.execute(
                         insert(ai_tool_calls).values(
                             request_id=req_uuid,
                             name=tool_call.get("name"),
-                            args=tool_call.get("args"),
+                            args=args_val,
                             result=tool_call.get("result"),
                             success=tool_call.get("success", False),
                             duration_ms=tool_call.get("duration_ms"),
-                            error=tool_call.get("error"),
-                            created_at=datetime.utcnow(),
+                            error=err_val,
+                            created_at=datetime.now(timezone.utc),
                         )
                     )
 
@@ -142,7 +138,6 @@ class InvestigationStore:
             )
             return [dict(row) for row in result.mappings().all()]
 
-
     async def create_session(
         self,
         session_id: str | None = None,
@@ -150,7 +145,7 @@ class InvestigationStore:
         metadata: dict | None = None,
     ) -> dict[str, Any]:
         await self._check()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if session_id:
             s_id = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
         else:
@@ -163,22 +158,44 @@ class InvestigationStore:
             )
             row = existing.mappings().first()
             if row:
-                return jsonable_encoder(dict(row))
+                res_dict = dict(row)
+                if not res_dict.get("metadata"):
+                    meta_res = await session.execute(
+                        select(ai_session_metadata.c.key, ai_session_metadata.c.value)
+                        .where(ai_session_metadata.c.session_id == s_id)
+                    )
+                    res_dict["metadata"] = {m["key"]: m["value"] for m in meta_res.mappings().all()}
+                return jsonable_encoder(res_dict)
 
             result = await session.execute(
                 insert(ai_chat_sessions)
                 .values(
                     id=s_id,
                     session_name=name,
-                    metadata=metadata or {},
+                    metadata=None,
                     created_at=now,
                     updated_at=now,
                 )
                 .returning(ai_chat_sessions)
             )
+
+            # Insert into normalized ai_session_metadata table if metadata provided
+            if metadata:
+                for k, v in metadata.items():
+                    await session.execute(
+                        insert(ai_session_metadata).values(
+                            session_id=s_id,
+                            key=str(k),
+                            value=str(v),
+                            created_at=now,
+                        )
+                    )
+
             await session.commit()
-            row = result.mappings().first()
-            return jsonable_encoder(dict(row)) if row else {}
+            created_row = result.mappings().first()
+            res_dict = dict(created_row) if created_row else {}
+            res_dict["metadata"] = metadata or {}
+            return jsonable_encoder(res_dict)
 
     async def list_sessions(self, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
         await self._check()
@@ -189,7 +206,11 @@ class InvestigationStore:
                 .limit(limit)
                 .offset(offset)
             )
-            return jsonable_encoder([dict(row) for row in result.mappings().all()])
+            sessions_list = [dict(row) for row in result.mappings().all()]
+            for s in sessions_list:
+                if not s.get("metadata"):
+                    s["metadata"] = {}
+            return jsonable_encoder(sessions_list)
 
     async def get_session(self, session_id: str) -> dict[str, Any] | None:
         await self._check()
@@ -199,7 +220,16 @@ class InvestigationStore:
                 select(ai_chat_sessions).where(ai_chat_sessions.c.id == s_id)
             )
             row = result.mappings().first()
-            return jsonable_encoder(dict(row)) if row else None
+            if not row:
+                return None
+            res_dict = dict(row)
+            if not res_dict.get("metadata"):
+                meta_res = await session.execute(
+                    select(ai_session_metadata.c.key, ai_session_metadata.c.value)
+                    .where(ai_session_metadata.c.session_id == s_id)
+                )
+                res_dict["metadata"] = {m["key"]: m["value"] for m in meta_res.mappings().all()}
+            return jsonable_encoder(res_dict)
 
     async def rename_session(self, session_id: str, session_name: str) -> dict[str, Any] | None:
         await self._check()
@@ -208,7 +238,7 @@ class InvestigationStore:
             result = await session.execute(
                 update(ai_chat_sessions)
                 .where(ai_chat_sessions.c.id == s_id)
-                .values(session_name=session_name, updated_at=datetime.utcnow())
+                .values(session_name=session_name, updated_at=datetime.now(timezone.utc))
                 .returning(ai_chat_sessions)
             )
             await session.commit()
@@ -360,6 +390,96 @@ class InvestigationStore:
                 },
                 "model_name": settings.OPENROUTER_MODEL
             })
+
+    async def save_report(
+        self,
+        report_type: str,
+        subject: str,
+        recipients: list[str],
+        content_html: str | None = None,
+        content_markdown: str | None = None,
+        status: str = "generated",
+    ) -> dict[str, Any]:
+        await self._check()
+        report_id = uuid.uuid4()
+        now = datetime.now(timezone.utc)
+        async with self.session_factory() as session:
+            await session.execute(
+                insert(ai_reports).values(
+                    id=report_id,
+                    report_type=report_type,
+                    subject=subject,
+                    recipients=recipients,
+                    content_html=content_html,
+                    content_markdown=content_markdown,
+                    status=status,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            await session.commit()
+            return {
+                "id": str(report_id),
+                "report_type": report_type,
+                "subject": subject,
+                "recipients": recipients,
+                "content_html": content_html,
+                "content_markdown": content_markdown,
+                "status": status,
+                "created_at": now.isoformat(),
+            }
+
+    async def get_report(self, report_id: str) -> dict[str, Any] | None:
+        await self._check()
+        r_id = uuid.UUID(report_id) if isinstance(report_id, str) else report_id
+        async with self.session_factory() as session:
+            result = await session.execute(
+                select(ai_reports).where(ai_reports.c.id == r_id)
+            )
+            row = result.mappings().first()
+            if not row:
+                return None
+            data = dict(row)
+            if data.get("id"):
+                data["id"] = str(data["id"])
+            return jsonable_encoder(data)
+
+    async def update_report_status(
+        self,
+        report_id: str,
+        status: str,
+        sent_at: datetime | None = None,
+        pdf_path: str | None = None,
+        error_message: str | None = None,
+    ) -> dict[str, Any] | None:
+        await self._check()
+        r_id = uuid.UUID(report_id) if isinstance(report_id, str) else report_id
+        values: dict[str, Any] = {
+            "status": status,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if sent_at is not None:
+            values["sent_at"] = sent_at
+        if pdf_path is not None:
+            values["pdf_path"] = pdf_path
+        if error_message is not None:
+            values["error_message"] = error_message
+
+        async with self.session_factory() as session:
+            result = await session.execute(
+                update(ai_reports)
+                .where(ai_reports.c.id == r_id)
+                .values(**values)
+                .returning(ai_reports)
+            )
+            await session.commit()
+            row = result.mappings().first()
+            if not row:
+                return None
+            data = dict(row)
+            if data.get("id"):
+                data["id"] = str(data["id"])
+            return jsonable_encoder(data)
 
 
 persistence_store = InvestigationStore(async_session)

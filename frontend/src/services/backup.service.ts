@@ -1,3 +1,4 @@
+import { AGENT_URL } from "@/config/env";
 import { fetchAPI } from "@/lib/api";
 import type {
   BackupFix,
@@ -32,8 +33,6 @@ export const backupService = {
       typeof window !== "undefined"
         ? localStorage.getItem("agent_token")
         : null;
-    const AGENT_URL =
-      process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
 
     return fetch(`${AGENT_URL}/backup-fixes`, {
       method: "POST",
@@ -67,8 +66,6 @@ export const backupService = {
       typeof window !== "undefined"
         ? localStorage.getItem("agent_token")
         : null;
-    const AGENT_URL =
-      process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
 
     return fetch(`${AGENT_URL}/backup-fixes/${id}`, {
       method: "PUT",

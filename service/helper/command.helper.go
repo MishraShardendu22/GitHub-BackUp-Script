@@ -20,9 +20,9 @@ const (
 
 /*
     Custom Retry function - generic retry wrapper for shell commands.
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	- Create timeout context, automatically expires after timeout 
+	- Create timeout context, automatically expires after timeout
 
 	cmdFunc()
 	- build the command
@@ -76,7 +76,7 @@ const (
 		- 1 << 1 = 2
 		- 1 << 2 = 4
 		- 1 << 3 = 8
-	
+
 	if attempt < maxRetries {
 		delay := baseDelay * time.Duration(1<<uint(attempt-1))
 		util.Logger().Warn("Command failed with transient error; retrying",
@@ -95,7 +95,7 @@ const (
 	2nd timeout -> 2 × RTO
 	3rd timeout -> 4 × RTO
 	4th timeout -> 8 × RTO
-*/ 
+*/
 func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Duration) error {
 	var lastErr error
 
@@ -121,51 +121,51 @@ func retryCommand(cmdFunc func() *exec.Cmd, operation string, timeout time.Durat
 		}()
 
 		select {
-			case <-ctx.Done():
-				cmd.Process.Kill()
-				cancel()
-				lastErr = fmt.Errorf("%s: timeout after %v", operation, timeout)
+		case <-ctx.Done():
+			cmd.Process.Kill()
+			cancel()
+			lastErr = fmt.Errorf("%s: timeout after %v", operation, timeout)
 
-				if attempt < maxRetries {
-					delay := baseDelay * time.Duration(1<<uint(attempt-1))
-					util.Logger().Warn("Command timed out; retrying",
-						zap.Int("attempt", attempt),
-						zap.Int("max_retries", maxRetries),
-						zap.String("operation", operation),
-						zap.Duration("retry_in", delay),
-					)
-					time.Sleep(delay)
-					continue
-				}
-			case err := <-done:
-				cancel()
-				if err == nil {
-					return nil
-				}
-				lastErr = fmt.Errorf("%s: %v", operation, err)
+			if attempt < maxRetries {
+				delay := baseDelay * time.Duration(1<<uint(attempt-1))
+				util.Logger().Warn("Command timed out; retrying",
+					zap.Int("attempt", attempt),
+					zap.Int("max_retries", maxRetries),
+					zap.String("operation", operation),
+					zap.Duration("retry_in", delay),
+				)
+				time.Sleep(delay)
+				continue
+			}
+		case err := <-done:
+			cancel()
+			if err == nil {
+				return nil
+			}
+			lastErr = fmt.Errorf("%s: %v", operation, err)
 
-				errorStr := err.Error()
-				isTransient := strings.Contains(errorStr, "Could not resolve hostname") ||
-					strings.Contains(errorStr, "Connection reset") ||
-					strings.Contains(errorStr, "Connection timed out") ||
-					strings.Contains(errorStr, "temporary failure") ||
-					strings.Contains(errorStr, "early EOF")
+			errorStr := err.Error()
+			isTransient := strings.Contains(errorStr, "Could not resolve hostname") ||
+				strings.Contains(errorStr, "Connection reset") ||
+				strings.Contains(errorStr, "Connection timed out") ||
+				strings.Contains(errorStr, "temporary failure") ||
+				strings.Contains(errorStr, "early EOF")
 
-				if !isTransient {
-					return lastErr
-				}
+			if !isTransient {
+				return lastErr
+			}
 
-				if attempt < maxRetries {
-					delay := baseDelay * time.Duration(1<<uint(attempt-1))
-					util.Logger().Warn("Command failed with transient error; retrying",
-						zap.Int("attempt", attempt),
-						zap.Int("max_retries", maxRetries),
-						zap.String("operation", operation),
-						zap.Duration("retry_in", delay),
-						zap.Error(err),
-					)
-					time.Sleep(delay)
-				}
+			if attempt < maxRetries {
+				delay := baseDelay * time.Duration(1<<uint(attempt-1))
+				util.Logger().Warn("Command failed with transient error; retrying",
+					zap.Int("attempt", attempt),
+					zap.Int("max_retries", maxRetries),
+					zap.String("operation", operation),
+					zap.Duration("retry_in", delay),
+					zap.Error(err),
+				)
+				time.Sleep(delay)
+			}
 		}
 	}
 

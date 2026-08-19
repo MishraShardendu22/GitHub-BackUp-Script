@@ -57,3 +57,4 @@ CREATE TABLE IF NOT EXISTS analytics_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_time ON analytics_snapshots(captured_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_run ON analytics_snapshots(run_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_snapshots_run_id_unique ON analytics_snapshots(run_id) WHERE run_id IS NOT NULL;
