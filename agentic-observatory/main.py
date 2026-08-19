@@ -608,9 +608,9 @@ async def create_backup_fix(
                 fix_query,
                 {
                     "title": request.title,
-                    "description": request.description,
-                    "commit_hash": request.commitHash,
-                    "author": request.author,
+                    "description": request.description or "",
+                    "commit_hash": request.commitHash or None,
+                    "author": request.author or "",
                 }
             )
             fix_id = result.scalar()
@@ -711,9 +711,9 @@ async def update_backup_fix(
                 {
                     "fix_id": fix_id,
                     "title": title,
-                    "description": description,
-                    "commit_hash": commit_hash,
-                    "author": author,
+                    "description": description or "",
+                    "commit_hash": commit_hash or None,
+                    "author": author or "",
                 }
             )
 
