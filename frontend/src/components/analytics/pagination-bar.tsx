@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { Dropdown } from "@/components/ui/Dropdown";
 
 const PAGE_SIZES = [10, 25, 50] as const;
 
@@ -60,37 +61,15 @@ export function PaginationBar({
         {totalItems === 0 ? "No results" : `${from}–${to} of ${totalItems}`}
       </span>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 12,
-            color: "var(--text-muted)",
-          }}
-        >
-          Rows
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSize(Number(e.target.value))}
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              color: "var(--text)",
-              padding: "3px 8px",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
-          >
-            {PAGE_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Dropdown
+          options={PAGE_SIZES.map((s) => ({
+            value: String(s),
+            label: `${s} rows`,
+          }))}
+          value={String(pageSize)}
+          onChange={(val) => handlePageSize(Number(val))}
+        />
 
         <div style={{ display: "flex", gap: 3 }}>
           <PBtn onClick={() => handlePage(1)} disabled={page <= 1} label="«" />

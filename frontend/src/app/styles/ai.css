@@ -20,29 +20,6 @@ body.ai-page-active .app-main {
   overflow: hidden;
 }
 
-body.ai-page-active .header-container {
-  max-width: 100%;
-  padding-left: 24px;
-  padding-right: 24px;
-}
-
-body.ai-page-active .ai-chat-composer-wrap {
-  padding: 12px 24px 16px 24px;
-}
-
-body.ai-page-active .composerWrap {
-  padding: 12px 16px;
-  gap: 12px;
-  border-radius: var(--radius-md);
-}
-
-body.ai-page-active .composer {
-  min-height: 44px;
-  max-height: 140px;
-  padding: 10px 14px;
-  font-size: 15px;
-}
-
 body.ai-page-active .app-layout {
   height: 100vh;
   overflow: hidden;
@@ -1279,4 +1256,28 @@ body.ai-page-active .app-content-wrapper {
   color: var(--accent, #8b7cff);
   display: flex;
   align-items: center;
+}
+
+/* ── Active Page Component Overrides ───────────────────────────────── */
+body.ai-page-active .header-container {
+  max-width: 100%;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+body.ai-page-active .ai-chat-composer-wrap {
+  padding: 12px 24px 16px 24px;
+}
+
+body.ai-page-active .composerWrap {
+  padding: 12px 16px;
+  gap: 12px;
+  border-radius: var(--radius-md);
+}
+
+body.ai-page-active .composer {
+  min-height: 44px;
+  max-height: 140px;
+  padding: 10px 14px;
+  font-size: 15px;
 }

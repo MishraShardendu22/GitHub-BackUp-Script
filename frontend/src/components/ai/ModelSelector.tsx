@@ -140,23 +140,16 @@ export function ModelSelector({
           )}
         </span>
         {error ? (
-          <span
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             className="custom-model-retry-btn"
             onClick={(e) => {
               e.stopPropagation();
               onRefresh();
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.stopPropagation();
-                onRefresh();
-              }
-            }}
           >
             Retry
-          </span>
+          </button>
         ) : (
           <span className={`custom-model-arrow ${isOpen ? "rotated" : ""}`}>
             <svg

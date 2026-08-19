@@ -51,27 +51,52 @@ export function MessageBubble({ msg }: { msg: Message }) {
             </span>
             {msg.sources.map((src, idx) => (
               <div
-                key={idx}
+                key={
+                  src.id
+                    ? String(src.id)
+                    : `${src.source_type}:${src.source_id}`
+                }
                 style={{
                   fontSize: "12px",
                   color: "var(--text-secondary)",
-                  marginBottom: idx === msg.sources!.length - 1 ? 0 : "6px",
+                  marginBottom:
+                    idx === (msg.sources?.length ?? 0) - 1 ? 0 : "6px",
                   borderBottom:
-                    idx === msg.sources!.length - 1
+                    idx === (msg.sources?.length ?? 0) - 1
                       ? "none"
                       : "1px dashed var(--card-border)",
                   paddingBottom: "4px",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span className="badge badge-info" style={{ fontSize: "10px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span
+                    className="badge badge-info"
+                    style={{ fontSize: "10px" }}
+                  >
                     {src.source_type}
                   </span>
-                  <span style={{ color: "var(--text-muted)", fontSize: "10.5px" }}>
-                    Score: {typeof src.score === "number" ? src.score.toFixed(4) : src.score}
+                  <span
+                    style={{ color: "var(--text-muted)", fontSize: "10.5px" }}
+                  >
+                    Score:{" "}
+                    {typeof src.score === "number"
+                      ? src.score.toFixed(4)
+                      : src.score}
                   </span>
                 </div>
-                <div style={{ marginTop: "4px", color: "var(--text)", fontSize: "12.5px" }}>
+                <div
+                  style={{
+                    marginTop: "4px",
+                    color: "var(--text)",
+                    fontSize: "12.5px",
+                  }}
+                >
                   {src.content}
                 </div>
               </div>

@@ -1,14 +1,22 @@
 "use client";
 
+import {
+  Database,
+  Filter,
+  GitMerge,
+  Layers,
+  Search,
+  Sliders,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import { MessageContentRenderer } from "@/components/ai/MessageContentRenderer";
 import { useAIContext } from "@/components/layout/AIContext";
-import { searchService } from "@/services/search.service";
-import type { RerankModel, SearchResult } from "@/services/search.service";
-import { Search, Database, Layers, Filter, Sliders, GitMerge } from "lucide-react";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { SectionHeader } from "@/components/ui/SectionHeader";
+import { LoadingState } from "@/components/ui/LoadingState";
+import type { RerankModel, SearchResult } from "@/services/search.service";
+import { searchService } from "@/services/search.service";
 
 const SOURCE_TYPES = [
   { id: "chat_message", label: "Chat Messages" },
@@ -22,12 +30,16 @@ export default function SearchPlaygroundPage() {
   const { auth, isAuthenticated } = useAIContext();
 
   const [rerankModels, setRerankModels] = useState<RerankModel[]>([]);
-  const [selectedRerank, setSelectedRerank] = useState<RerankModel | null>(null);
+  const [selectedRerank, setSelectedRerank] = useState<RerankModel | null>(
+    null,
+  );
   const [loadingModels, setLoadingModels] = useState(true);
 
   const [query, setQuery] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [searchMode, setSearchMode] = useState<"hybrid" | "fts" | "semantic">("hybrid");
+  const [searchMode, setSearchMode] = useState<"hybrid" | "fts" | "semantic">(
+    "hybrid",
+  );
   const [ftsWeight, setFtsWeight] = useState(0.3);
   const [semanticWeight, setSemanticWeight] = useState(0.7);
   const [enableRerank, setEnableRerank] = useState(true);
@@ -37,23 +49,40 @@ export default function SearchPlaygroundPage() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
-    searchService.fetchRerankModels().then((rm) => {
-      setRerankModels(rm);
-      if (rm.length > 0) setSelectedRerank(rm[0]);
-      setLoadingModels(false);
-    }).catch(() => setLoadingModels(false));
+    searchService
+      .fetchRerankModels()
+      .then((rm) => {
+        setRerankModels(rm);
+        if (rm.length > 0) setSelectedRerank(rm[0]);
+        setLoadingModels(false);
+      })
+      .catch(() => setLoadingModels(false));
   }, []);
 
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const { login, authLoading, authError } = useAIContext();
+
   const handleSearch = async () => {
-    if (!query.trim() || !isAuthenticated || !auth?.token) return;
+    if (!query.trim()) return;
+    if (!isAuthenticated || !auth?.token) {
+      setShowLoginModal(true);
+      return;
+    }
     try {
       setIsSearching(true);
       setSearchError(null);
 
       let effectiveFtsWeight = ftsWeight;
       let effectiveSemanticWeight = semanticWeight;
-      if (searchMode === "fts") { effectiveFtsWeight = 1.0; effectiveSemanticWeight = 0.0; }
-      else if (searchMode === "semantic") { effectiveFtsWeight = 0.0; effectiveSemanticWeight = 1.0; }
+      if (searchMode === "fts") {
+        effectiveFtsWeight = 1.0;
+        effectiveSemanticWeight = 0.0;
+      } else if (searchMode === "semantic") {
+        effectiveFtsWeight = 0.0;
+        effectiveSemanticWeight = 1.0;
+      }
 
       const res = await searchService.search(auth.token, {
         query,
@@ -72,62 +101,99 @@ export default function SearchPlaygroundPage() {
     }
   };
 
+  const handleInlineLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginUsername || !loginPassword) return;
+    try {
+      await login(loginUsername, loginPassword);
+      setShowLoginModal(false);
+    } catch {
+      // Handled by authError in context
+    }
+  };
+
   const toggleSourceType = (typeId: string) => {
     setSelectedTypes((prev) =>
-      prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId]
+      prev.includes(typeId)
+        ? prev.filter((t) => t !== typeId)
+        : [...prev, typeId],
     );
   };
 
   return (
     <div className="page">
-      {/* Hero */}
+      {/* Compact Hero */}
       <section
         className="card section-card reveal"
-        style={{ borderTop: "2px solid var(--accent)", padding: "40px 48px", marginBottom: 32 }}
+        style={{
+          borderTop: "2px solid var(--accent)",
+          padding: "16px 24px",
+          marginBottom: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
       >
-        <div className="page-head">
-          <div>
-            <div className="page-kicker">Experiments &amp; Retrieval Engine</div>
-            <h1 className="page-title">
-              Search
-              <br />
-              <em>Playground</em>
-            </h1>
-            <p className="page-subtitle">
-              Benchmark Full-Text Search (FTS), Semantic Vector Search, Hybrid Rank Fusion (RRF), and Cross-Encoder Reranking.
-            </p>
+        <div>
+          <div className="page-kicker" style={{ marginBottom: 2 }}>
+            Retrieval Engine &amp; Experiments
           </div>
+          <h1 className="page-title" style={{ fontSize: "22px", margin: 0 }}>
+            Search <em>Playground</em>
+          </h1>
         </div>
+        <p
+          className="page-subtitle"
+          style={{
+            margin: 0,
+            fontSize: "13px",
+            maxWidth: 620,
+            lineHeight: 1.4,
+          }}
+        >
+          Benchmark Full-Text Search (FTS), Semantic Vector Search, Hybrid RRF,
+          and Cross-Encoder Reranking in real-time.
+        </p>
       </section>
 
-      {/* Search Engine */}
-      <section className="card">
-        <SectionHeader
-          title="Search Engine Benchmark"
-          subtitle="Compare search relevance across FTS, Semantic Vector, Hybrid RRF, and Reranking"
-        />
-
+      {/* Search Engine Workbench */}
+      <section className="card" style={{ padding: "20px 24px" }}>
         {/* Search Mode Tabs */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 16,
+            flexWrap: "wrap",
+          }}
+        >
           <button
+            type="button"
             className={`btn ${searchMode === "hybrid" ? "btn-primary" : "btn-outline"}`}
             onClick={() => setSearchMode("hybrid")}
+            style={{ padding: "6px 14px", fontSize: 13 }}
           >
-            <GitMerge size={15} />
+            <GitMerge size={14} />
             Hybrid Search (FTS + Vector + RRF)
           </button>
           <button
+            type="button"
             className={`btn ${searchMode === "fts" ? "btn-primary" : "btn-outline"}`}
             onClick={() => setSearchMode("fts")}
+            style={{ padding: "6px 14px", fontSize: 13 }}
           >
-            <Database size={15} />
+            <Database size={14} />
             Full-Text Search (FTS)
           </button>
           <button
+            type="button"
             className={`btn ${searchMode === "semantic" ? "btn-primary" : "btn-outline"}`}
             onClick={() => setSearchMode("semantic")}
+            style={{ padding: "6px 14px", fontSize: 13 }}
           >
-            <Layers size={15} />
+            <Layers size={14} />
             Semantic Search (Vector)
           </button>
         </div>
@@ -137,111 +203,197 @@ export default function SearchPlaygroundPage() {
           <div
             style={{
               background: "var(--surface)",
-              padding: "20px 24px",
+              padding: "12px 18px",
               borderRadius: "var(--radius-md)",
-              marginBottom: 24,
+              marginBottom: 16,
               border: "1px solid var(--border)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <Sliders size={15} style={{ color: "var(--accent)" }} />
-              <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10,
+              }}
+            >
+              <Sliders size={13} style={{ color: "var(--accent)" }} />
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
                 RRF Fusion Weight Distribution
               </span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 18,
+              }}
+            >
               <div>
-                <label style={{ fontSize: 13, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>
-                  FTS Weight: <strong style={{ color: "var(--text)" }}>{ftsWeight.toFixed(2)}</strong>
+                <label
+                  htmlFor="fts-weight-input"
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text-secondary)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span>FTS Weight</span>
+                  <strong style={{ color: "var(--text)" }}>
+                    {ftsWeight.toFixed(2)}
+                  </strong>
                 </label>
                 <input
-                  type="range" min="0" max="1" step="0.05"
+                  id="fts-weight-input"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
                   value={ftsWeight}
                   onChange={(e) => setFtsWeight(parseFloat(e.target.value))}
-                  style={{ width: "100%", accentColor: "var(--accent)" }}
+                  style={{
+                    width: "100%",
+                    accentColor: "var(--accent)",
+                    height: 4,
+                  }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: 13, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>
-                  Semantic Weight: <strong style={{ color: "var(--text)" }}>{semanticWeight.toFixed(2)}</strong>
+                <label
+                  htmlFor="semantic-weight-input"
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text-secondary)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span>Semantic Weight</span>
+                  <strong style={{ color: "var(--text)" }}>
+                    {semanticWeight.toFixed(2)}
+                  </strong>
                 </label>
                 <input
-                  type="range" min="0" max="1" step="0.05"
+                  id="semantic-weight-input"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
                   value={semanticWeight}
-                  onChange={(e) => setSemanticWeight(parseFloat(e.target.value))}
-                  style={{ width: "100%", accentColor: "var(--accent)" }}
+                  onChange={(e) =>
+                    setSemanticWeight(parseFloat(e.target.value))
+                  }
+                  style={{
+                    width: "100%",
+                    accentColor: "var(--accent)",
+                    height: 4,
+                  }}
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* Reranking Toggle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-          <input
-            type="checkbox"
-            id="rerank-toggle"
-            checked={enableRerank}
-            onChange={(e) => setEnableRerank(e.target.checked)}
-            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--accent)" }}
-          />
-          <label htmlFor="rerank-toggle" style={{ fontSize: 13, cursor: "pointer", color: "var(--text)" }}>
-            Enable Cross-Encoder Reranking
-            {selectedRerank && (
-              <> with <strong style={{ color: "var(--accent)" }}>{selectedRerank.id}</strong></>
-            )}
-          </label>
-          {!loadingModels && rerankModels.length > 1 && (
-            <select
+        {/* Reranking Toggle & Model Selector */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            marginBottom: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              id="rerank-toggle"
+              checked={enableRerank}
+              onChange={(e) => setEnableRerank(e.target.checked)}
+              style={{
+                width: 15,
+                height: 15,
+                cursor: "pointer",
+                accentColor: "var(--accent)",
+              }}
+            />
+            <label
+              htmlFor="rerank-toggle"
+              style={{ fontSize: 13, cursor: "pointer", color: "var(--text)" }}
+            >
+              Enable Cross-Encoder Reranking
+            </label>
+          </div>
+
+          {enableRerank && !loadingModels && rerankModels.length > 0 && (
+            <Dropdown
+              label="RERANKER"
+              options={rerankModels.map((m) => ({
+                value: m.id,
+                label: m.name || m.id,
+                sublabel: m.id,
+                badge: m.provider,
+              }))}
               value={selectedRerank?.id || ""}
-              onChange={(e) => {
-                const found = rerankModels.find((m) => m.id === e.target.value);
+              onChange={(val) => {
+                const found = rerankModels.find((m) => m.id === val);
                 if (found) setSelectedRerank(found);
               }}
-              style={{
-                marginLeft: 8,
-                fontSize: 12,
-                background: "var(--surface)",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-md)",
-                padding: "4px 8px",
-                cursor: "pointer",
-              }}
-            >
-              {rerankModels.map((m) => (
-                <option key={m.id} value={m.id}>{m.id}</option>
-              ))}
-            </select>
+              searchable={rerankModels.length > 3}
+            />
           )}
         </div>
 
-        {/* Query Input */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        {/* Query Input Box (Always Enabled) */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
           <input
             type="text"
             className="input"
-            style={{ flex: 1 }}
-            placeholder="Enter query — e.g. backup connection error, failed repositories, rate limit..."
+            style={{ flex: 1, height: 42, fontSize: 14 }}
+            placeholder="Enter search query — e.g. backup connection error, failed repositories, rate limit..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            disabled={isSearching || !isAuthenticated}
+            disabled={isSearching}
           />
           <button
+            type="button"
             className="btn btn-primary"
             onClick={handleSearch}
-            disabled={isSearching || !isAuthenticated || !query.trim()}
+            disabled={isSearching || !query.trim()}
+            style={{ height: 42, padding: "0 22px", fontSize: 13 }}
           >
-            {isSearching ? "Searching..." : "Search"}
+            {isSearching
+              ? "Searching..."
+              : !isAuthenticated
+                ? "Sign in & Search"
+                : "Search"}
           </button>
         </div>
 
         {/* Source Filters */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 32 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+            marginBottom: 20,
+          }}
+        >
           <span
             style={{
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 700,
               color: "var(--text-muted)",
               textTransform: "uppercase",
@@ -251,16 +403,21 @@ export default function SearchPlaygroundPage() {
               gap: 4,
             }}
           >
-            <Filter size={13} /> Filter:
+            <Filter size={12} /> Filter:
           </span>
           {SOURCE_TYPES.map((type) => (
             <button
+              type="button"
               key={type.id}
               onClick={() => toggleSourceType(type.id)}
               className={`badge ${selectedTypes.includes(type.id) ? "badge-running" : ""}`}
               style={{
                 cursor: "pointer",
-                background: selectedTypes.includes(type.id) ? "var(--accent-bg)" : "var(--surface)",
+                padding: "3px 10px",
+                fontSize: 12,
+                background: selectedTypes.includes(type.id)
+                  ? "var(--accent-bg)"
+                  : "var(--surface)",
               }}
             >
               {type.label}
@@ -268,7 +425,7 @@ export default function SearchPlaygroundPage() {
           ))}
         </div>
 
-        {/* Results */}
+        {/* Results Area */}
         <div>
           {searchError ? (
             <ErrorState message={searchError} />
@@ -279,49 +436,147 @@ export default function SearchPlaygroundPage() {
               <div
                 key={`${result.source_type}-${result.id}`}
                 className="card-flat"
-                style={{ marginBottom: 12 }}
+                style={{ marginBottom: 10, padding: "14px 18px" }}
               >
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: 8,
+                    marginBottom: 6,
                   }}
                 >
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span className="badge badge-running">{result.source_type}</span>
-                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>ID: {result.source_id}</span>
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                  >
+                    <span
+                      className="badge badge-running"
+                      style={{ fontSize: 11 }}
+                    >
+                      {result.source_type}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      ID: {result.source_id}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        fontWeight: 600,
+                      }}
+                    >
                       Score: {result.score.toFixed(4)}
                     </span>
                     {result.reranked && (
-                      <span className="badge badge-success" style={{ fontSize: 10 }}>Reranked</span>
+                      <span
+                        className="badge badge-success"
+                        style={{ fontSize: 10 }}
+                      >
+                        Reranked
+                      </span>
                     )}
                   </div>
                 </div>
-                <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.6, margin: 0 }}>
-                  {result.content}
-                </p>
+                <div style={{ marginTop: 6 }}>
+                  <MessageContentRenderer content={result.content} />
+                </div>
               </div>
             ))
           ) : query && !isSearching ? (
             <EmptyState
               message="No Results Found"
               description="Try adjusting your query, mode, or source type filters."
-              icon={<Search size={24} />}
+              icon={<Search size={22} />}
             />
-          ) : !isAuthenticated ? (
-            <EmptyState
-              message="Login Required"
-              description="Please log in to run search queries."
-              icon={<Search size={24} />}
-            />
-          ) : null}
+          ) : (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "24px 16px",
+                color: "var(--text-muted)",
+                fontSize: 13,
+                border: "1px dashed var(--border)",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              Enter keywords above and press <strong>Search</strong> to
+              benchmark hybrid relevance scores.
+            </div>
+          )}
         </div>
       </section>
+
+      {/* Quick Sign-In Modal */}
+      {showLoginModal && (
+        <div className="ai-confirm-overlay">
+          <div className="ai-confirm-modal" style={{ maxWidth: 420 }}>
+            <h3>Sign In to AI Observatory</h3>
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--text-secondary)",
+                marginBottom: 16,
+              }}
+            >
+              Enter your credentials to query hybrid vector embeddings.
+            </p>
+            <form onSubmit={handleInlineLogin}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginBottom: 16,
+                }}
+              >
+                <input
+                  type="text"
+                  className="ai-login-input"
+                  placeholder="Username"
+                  autoComplete="username"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  required
+                />
+                <input
+                  type="password"
+                  className="ai-login-input"
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {authError && (
+                <div className="ai-login-error" style={{ marginBottom: 14 }}>
+                  {authError}
+                </div>
+              )}
+              <div className="ai-confirm-actions">
+                <button
+                  type="button"
+                  className="ai-confirm-btn-abort"
+                  onClick={() => setShowLoginModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ai-confirm-btn"
+                  disabled={authLoading || !loginUsername || !loginPassword}
+                >
+                  {authLoading ? "Signing in..." : "Sign In"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

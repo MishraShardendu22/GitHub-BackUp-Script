@@ -16,11 +16,11 @@ function renderMarkdownInline(text: string): React.ReactNode {
             <code
               key={key}
               style={{
-                fontSize: "11px",
+                fontSize: "11.5px",
                 background: "rgba(255, 255, 255, 0.08)",
-                padding: "2px 4px",
-                borderRadius: "3px",
-                fontFamily: "monospace",
+                padding: "2px 5px",
+                borderRadius: "4px",
+                fontFamily: "var(--font-mono, monospace)",
                 textTransform: "none",
                 color: "var(--accent)",
               }}
@@ -36,13 +36,21 @@ function renderMarkdownInline(text: string): React.ReactNode {
 }
 
 export function MessageContentRenderer({ content }: { content: string }) {
+  if (!content) return null;
+
+  // Pre-normalize embedded markdown headings and bullet lists
+  const normalizedContent = content
+    .replace(/(\S)\s+(#{1,4}\s+)/g, "$1\n\n$2")
+    .replace(/(\S)\s+([*-]\s+)/g, "$1\n$2")
+    .replace(/(\S)\s+(\d+\.\s+)/g, "$1\n$2");
+
   const parseBlocks = (text: string) => {
     const blocks: {
       type: "text" | "code" | "table";
       content: string;
       language?: string;
     }[] = [];
-    const lines = text.split("\n");
+    const lines = text.split(/\r?\n/);
     let inCode = false,
       codeLang = "",
       codeLines: string[] = [],
@@ -74,7 +82,8 @@ export function MessageContentRenderer({ content }: { content: string }) {
         inTable = true;
         tableLines.push(line);
         continue;
-      } else if (inTable) {
+      }
+      if (inTable) {
         blocks.push({ type: "table", content: tableLines.join("\n") });
         tableLines = [];
         inTable = false;
@@ -100,15 +109,15 @@ export function MessageContentRenderer({ content }: { content: string }) {
     return merged;
   };
 
-  const blocks = parseBlocks(content);
+  const blocks = parseBlocks(normalizedContent);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       {blocks.map((block, idx) => {
         const blockKey = `block-${idx}-${block.type}-${block.content.slice(0, 8)}`;
         if (block.type === "code") {
           return (
-            <div key={blockKey}>
+            <div key={blockKey} style={{ margin: "4px 0" }}>
               <div className="ai-code-block-header">
                 <span>{block.language || "code"}</span>
                 <span>Copy</span>
@@ -116,7 +125,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
               <pre
                 className="ai-code-block-body"
                 style={{
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-mono, monospace)",
                   background: "#0d0b0a",
                   padding: "12px",
                   borderRadius: "0 0 8px 8px",
@@ -148,7 +157,11 @@ export function MessageContentRenderer({ content }: { content: string }) {
             )
             .filter((row) => row.length > 0);
           return (
-            <div className="ai-rich-table-container" key={blockKey}>
+            <div
+              className="ai-rich-table-container"
+              key={blockKey}
+              style={{ margin: "6px 0" }}
+            >
               <table className="ai-rich-table">
                 <thead>
                   <tr>
@@ -181,19 +194,22 @@ export function MessageContentRenderer({ content }: { content: string }) {
         return (
           <div
             key={blockKey}
-            style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "4px" }}
           >
             {lines.map((line, lidx) => {
               const lineKey = `line-${lidx}-${line.slice(0, 12)}`;
               const trimmed = line.trim();
+              if (!trimmed) return <div key={lineKey} style={{ height: 4 }} />;
+
               if (trimmed.startsWith("# "))
                 return (
                   <h3
                     key={lineKey}
                     style={{
-                      fontSize: "18px",
+                      fontSize: "17px",
                       color: "var(--accent)",
-                      margin: "10px 0 4px",
+                      margin: "8px 0 2px",
+                      fontWeight: 700,
                     }}
                   >
                     {renderMarkdownInline(trimmed.slice(2))}
@@ -206,25 +222,60 @@ export function MessageContentRenderer({ content }: { content: string }) {
                     style={{
                       fontSize: "15px",
                       color: "var(--text)",
-                      margin: "8px 0 4px",
+                      margin: "6px 0 2px",
+                      fontWeight: 600,
                     }}
                   >
                     {renderMarkdownInline(trimmed.slice(3))}
                   </h4>
+                );
+              if (trimmed.startsWith("### "))
+                return (
+                  <h5
+                    key={lineKey}
+                    style={{
+                      fontSize: "14px",
+                      color: "var(--text)",
+                      margin: "4px 0 2px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {renderMarkdownInline(trimmed.slice(4))}
+                  </h5>
                 );
               if (trimmed.startsWith("- ") || trimmed.startsWith("* "))
                 return (
                   <li
                     key={lineKey}
                     style={{
-                      marginLeft: "16px",
+                      marginLeft: "18px",
                       fontSize: "13px",
                       lineHeight: "1.6",
+                      color: "var(--text)",
                     }}
                   >
                     {renderMarkdownInline(trimmed.slice(2))}
                   </li>
                 );
+
+              const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+              if (numMatch) {
+                return (
+                  <li
+                    key={lineKey}
+                    style={{
+                      marginLeft: "18px",
+                      fontSize: "13px",
+                      lineHeight: "1.6",
+                      listStyleType: "decimal",
+                      color: "var(--text)",
+                    }}
+                  >
+                    {renderMarkdownInline(numMatch[2])}
+                  </li>
+                );
+              }
+
               const metricRegex =
                 /^(📊|📈|🔋|💾|⚙️)?\s*([^:]+):\s*([\d.,%]+|Healthy|Operational|Active|Failed)$/i;
               const match = trimmed.match(metricRegex);
@@ -237,7 +288,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
                       display: "inline-flex",
                       flexDirection: "column",
                       width: "180px",
-                      margin: "6px 6px 6px 0",
+                      margin: "4px 6px 4px 0",
                       verticalAlign: "top",
                     }}
                     key={lineKey}
@@ -255,7 +306,12 @@ export function MessageContentRenderer({ content }: { content: string }) {
               return (
                 <p
                   key={lineKey}
-                  style={{ margin: 0, fontSize: "13.5px", lineHeight: "1.6" }}
+                  style={{
+                    margin: 0,
+                    fontSize: "13.5px",
+                    lineHeight: "1.6",
+                    color: "var(--text)",
+                  }}
                 >
                   {renderMarkdownInline(line)}
                 </p>

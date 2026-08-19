@@ -1,4 +1,4 @@
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
+import { AGENT_URL } from "@/config/env";
 
 export interface EmbeddingModel {
   id: string;
@@ -45,27 +45,38 @@ export interface GenerationStatus {
 
 export const searchService = {
   async fetchEmbeddingModels(): Promise<EmbeddingModel[]> {
-    const res = await fetch(`${AGENT_URL}/api/embedding-models`);
-    if (!res.ok) throw new Error(`Failed to fetch embedding models: ${res.statusText}`);
-    const data = await res.json();
-    return data.data || [];
+    try {
+      const res = await fetch(`${AGENT_URL}/api/embedding-models`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.data || [];
+    } catch {
+      return [];
+    }
   },
 
   async fetchRerankModels(): Promise<RerankModel[]> {
-    const res = await fetch(`${AGENT_URL}/api/reranking-models`);
-    if (!res.ok) throw new Error(`Failed to fetch reranking models: ${res.statusText}`);
-    const data = await res.json();
-    return data.data || [];
+    try {
+      const res = await fetch(`${AGENT_URL}/api/reranking-models`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.data || [];
+    } catch {
+      return [];
+    }
   },
 
-  async search(token: string, params: {
-    query: string;
-    source_types?: string[];
-    limit?: number;
-    rerank_model_id?: string;
-    fts_weight?: number;
-    semantic_weight?: number;
-  }): Promise<SearchResponse> {
+  async search(
+    token: string,
+    params: {
+      query: string;
+      source_types?: string[];
+      limit?: number;
+      rerank_model_id?: string;
+      fts_weight?: number;
+      semantic_weight?: number;
+    },
+  ): Promise<SearchResponse> {
     const res = await fetch(`${AGENT_URL}/search`, {
       method: "POST",
       headers: {
@@ -75,14 +86,18 @@ export const searchService = {
       body: JSON.stringify(params),
     });
     if (!res.ok) {
-      if (res.status === 401) window.dispatchEvent(new Event("auth:unauthorized"));
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
       throw new Error(`Search failed: ${res.statusText}`);
     }
     const data = await res.json();
     return data.data;
   },
 
-  async getGenerationStatus(token: string, generationId?: number): Promise<GenerationStatus | null> {
+  async getGenerationStatus(
+    token: string,
+    generationId?: number,
+  ): Promise<GenerationStatus | null> {
     const url = generationId
       ? `${AGENT_URL}/embeddings/status?generation_id=${generationId}`
       : `${AGENT_URL}/embeddings/status`;
@@ -90,7 +105,8 @@ export const searchService = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      if (res.status === 401) window.dispatchEvent(new Event("auth:unauthorized"));
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
       throw new Error(`Failed to fetch status: ${res.statusText}`);
     }
     const data = await res.json();
@@ -107,24 +123,33 @@ export const searchService = {
       body: JSON.stringify({ model_id: modelId }),
     });
     if (!res.ok) {
-      if (res.status === 401) window.dispatchEvent(new Event("auth:unauthorized"));
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
       throw new Error(`Failed to start generation: ${res.statusText}`);
     }
     const data = await res.json();
     return data.data;
   },
 
-  async processBatch(token: string, generationId: number, batchSize?: number): Promise<unknown> {
+  async processBatch(
+    token: string,
+    generationId: number,
+    batchSize?: number,
+  ): Promise<unknown> {
     const res = await fetch(`${AGENT_URL}/embeddings/process-batch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ generation_id: generationId, batch_size: batchSize }),
+      body: JSON.stringify({
+        generation_id: generationId,
+        batch_size: batchSize,
+      }),
     });
     if (!res.ok) {
-      if (res.status === 401) window.dispatchEvent(new Event("auth:unauthorized"));
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
       throw new Error(`Batch processing failed: ${res.statusText}`);
     }
     const data = await res.json();
@@ -132,12 +157,16 @@ export const searchService = {
   },
 
   async activateGeneration(token: string, generationId: number): Promise<void> {
-    const res = await fetch(`${AGENT_URL}/embeddings/activate?generation_id=${generationId}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(
+      `${AGENT_URL}/embeddings/activate?generation_id=${generationId}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     if (!res.ok) {
-      if (res.status === 401) window.dispatchEvent(new Event("auth:unauthorized"));
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
       throw new Error(`Failed to activate generation: ${res.statusText}`);
     }
   },
@@ -152,7 +181,8 @@ export const searchService = {
       body: JSON.stringify({ model_id: modelId }),
     });
     if (!res.ok) {
-      if (res.status === 401) window.dispatchEvent(new Event("auth:unauthorized"));
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
       throw new Error(`Model switch failed: ${res.statusText}`);
     }
     const data = await res.json();

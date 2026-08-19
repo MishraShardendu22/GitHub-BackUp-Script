@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { API_BASE_URL } from "@/config/env";
+
+const API_BASE = API_BASE_URL;
 
 interface FetchOptions extends RequestInit {
   retries?: number;

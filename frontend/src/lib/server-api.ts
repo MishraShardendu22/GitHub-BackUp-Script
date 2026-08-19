@@ -1,6 +1,7 @@
 import "server-only";
+import { API_BASE_URL } from "@/config/env";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API = API_BASE_URL;
 
 export async function serverFetch<T>(path: string): Promise<T | null> {
   try {

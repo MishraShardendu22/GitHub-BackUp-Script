@@ -366,15 +366,21 @@
   padding: 10px 18px;
 }
 
-/* ── Spinner & Loading ───────────────────────────────────────────── */
 @keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
   to {
     transform: rotate(360deg);
   }
 }
 
-.spinner {
+.spinner,
+.spin,
+.animate-spin {
   animation: spin 1s linear infinite;
+  display: inline-block;
+  transform-origin: center center;
 }
 
 .loading-state {

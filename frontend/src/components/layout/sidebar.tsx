@@ -21,9 +21,9 @@ import {
   MessageSquare,
   Plus,
   Radio,
+  Search,
   Terminal,
   Trash2,
-  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
