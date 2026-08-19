@@ -8,7 +8,7 @@ os.environ.setdefault("INTERNAL_SECRET", "test-secret")
 os.environ.setdefault("JWT_SECRET", "test-jwt")
 
 from httpx import AsyncClient, ASGITransport
-from config.settings import Settings
+from config.settings import Settings, settings
 from utils.logging import get_current_request_id, set_current_request_id
 from utils.metrics import metrics
 from utils.response import error_response, success_response
@@ -17,10 +17,8 @@ from main import app
 
 class TestObservabilityAndHardening(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        os.environ["GO_BACKEND_URL"] = "http://localhost:8080"
-        os.environ["OPENROUTER_API_KEY"] = "test-key"
-        os.environ["INTERNAL_SECRET"] = "test-secret"
-        os.environ["JWT_SECRET"] = "test-jwt"
+        secret = os.environ.get("JWT_SECRET", "test-jwt")
+        settings.JWT_SECRET = secret
 
     def test_settings_validation(self):
         # Valid settings
@@ -95,9 +93,11 @@ class TestObservabilityAndHardening(unittest.IsolatedAsyncioTestCase):
         from utils.auth import create_access_token
         from jose import jwt
 
-        # Create valid token
+        # Create valid token with settings.JWT_SECRET
+        secret = settings.JWT_SECRET or os.environ.get("JWT_SECRET", "test-jwt")
+        settings.JWT_SECRET = secret
         token = create_access_token(data={"sub": "admin_user"})
-        payload = jwt.decode(token, os.environ["JWT_SECRET"], algorithms=["HS256"])
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
         self.assertEqual(payload["sub"], "admin_user")
         self.assertIn("exp", payload)
 

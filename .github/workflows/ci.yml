@@ -60,7 +60,11 @@ jobs:
           OPENROUTER_API_KEY: ci-test-key
           INTERNAL_SECRET: ci-internal-secret
           JWT_SECRET: ci-jwt-secret
-        run: uv run python test_observability.py
+        run: |
+          uv run python test_observability.py
+          uv run python test_openrouter_keys.py
+          uv run python test_agent_template.py
+          uv run python test_agent_suite.py
 
   frontend-test:
     name: Frontend Lint & Build
