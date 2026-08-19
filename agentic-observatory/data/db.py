@@ -33,6 +33,16 @@ ai_chat_sessions = Table(
     Column("metadata", JSONB, nullable=True),
 )
 
+ai_session_metadata = Table(
+    "ai_session_metadata",
+    metadata,
+    Column("session_id", PG_UUID(as_uuid=True), ForeignKey("ai_chat_sessions.id", ondelete="CASCADE"), primary_key=True),
+    Column("key", String, primary_key=True),
+    Column("value", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+)
+Index("idx_ai_session_metadata_session", ai_session_metadata.c.session_id)
+
 ai_chat_messages = Table(
     "ai_chat_messages",
     metadata,
@@ -81,6 +91,24 @@ Index("idx_investigations_request_id", investigations.c.request_id)
 Index("idx_investigations_session_id", investigations.c.session_id)
 Index("idx_investigations_created_at", investigations.c.created_at)
 
+ai_reports = Table(
+    "ai_reports",
+    metadata,
+    Column("id", PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column("report_type", String, nullable=False),
+    Column("subject", String, nullable=False),
+    Column("recipients", JSONB, nullable=False, default=list),
+    Column("content_html", Text, nullable=True),
+    Column("content_markdown", Text, nullable=True),
+    Column("status", String, nullable=False, default="generated"),
+    Column("pdf_path", String, nullable=True),
+    Column("error_message", Text, nullable=True),
+    Column("sent_at", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+)
+Index("idx_ai_reports_created_at", ai_reports.c.created_at)
+
 def _normalise_url(url: str) -> tuple[str, dict]:
     """Rewrite the URL for asyncpg and return (clean_url, connect_args).
 
@@ -120,9 +148,10 @@ def _normalise_url(url: str) -> tuple[str, dict]:
 
 
 def _create_engine() -> AsyncEngine | None:
-    if not settings.DATABASE_URL:
+    db_url = settings.DATABASE_URL or settings.POSTGRES_URL
+    if not db_url:
         return None
-    url, connect_args = _normalise_url(settings.DATABASE_URL)
+    url, connect_args = _normalise_url(db_url)
     return create_async_engine(
         url,
         future=True,

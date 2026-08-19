@@ -1,31 +1,41 @@
 import json
-from data import client
+import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from data.db import init_db, async_session
-from sqlalchemy import text
 from contextlib import asynccontextmanager
+
+import httpx
+from sqlalchemy import text
+from pydantic import BaseModel
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from fastapi.security import OAuth2PasswordRequestForm
+
+from config import settings
+from data import client
+from data.db import init_db, async_session
+from data.persistence import persistence_store
+from data.embedding_models import fetch_free_embedding_models, fetch_free_reranking_models
+from data import embeddings as embedding_service
+from data.search import hybrid_search
+from agent import invoke_agent, stream_agent
+from agent.models import fetch_free_text_models, validate_model_id
+from agent.state import InvestigationRecord, ReportRequest, ReportSendRequest, ToolExecution
+from utils.auth import authenticate_user, create_access_token, get_current_user, TokenResponse
+from utils.logging import logger, set_current_request_id
+from utils.metrics import metrics
 from utils.reports import (
     REPORT_DIR,
     normalize_recipients,
     render_report_html,
     send_email,
 )
-from datetime import datetime
-from pydantic import BaseModel
-from utils.response import success_response
-from utils.logging import logger
-from agent import invoke_agent, stream_agent
-from agent.models import fetch_free_text_models, validate_model_id
-from data.persistence import persistence_store
-from data.embedding_models import fetch_free_embedding_models, fetch_free_reranking_models
-from data import embeddings as embedding_service
-from data.search import hybrid_search
-from fastapi.responses import StreamingResponse
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.middleware.cors import CORSMiddleware
-from agent.state import InvestigationRecord, ReportRequest, ReportSendRequest, ToolExecution
-from fastapi import Depends, FastAPI, HTTPException, Query, status
-from utils.auth import authenticate_user, create_access_token, get_current_user, TokenResponse
+from utils.response import success_response, error_response
+
+_startup_time = time.time()
 
 
 @asynccontextmanager
@@ -43,11 +53,86 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://github.mishrashardendu22.is-a.dev", "http://localhost:3000"],
+    allow_origins=[
+        "https://github.mishrashardendu22.is-a.dev",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|.*\.vercel\.app|github\.mishrashardendu22\.is-a\.dev)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_context_and_metrics_middleware(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID") or f"req-{uuid.uuid4().hex[:12]}"
+    token = set_current_request_id(req_id)
+    start_time = time.time()
+
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+        metrics.record_http_request(request.method, request.url.path, response.status_code, duration)
+        response.headers["X-Request-ID"] = req_id
+        return response
+    except Exception as exc:
+        duration = time.time() - start_time
+        metrics.record_http_request(request.method, request.url.path, 500, duration)
+        logger.error(f"Unhandled exception in HTTP {request.method} {request.url.path}: {exc}", exc_info=True)
+        raise exc
+    finally:
+        set_current_request_id(None)
+
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+@app.exception_handler(StarletteHTTPException)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException | HTTPException):
+    code = "HTTP_ERROR"
+    if exc.status_code == 401:
+        code = "UNAUTHORIZED"
+    elif exc.status_code == 403:
+        code = "FORBIDDEN"
+    elif exc.status_code == 404:
+        code = "NOT_FOUND"
+    elif exc.status_code == 422:
+        code = "VALIDATION_ERROR"
+    elif exc.status_code == 429:
+        code = "RATE_LIMITED"
+    elif exc.status_code == 503:
+        code = "SERVICE_UNAVAILABLE"
+
+    return error_response(
+        message=str(exc.detail),
+        status_code=exc.status_code,
+        code=code,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return error_response(
+        message="Request validation failed",
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        code="VALIDATION_ERROR",
+        details=exc.errors(),
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global uncaught exception: {exc}", exc_info=True)
+    return error_response(
+        message=f"Internal server error: {exc}",
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        code="INTERNAL_ERROR",
+    )
 
 
 class ChatRequest(BaseModel):
@@ -94,10 +179,91 @@ class SearchRequest(BaseModel):
 
 
 @app.get("/health")
+@app.get("/healthz")
 async def health_check():
+    """Liveness check endpoint."""
     return success_response(
-        data={"status": "ok"},
-        message="Health check successful",
+        data={
+            "status": "ok",
+            "uptime_seconds": round(time.time() - _startup_time, 2),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        message="Liveness check successful",
+    )
+
+
+@app.get("/ready")
+@app.get("/readyz")
+async def readiness_check():
+    """Readiness check validating database, Go backend, and configuration."""
+    components = {
+        "database": "disconnected",
+        "go_backend": "disconnected",
+        "configuration": "valid",
+    }
+    is_ready = True
+
+    # 1. Check Database
+    if not async_session:
+        is_ready = False
+        components["database"] = "disconnected (no DATABASE_URL configured)"
+    else:
+        try:
+            async with async_session() as session:
+                start_db = time.time()
+                res = await session.execute(text("SELECT 1"))
+                metrics.record_db_query(time.time() - start_db)
+                if res.scalar() == 1:
+                    components["database"] = "connected"
+        except Exception as e:
+            is_ready = False
+            components["database"] = f"error: {e}"
+
+    # 2. Check Go Backend
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as http_c:
+            resp = await http_c.get(f"{settings.GO_BACKEND_URL}/health")
+            if resp.is_success:
+                components["go_backend"] = "connected"
+            else:
+                components["go_backend"] = f"status: {resp.status_code}"
+                is_ready = False
+    except Exception as e:
+        is_ready = False
+        components["go_backend"] = f"unreachable: {e}"
+
+    # 3. Check Configuration
+    if not settings.OPENROUTER_API_KEY:
+        is_ready = False
+        components["configuration"] = "missing OPENROUTER_API_KEY"
+
+    if not is_ready:
+        return error_response(
+            message="Readiness check failed",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="SERVICE_UNAVAILABLE",
+            details=components,
+        )
+
+    return success_response(
+        data={
+            "status": "ready",
+            "components": components,
+            "uptime_seconds": round(time.time() - _startup_time, 2),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        message="Readiness check successful",
+    )
+
+
+@app.get("/metrics")
+async def get_metrics(format: str | None = None):
+    """Exposes system metrics in Prometheus text exposition format or JSON."""
+    if format == "json":
+        return success_response(data=metrics.snapshot())
+    return Response(
+        content=metrics.prometheus_export(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
     )
 
 
@@ -202,8 +368,8 @@ async def chat_get(
         
     agent_response = await invoke_agent(question, session_id=session_id, model=model)
     
-    user_msg = {"role": "user", "content": question, "created_at": datetime.utcnow().isoformat()}
-    assistant_msg = {"role": "assistant", "content": agent_response.answer, "created_at": datetime.utcnow().isoformat()}
+    user_msg = {"role": "user", "content": question, "created_at": datetime.now(timezone.utc).isoformat()}
+    assistant_msg = {"role": "assistant", "content": agent_response.answer, "created_at": datetime.now(timezone.utc).isoformat()}
     
     investigation = InvestigationRecord(
         request_id=agent_response.request_id,
@@ -229,8 +395,8 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         
     agent_response = await invoke_agent(request.question, session_id=request.session_id, model=request.model)
     
-    user_msg = {"role": "user", "content": request.question, "created_at": datetime.utcnow().isoformat()}
-    assistant_msg = {"role": "assistant", "content": agent_response.answer, "created_at": datetime.utcnow().isoformat()}
+    user_msg = {"role": "user", "content": request.question, "created_at": datetime.now(timezone.utc).isoformat()}
+    assistant_msg = {"role": "assistant", "content": agent_response.answer, "created_at": datetime.now(timezone.utc).isoformat()}
     
     investigation = InvestigationRecord(
         request_id=agent_response.request_id,
@@ -286,8 +452,8 @@ async def chat_stream(request: ChatRequest, current_user: str = Depends(get_curr
         # Save investigation record once stream finishes
         if request_id:
             answer = "".join(answer_parts)
-            user_msg = {"role": "user", "content": request.question, "created_at": datetime.utcnow().isoformat()}
-            assistant_msg = {"role": "assistant", "content": answer, "created_at": datetime.utcnow().isoformat()}
+            user_msg = {"role": "user", "content": request.question, "created_at": datetime.now(timezone.utc).isoformat()}
+            assistant_msg = {"role": "assistant", "content": answer, "created_at": datetime.now(timezone.utc).isoformat()}
             investigation = InvestigationRecord(
                 request_id=request_id,
                 session_id=request.session_id,
@@ -370,7 +536,7 @@ async def create_report(
             report = await persistence_store.update_report_status(
                 report_id=report["id"],
                 status="sent",
-                sent_at=datetime.utcnow(),
+                sent_at=datetime.now(timezone.utc),
                 pdf_path=pdf_path,
             )
         return success_response(data=report, message="Report generated and sent")
@@ -396,7 +562,7 @@ async def send_saved_report(
         updated = await persistence_store.update_report_status(
             report_id=request.report_id,
             status="sent",
-            sent_at=datetime.utcnow(),
+            sent_at=datetime.now(timezone.utc),
         )
         return success_response(data=updated, message="Report emailed successfully")
     except Exception as exc:
@@ -676,6 +842,9 @@ async def switch_embedding_model(
         return success_response(data=result, message="Model switch initiated")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Model switch failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Model switch failed: {e!s}")
 
 
 @app.post("/embeddings/activate")
@@ -688,8 +857,20 @@ async def activate_embedding_generation(
         raise HTTPException(status_code=500, detail="Failed to activate generation")
     return success_response(
         data={"generation_id": generation_id, "status": "ACTIVE"},
-        message="Generation activated",
+        message="Generation activated and previous generations pruned",
     )
+
+
+@app.post("/embeddings/prune")
+async def prune_stale_embeddings(
+    current_user: str = Depends(get_current_user),
+):
+    result = await embedding_service.prune_stale_generations()
+    return success_response(
+        data=result,
+        message="Stale embedding generations and failed jobs pruned",
+    )
+
 
 
 @app.post("/search")

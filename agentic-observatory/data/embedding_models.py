@@ -1,21 +1,28 @@
 """Embedding and reranking model registry for OpenRouter.
 
-OpenRouter's /api/v1/models endpoint only lists chat/completion LLMs.
-Embedding and reranking models are accessed via separate APIs and are
-NOT returned by the general model listing endpoint.
+Fetches live supported embedding and reranking models directly from OpenRouter APIs:
+  - https://openrouter.ai/api/v1/models?output_modalities=embeddings
+  - https://openrouter.ai/api/v1/models?output_modalities=rerank
 
-This module maintains a curated list of models that OpenRouter actually
-supports for embeddings and reranking, sourced from:
-  https://openrouter.ai/docs/features/embeddings
-  https://openrouter.ai/models?category=embed
-  https://openrouter.ai/models?category=rerank
+Filters for free models (prompt & completion price == 0) with caching and resilient fallback.
 """
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
+import httpx
 
 from utils.logging import logger
+
+OPENROUTER_EMBEDDINGS_URL = "https://openrouter.ai/api/v1/models?output_modalities=embeddings"
+OPENROUTER_RERANK_URL = "https://openrouter.ai/api/v1/models?output_modalities=rerank"
+
+_CACHE_TTL_SECONDS: float = 300  # 5 minutes
+_embed_cache: list[dict] | None = None
+_embed_cache_timestamp: float = 0
+_rerank_cache: list[dict] | None = None
+_rerank_cache_timestamp: float = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,137 +45,250 @@ class RerankModelInfo:
     provider: str
 
 
-# ---------------------------------------------------------------------------
-# Curated embedding models supported by OpenRouter's /v1/embeddings API
-# Source: https://openrouter.ai/models?category=embed
-# ---------------------------------------------------------------------------
-_EMBEDDING_MODELS: list[EmbeddingModelInfo] = [
-    EmbeddingModelInfo(
-        id="jina/jina-embeddings-v3",
-        name="Jina: jina-embeddings-v3",
-        dimensions=1024,
-        provider="jina",
-        max_tokens=8192,
-    ),
-    EmbeddingModelInfo(
-        id="jina/jina-embeddings-v2-base-en",
-        name="Jina: jina-embeddings-v2-base-en",
-        dimensions=768,
-        provider="jina",
-        max_tokens=8192,
-    ),
-    EmbeddingModelInfo(
-        id="jina/jina-colbert-v2",
-        name="Jina: jina-colbert-v2",
-        dimensions=128,
-        provider="jina",
-        max_tokens=8192,
-    ),
-    EmbeddingModelInfo(
-        id="text-embedding-3-small",
-        name="OpenAI: text-embedding-3-small",
-        dimensions=1536,
-        provider="openai",
-        max_tokens=8191,
-    ),
-    EmbeddingModelInfo(
-        id="text-embedding-3-large",
-        name="OpenAI: text-embedding-3-large",
-        dimensions=3072,
-        provider="openai",
-        max_tokens=8191,
-    ),
-    EmbeddingModelInfo(
-        id="text-embedding-ada-002",
-        name="OpenAI: text-embedding-ada-002",
-        dimensions=1536,
-        provider="openai",
-        max_tokens=8191,
-    ),
-]
-
-# ---------------------------------------------------------------------------
-# Curated reranking models supported by OpenRouter's reranking API
-# Source: https://openrouter.ai/models?category=rerank
-# ---------------------------------------------------------------------------
-_RERANKING_MODELS: list[RerankModelInfo] = [
-    RerankModelInfo(
-        id="jina/jina-reranker-v2-base-multilingual",
-        name="Jina: jina-reranker-v2-base-multilingual",
-        provider="jina",
-    ),
-    RerankModelInfo(
-        id="jina/jina-reranker-v1-base-en",
-        name="Jina: jina-reranker-v1-base-en",
-        provider="jina",
-    ),
-    RerankModelInfo(
-        id="cohere/rerank-english-v3.0",
-        name="Cohere: rerank-english-v3.0",
-        provider="cohere",
-    ),
-    RerankModelInfo(
-        id="cohere/rerank-multilingual-v3.0",
-        name="Cohere: rerank-multilingual-v3.0",
-        provider="cohere",
-    ),
-    RerankModelInfo(
-        id="cohere/rerank-english-v2.0",
-        name="Cohere: rerank-english-v2.0",
-        provider="cohere",
-    ),
-]
-
-
 def _extract_provider(model_id: str) -> str:
     """Extract raw provider name from model ID."""
     if "/" in model_id:
-        return model_id.split("/")[0]
+        raw = model_id.split("/")[0]
+        name_map = {
+            "google": "Google",
+            "openai": "OpenAI",
+            "anthropic": "Anthropic",
+            "nvidia": "NVIDIA",
+            "liquid": "LiquidAI",
+            "cohere": "Cohere",
+            "deepseek": "DeepSeek",
+            "meta": "Meta",
+            "mistralai": "Mistral",
+            "qwen": "Qwen",
+            "jina": "Jina",
+            "voyageai": "VoyageAI",
+            "thenlper": "Thenlper",
+            "intfloat": "Intfloat",
+            "sentence-transformers": "Sentence Transformers",
+            "baai": "BAAI",
+            "perplexity": "Perplexity",
+        }
+        return name_map.get(raw.lower(), raw.capitalize())
     return "OpenRouter"
 
 
+def _estimate_dimensions(model_id: str, description: str = "") -> int:
+    """Infer dimension size from model ID or description."""
+    mid = model_id.lower()
+    desc = description.lower()
+
+    if "1024" in desc or "1,024" in desc or "350m" in mid or "jina-embeddings-v3" in mid or "bge-m3" in mid:
+        return 1024
+    if "3072" in desc or "3-large" in mid:
+        return 3072
+    if "1536" in desc or "3-small" in mid or "ada-002" in mid:
+        return 1536
+    if "768" in desc or "base" in mid or "gemini" in mid:
+        return 768
+    if "384" in desc or "minilm" in mid:
+        return 384
+    if "2048" in desc or "1b" in mid or "nemotron" in mid:
+        return 2048
+    return 1024
+
+
 # ---------------------------------------------------------------------------
-# Public API — async-friendly, matches the interface expected by main.py
+# Fallback models in case of OpenRouter API timeout / offline status
 # ---------------------------------------------------------------------------
+_FALLBACK_EMBEDDINGS: list[dict] = [
+    {
+        "id": "liquid/lfm-2.5-embedding-350m:free",
+        "name": "LiquidAI: LFM2.5-Embedding-350M (free)",
+        "dimensions": 1024,
+        "provider": "LiquidAI",
+    },
+    {
+        "id": "nvidia/nemotron-3-embed-1b:free",
+        "name": "NVIDIA: Nemotron 3 Embed 1B (free)",
+        "dimensions": 2048,
+        "provider": "NVIDIA",
+    },
+    {
+        "id": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+        "name": "NVIDIA: Llama Nemotron Embed VL 1B V2 (free)",
+        "dimensions": 2048,
+        "provider": "NVIDIA",
+    },
+]
+
+_FALLBACK_RERANKERS: list[dict] = [
+    {
+        "id": "qwen/qwen3-reranker-8b",
+        "name": "Qwen: Qwen3 Reranker 8B",
+        "provider": "Qwen",
+    },
+    {
+        "id": "voyageai/rerank-2.5-lite",
+        "name": "VoyageAI: rerank-2.5-lite",
+        "provider": "VoyageAI",
+    },
+    {
+        "id": "voyageai/rerank-2.5",
+        "name": "VoyageAI: rerank-2.5",
+        "provider": "VoyageAI",
+    },
+    {
+        "id": "nvidia/llama-nemotron-rerank-vl-1b-v2:free",
+        "name": "NVIDIA: Llama Nemotron Rerank VL 1B V2 (free)",
+        "provider": "NVIDIA",
+    },
+    {
+        "id": "cohere/rerank-4-pro",
+        "name": "Cohere: Rerank 4 Pro",
+        "provider": "Cohere",
+    },
+    {
+        "id": "cohere/rerank-4-fast",
+        "name": "Cohere: Rerank 4 Fast",
+        "provider": "Cohere",
+    },
+    {
+        "id": "cohere/rerank-v3.5",
+        "name": "Cohere: Rerank v3.5",
+        "provider": "Cohere",
+    },
+]
+
 
 async def fetch_free_embedding_models(force_refresh: bool = False) -> list[dict]:
-    """Return the curated list of supported embedding models as dicts."""
-    models = [
-        {
-            "id": m.id,
-            "name": m.name,
-            "dimensions": m.dimensions,
-            "provider": m.provider,
-        }
-        for m in _EMBEDDING_MODELS
-    ]
-    logger.info("Returning %d supported embedding models", len(models))
-    return models
+    """Fetch live embedding models from OpenRouter API with free pricing priority."""
+    global _embed_cache, _embed_cache_timestamp
+
+    now = time.monotonic()
+    if not force_refresh and _embed_cache is not None and (now - _embed_cache_timestamp) < _CACHE_TTL_SECONDS:
+        return _embed_cache
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(OPENROUTER_EMBEDDINGS_URL)
+            resp.raise_for_status()
+            data = resp.json().get("data", [])
+
+        free_models = []
+        other_models = []
+
+        for m in data:
+            mid = m.get("id", "")
+            name = m.get("name", mid)
+            pricing = m.get("pricing", {})
+            prompt_p = pricing.get("prompt", "1")
+            compl_p = pricing.get("completion", "1")
+            description = m.get("description", "")
+            dims = _estimate_dimensions(mid, description)
+            provider = _extract_provider(mid)
+
+            is_free = False
+            try:
+                is_free = float(prompt_p) == 0 and float(compl_p) == 0
+            except (ValueError, TypeError):
+                is_free = False
+
+            # Model item payload
+            item = {
+                "id": mid,
+                "name": name,
+                "dimensions": dims,
+                "provider": provider,
+                "is_free": is_free,
+            }
+
+            if is_free or ":free" in mid:
+                free_models.append(item)
+            else:
+                other_models.append(item)
+
+        # Free models first, then sort by display name
+        free_models.sort(key=lambda x: x["name"].lower())
+        results = free_models if free_models else other_models[:10]
+
+        _embed_cache = results
+        _embed_cache_timestamp = now
+        logger.info(f"Fetched {len(results)} embedding models from OpenRouter ({len(free_models)} free)")
+        return results
+
+    except Exception as exc:
+        logger.error(f"Failed to fetch OpenRouter embedding models: {exc}")
+        if _embed_cache:
+            return _embed_cache
+        return _FALLBACK_EMBEDDINGS
 
 
 async def fetch_free_reranking_models(force_refresh: bool = False) -> list[dict]:
-    """Return the curated list of supported reranking models as dicts."""
-    models = [
-        {
-            "id": m.id,
-            "name": m.name,
-            "provider": m.provider,
-        }
-        for m in _RERANKING_MODELS
-    ]
-    logger.info("Returning %d supported reranking models", len(models))
-    return models
+    """Fetch live reranking models from OpenRouter API."""
+    global _rerank_cache, _rerank_cache_timestamp
+
+    now = time.monotonic()
+    if not force_refresh and _rerank_cache is not None and (now - _rerank_cache_timestamp) < _CACHE_TTL_SECONDS:
+        return _rerank_cache
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(OPENROUTER_RERANK_URL)
+            resp.raise_for_status()
+            data = resp.json().get("data", [])
+
+        free_models = []
+        other_models = []
+
+        for m in data:
+            mid = m.get("id", "")
+            name = m.get("name", mid)
+            pricing = m.get("pricing", {})
+            prompt_p = pricing.get("prompt", "1")
+            compl_p = pricing.get("completion", "1")
+            provider = _extract_provider(mid)
+
+            is_free = False
+            try:
+                is_free = float(prompt_p) == 0 and float(compl_p) == 0
+            except (ValueError, TypeError):
+                is_free = False
+
+            item = {
+                "id": mid,
+                "name": name,
+                "provider": provider,
+                "is_free": is_free,
+            }
+
+            if is_free or ":free" in mid:
+                free_models.append(item)
+            else:
+                other_models.append(item)
+
+        free_models.sort(key=lambda x: x["name"].lower())
+        results = free_models if free_models else other_models
+
+        _rerank_cache = results
+        _rerank_cache_timestamp = now
+        logger.info(f"Fetched {len(results)} reranking models from OpenRouter ({len(free_models)} free)")
+        return results
+
+    except Exception as exc:
+        logger.error(f"Failed to fetch OpenRouter reranking models: {exc}")
+        if _rerank_cache:
+            return _rerank_cache
+        return _FALLBACK_RERANKERS
 
 
-async def get_embedding_model(model_id: str) -> EmbeddingModelInfo | None:
+async def get_embedding_model(model_id: str) -> EmbeddingModelInfo:
     """Look up embedding model info by ID."""
-    found = next((m for m in _EMBEDDING_MODELS if m.id == model_id), None)
+    models = await fetch_free_embedding_models()
+    found = next((m for m in models if m["id"] == model_id), None)
     if found:
-        return found
-    # Unknown model — make a best-guess EmbeddingModelInfo so callers don't break
+        return EmbeddingModelInfo(
+            id=found["id"],
+            name=found["name"],
+            dimensions=found["dimensions"],
+            provider=found["provider"],
+        )
     provider = _extract_provider(model_id)
-    dims = 768 if "google" in model_id.lower() else (1536 if "openai" in model_id.lower() else 1024)
-    logger.warning("Unknown embedding model '%s', using dims=%d", model_id, dims)
+    dims = _estimate_dimensions(model_id)
     return EmbeddingModelInfo(
         id=model_id,
         name=model_id,
@@ -177,11 +297,15 @@ async def get_embedding_model(model_id: str) -> EmbeddingModelInfo | None:
     )
 
 
-async def get_reranking_model(model_id: str) -> RerankModelInfo | None:
+async def get_reranking_model(model_id: str) -> RerankModelInfo:
     """Look up reranking model info by ID."""
-    found = next((m for m in _RERANKING_MODELS if m.id == model_id), None)
+    models = await fetch_free_reranking_models()
+    found = next((m for m in models if m["id"] == model_id), None)
     if found:
-        return found
+        return RerankModelInfo(
+            id=found["id"],
+            name=found["name"],
+            provider=found["provider"],
+        )
     provider = _extract_provider(model_id)
-    logger.warning("Unknown reranking model '%s'", model_id)
     return RerankModelInfo(id=model_id, name=model_id, provider=provider)

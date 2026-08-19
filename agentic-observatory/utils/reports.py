@@ -82,8 +82,10 @@ def send_email(
     finally:
         smtp_client.quit()
 
+import re
+
 # converts input into a clean list of email strings.
 def normalize_recipients(value: list[str] | str) -> list[str]:
     if isinstance(value, str):
-        return [item.strip() for item in value.split(",") if item.strip()]
+        return [item.strip() for item in re.split(r"[,;]+", value) if item.strip()]
     return [item.strip() for item in value if item.strip()]

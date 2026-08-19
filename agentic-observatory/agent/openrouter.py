@@ -21,9 +21,12 @@ from data.tools import (
     list_tracked_repositories,
     fetch_dashboard_statistics,
     fetch_latest_analytics_snapshot,
+    hybrid_search_knowledge_base,
 )
+from pydantic import SecretStr
 from langchain_core.messages import (
     AIMessage,
+    BaseMessage,
     ToolMessage,
     HumanMessage,
     SystemMessage,
@@ -36,6 +39,7 @@ from langchain_openrouter import ChatOpenRouter
 from .state import AgentResponse, ToolExecution, create_request_id, safe_serialize_payload
 
 TOOLS = [
+    hybrid_search_knowledge_base,
     list_backup_runs,
     send_report_email,
     list_backup_fixes,
@@ -51,28 +55,22 @@ TOOLS = [
     fetch_latest_analytics_snapshot,
 ]
 
+from utils.openrouter_keys import get_active_openrouter_key, rotate_openrouter_key
+
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}
 
-# Initialize the LLM
-def get_llm(model: str | None = None) -> ChatOpenRouter:
+# Initialize the LLM with active OpenRouter key from failover pool
+def get_llm(model: str | None = None, api_key: str | None = None) -> ChatOpenRouter:
+    key = api_key or get_active_openrouter_key()
     return ChatOpenRouter(
         temperature=0.2,
         model=model or settings.OPENROUTER_MODEL,
-        api_key=settings.OPENROUTER_API_KEY,
-        # We can pass extra_body to the LLM to tell it which tools are available for it to call
-        # Open has web search tool, we can tell the LLM that it can use it by passing it in the extra_body
-        # extra_body={
-        #     "tools": [
-        #         {
-        #             "type": "openrouter:web_search"
-        #         }
-        #     ]
-        # }
+        api_key=SecretStr(key) if key else None,
     )
 
 # Bind tools to the LLM, so that it can call them when needed
-def get_bound_llm(model: str | None = None):
-    return get_llm(model=model).bind_tools(TOOLS, strict=True)
+def get_bound_llm(model: str | None = None, api_key: str | None = None):
+    return get_llm(model=model, api_key=api_key).bind_tools(TOOLS, strict=True)
 
 
 async def _retrieve_hybrid_context(question: str) -> tuple[str, list[dict]]:
@@ -118,7 +116,7 @@ async def invoke_agent(
     system_prompt_content, retrieved_sources = await _retrieve_hybrid_context(question)
 
     # Load history messages if session_id is provided
-    history_messages = []
+    history_messages: list[BaseMessage] = []
     if session_id:
         try:
             from data.persistence import persistence_store
@@ -127,14 +125,14 @@ async def invoke_agent(
                 role = msg.get("role")
                 content = msg.get("content")
                 if role == "user":
-                    history_messages.append(HumanMessage(content=content))
+                    history_messages.append(HumanMessage(content=content or ""))
                 elif role == "assistant":
-                    history_messages.append(AIMessage(content=content))
+                    history_messages.append(AIMessage(content=content or ""))
         except Exception as e:
             logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
 
     # initialize the conversation with a system prompt, history, and the user's question
-    messages = [
+    messages: list[BaseMessage] = [
         SystemMessage(content=system_prompt_content),
     ]
     messages.extend(history_messages)
@@ -157,9 +155,9 @@ async def invoke_agent(
             return AgentResponse(
                 request_id=request_id,
                 question=question,
-                answer=response.content or "",
+                answer=extract_text_from_chunk(response) or "",
                 tool_calls=executed_tools,
-                tool_results=[tool.dict() for tool in executed_tools],
+                tool_results=[tool.model_dump() for tool in executed_tools],
                 retrieved_sources=retrieved_sources,
             )
 
@@ -222,9 +220,9 @@ async def invoke_agent(
     return AgentResponse(
         request_id=request_id,
         question=question,
-        answer=messages[-1].content or "Reasoning loop execution limit reached.",
+        answer=extract_text_from_chunk(messages[-1]) or "Reasoning loop execution limit reached.",
         tool_calls=executed_tools,
-        tool_results=[tool.dict() for tool in executed_tools],
+        tool_results=[tool.model_dump() for tool in executed_tools],
     )
 
 
@@ -312,7 +310,7 @@ async def stream_agent(
     })
 
     # Load history messages if session_id is provided
-    history_messages = []
+    history_messages: list[BaseMessage] = []
     if session_id:
         try:
             from data.persistence import persistence_store
@@ -321,14 +319,14 @@ async def stream_agent(
                 role = msg.get("role")
                 content = msg.get("content")
                 if role == "user":
-                    history_messages.append(HumanMessage(content=content))
+                    history_messages.append(HumanMessage(content=content or ""))
                 elif role == "assistant":
-                    history_messages.append(AIMessage(content=content))
+                    history_messages.append(AIMessage(content=content or ""))
         except Exception as e:
             logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
 
     # initialize the conversation with a system prompt, history, and the user's question
-    messages = [
+    messages: list[BaseMessage] = [
         SystemMessage(content=system_prompt_content),
     ]
 
@@ -373,6 +371,10 @@ async def stream_agent(
                 import uuid
                 confirm_id = str(uuid.uuid4())
                 
+                # confirm sending the email with the user before proceeding
+                confirm_event = asyncio.Event()
+                active_confirmations[confirm_id] = confirm_event
+
                 # Yield confirmation required event
                 yield json.dumps({
                     "type": "confirm_required",
@@ -380,10 +382,6 @@ async def stream_agent(
                     "name": tool_name,
                     "args": tool_args
                 })
-                
-                # confirm sending the email with the user before proceeding
-                confirm_event = asyncio.Event()
-                active_confirmations[confirm_id] = confirm_event
                 
                 try:
                     # Wait up to 120 seconds for human validation
