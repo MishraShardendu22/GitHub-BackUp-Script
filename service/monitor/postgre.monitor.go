@@ -123,18 +123,21 @@ func (m *Monitor) CompleteRun(successful, failed, skipped int, durationMs int64,
 		return
 	}
 	status := "completed"
-	var errMsgPtr *string
-	if errMsg != "" {
+	if failed > 0 || errMsg != "" {
 		status = "failed"
-		errMsgPtr = &errMsg
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := m.pool.Exec(ctx,
-		`UPDATE backup_runs SET status=$1, completed_at=NOW(), successful=$2, failed=$3, skipped=$4, duration_ms=$5, error_message=$6 WHERE id=$7`,
-		status, successful, failed, skipped, durationMs, errMsgPtr, m.runID)
+		`UPDATE backup_runs SET status=$1, completed_at=NOW(), successful=$2, failed=$3, skipped=$4, duration_ms=$5 WHERE id=$6`,
+		status, successful, failed, skipped, durationMs, m.runID)
 	if err != nil {
 		util.Logger().Error("Monitor: failed to complete run", zap.Error(err))
+	}
+	if errMsg != "" {
+		_, _ = m.pool.Exec(ctx,
+			`INSERT INTO backup_run_errors (run_id, error_message) VALUES ($1, $2) ON CONFLICT (run_id) DO UPDATE SET error_message = EXCLUDED.error_message`,
+			m.runID, errMsg)
 	}
 }
 

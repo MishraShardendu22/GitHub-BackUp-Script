@@ -88,7 +88,35 @@ BEGIN
     END IF;
 END $$;
 
--- 4. Normalize ai_tool_calls: convert empty JSON objects and empty strings to clean SQL NULL
+-- 4. Normalize backup_runs error data: extract into backup_run_errors and drop error_message column from backup_runs
+CREATE TABLE IF NOT EXISTS backup_run_errors (
+    id SERIAL PRIMARY KEY,
+    run_id INT NOT NULL UNIQUE REFERENCES backup_runs(id) ON DELETE CASCADE,
+    error_message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_run_errors_run ON backup_run_errors(run_id);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'backup_runs' AND column_name = 'error_message'
+    ) THEN
+        INSERT INTO backup_run_errors (run_id, error_message)
+        SELECT id, error_message
+        FROM backup_runs
+        WHERE error_message IS NOT NULL
+          AND error_message != ''
+          AND error_message != 'EMPTY_STRING'
+        ON CONFLICT (run_id) DO UPDATE
+        SET error_message = EXCLUDED.error_message;
+
+        ALTER TABLE backup_runs DROP COLUMN IF EXISTS error_message;
+    END IF;
+END $$;
+
+-- 5. Normalize ai_tool_calls: convert empty JSON objects and empty strings to clean SQL NULL
 UPDATE ai_tool_calls
 SET args = NULL
 WHERE args = '{}'::jsonb;
@@ -101,14 +129,14 @@ UPDATE ai_tool_calls
 SET error = NULL
 WHERE error = '' OR error = 'null';
 
--- 5. Partial indexes for fast failure and error lookups without scanning successful rows
+-- 6. Partial indexes for fast failure and error lookups without scanning successful rows
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors
     ON backup_results (run_id, status)
     WHERE error_message IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_backup_runs_errors
+CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed
     ON backup_runs (status)
-    WHERE error_message IS NOT NULL OR status = 'failed';
+    WHERE status = 'failed';
 
 CREATE INDEX IF NOT EXISTS idx_investigations_errors
     ON investigations (status)
@@ -118,7 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_errors
     ON ai_tool_calls (name, success)
     WHERE error IS NOT NULL OR success = FALSE;
 
--- 6. Partial indexes for commit hash lookups
+-- 7. Partial indexes for commit hash lookups
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit
     ON backup_results (commit_hash)
     WHERE commit_hash IS NOT NULL;
@@ -127,16 +155,16 @@ CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit
     ON backup_fixes (commit_hash)
     WHERE commit_hash IS NOT NULL;
 
--- 7. Clean redundant keys (source_type, source_id, chunk_index) from embedding_chunks.metadata JSONB
+-- 8. Clean redundant keys (source_type, source_id, chunk_index) from embedding_chunks.metadata JSONB
 UPDATE embedding_chunks
 SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
 WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
 
--- 8. Safe transactional pruning of obsolete retired/failed generations
+-- 9. Safe transactional pruning of obsolete retired/failed generations
 DELETE FROM embedding_generations
 WHERE status IN ('RETIRED', 'FAILED');
 
--- 9. Safe cleanup of stale failed embedding jobs older than 6 hours
+-- 10. Safe cleanup of stale failed embedding jobs older than 6 hours
 DELETE FROM embedding_jobs
 WHERE status = 'failed'
   AND updated_at < NOW() - INTERVAL '6 hours';

@@ -64,6 +64,34 @@ BEGIN
     END IF;
 END $$;
 
+-- Normalize backup_runs: extract into backup_run_errors and drop error_message column
+CREATE TABLE IF NOT EXISTS backup_run_errors (
+    id SERIAL PRIMARY KEY,
+    run_id INT NOT NULL UNIQUE REFERENCES backup_runs(id) ON DELETE CASCADE,
+    error_message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_run_errors_run ON backup_run_errors(run_id);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'backup_runs' AND column_name = 'error_message'
+    ) THEN
+        INSERT INTO backup_run_errors (run_id, error_message)
+        SELECT id, error_message
+        FROM backup_runs
+        WHERE error_message IS NOT NULL
+          AND error_message != ''
+          AND error_message != 'EMPTY_STRING'
+        ON CONFLICT (run_id) DO UPDATE
+        SET error_message = EXCLUDED.error_message;
+
+        ALTER TABLE backup_runs DROP COLUMN IF EXISTS error_message;
+    END IF;
+END $$;
+
 -- Normalize ai_tool_calls: convert empty JSON objects and empty strings to clean SQL NULL
 UPDATE ai_tool_calls
 SET args = NULL
@@ -81,9 +109,9 @@ CREATE INDEX IF NOT EXISTS idx_backup_results_errors
     ON backup_results (run_id, status)
     WHERE error_message IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_backup_runs_errors
+CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed
     ON backup_runs (status)
-    WHERE error_message IS NOT NULL OR status = 'failed';
+    WHERE status = 'failed';
 
 CREATE INDEX IF NOT EXISTS idx_investigations_errors
     ON investigations (status)

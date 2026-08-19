@@ -72,15 +72,16 @@ func FinalizeStaleRunningRuns(ctx context.Context, threshold time.Duration) (boo
 		     duration_ms = CASE
 		       WHEN duration_ms > 0 THEN duration_ms
 		       ELSE (EXTRACT(EPOCH FROM (NOW() - started_at)) * 1000)::bigint
-		     END,
-		     error_message = CASE
-		       WHEN error_message IS NULL OR error_message = '' THEN 'Marked completed after stale running state'
-		       ELSE error_message
 		     END
 		 WHERE id = $1`, runID)
 	if err != nil {
 		return false, err
 	}
+
+	_, _ = Pool.Exec(ctx,
+		`INSERT INTO backup_run_errors (run_id, error_message)
+		 VALUES ($1, 'Marked completed after stale running state')
+		 ON CONFLICT (run_id) DO NOTHING`, runID)
 
 	return true, nil
 }

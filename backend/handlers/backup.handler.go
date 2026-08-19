@@ -62,8 +62,10 @@ func GetBackupRuns(c *fiber.Ctx) error {
 	}
 
 	rows, err := db.Pool.Query(ctx,
-		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms, error_message
-		 FROM backup_runs ORDER BY started_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		`SELECT r.id, r.status, r.started_at, r.completed_at, r.total_repos, r.successful, r.failed, r.skipped, r.duration_ms, COALESCE(bre.error_message, '')
+		 FROM backup_runs r
+		 LEFT JOIN backup_run_errors bre ON r.id = bre.run_id
+		 ORDER BY r.started_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -175,8 +177,10 @@ func GetBackupRun(c *fiber.Ctx) error {
 
 	var r models.BackupRun
 	err := db.Pool.QueryRow(ctx,
-		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms, error_message
-		 FROM backup_runs WHERE id = $1`, id).Scan(
+		`SELECT r.id, r.status, r.started_at, r.completed_at, r.total_repos, r.successful, r.failed, r.skipped, r.duration_ms, COALESCE(bre.error_message, '')
+		 FROM backup_runs r
+		 LEFT JOIN backup_run_errors bre ON r.id = bre.run_id
+		 WHERE r.id = $1`, id).Scan(
 		&r.ID, &r.Status, &r.StartedAt, &r.CompletedAt, &r.TotalRepos,
 		&r.Successful, &r.Failed, &r.Skipped, &r.DurationMs, &r.ErrorMessage)
 	if err != nil {
@@ -262,8 +266,10 @@ func GetLatestBackup(c *fiber.Ctx) error {
 
 	var r models.BackupRun
 	err := db.Pool.QueryRow(ctx,
-		`SELECT id, status, started_at, completed_at, total_repos, successful, failed, skipped, duration_ms, error_message
-		 FROM backup_runs ORDER BY started_at DESC LIMIT 1`).Scan(
+		`SELECT r.id, r.status, r.started_at, r.completed_at, r.total_repos, r.successful, r.failed, r.skipped, r.duration_ms, COALESCE(bre.error_message, '')
+		 FROM backup_runs r
+		 LEFT JOIN backup_run_errors bre ON r.id = bre.run_id
+		 ORDER BY r.started_at DESC LIMIT 1`).Scan(
 		&r.ID, &r.Status, &r.StartedAt, &r.CompletedAt, &r.TotalRepos,
 		&r.Successful, &r.Failed, &r.Skipped, &r.DurationMs, &r.ErrorMessage)
 	if err != nil {

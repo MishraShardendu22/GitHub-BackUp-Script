@@ -7,9 +7,16 @@ CREATE TABLE IF NOT EXISTS backup_runs (
     successful INT DEFAULT 0,
     failed INT DEFAULT 0,
     skipped INT DEFAULT 0,
-    duration_ms BIGINT DEFAULT 0,
-    error_message TEXT DEFAULT ''
+    duration_ms BIGINT DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS backup_run_errors (
+    id SERIAL PRIMARY KEY,
+    run_id INT NOT NULL UNIQUE REFERENCES backup_runs(id) ON DELETE CASCADE,
+    error_message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_run_errors_run ON backup_run_errors(run_id);
 
 CREATE TABLE IF NOT EXISTS backup_results (
     id SERIAL PRIMARY KEY,
