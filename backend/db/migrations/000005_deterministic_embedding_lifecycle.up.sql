@@ -72,7 +72,36 @@ BEGIN
     END IF;
 END $$;
 
--- 3. Partial indexes for fast failure and error lookups without scanning successful rows
+-- 3. Normalize analytics_snapshots by removing redundant surrogate 'id' column and making 'run_id' the primary key
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'analytics_snapshots' AND column_name = 'id'
+    ) THEN
+        ALTER TABLE analytics_snapshots DROP CONSTRAINT IF EXISTS analytics_snapshots_pkey;
+        ALTER TABLE analytics_snapshots DROP CONSTRAINT IF EXISTS analytics_snapshots_run_id_key;
+        DROP INDEX IF EXISTS idx_analytics_snapshots_run_id_unique;
+        DROP INDEX IF EXISTS idx_analytics_snapshots_run;
+        ALTER TABLE analytics_snapshots DROP COLUMN IF EXISTS id;
+        ALTER TABLE analytics_snapshots ADD CONSTRAINT analytics_snapshots_pkey PRIMARY KEY (run_id);
+    END IF;
+END $$;
+
+-- 4. Normalize ai_tool_calls: convert empty JSON objects and empty strings to clean SQL NULL
+UPDATE ai_tool_calls
+SET args = NULL
+WHERE args = '{}'::jsonb;
+
+UPDATE ai_tool_calls
+SET result = NULL
+WHERE result = '{}'::jsonb;
+
+UPDATE ai_tool_calls
+SET error = NULL
+WHERE error = '' OR error = 'null';
+
+-- 5. Partial indexes for fast failure and error lookups without scanning successful rows
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors
     ON backup_results (run_id, status)
     WHERE error_message IS NOT NULL;
@@ -89,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_errors
     ON ai_tool_calls (name, success)
     WHERE error IS NOT NULL OR success = FALSE;
 
--- 4. Partial indexes for commit hash lookups
+-- 6. Partial indexes for commit hash lookups
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit
     ON backup_results (commit_hash)
     WHERE commit_hash IS NOT NULL;
@@ -98,16 +127,16 @@ CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit
     ON backup_fixes (commit_hash)
     WHERE commit_hash IS NOT NULL;
 
--- 5. Clean redundant keys (source_type, source_id, chunk_index) from embedding_chunks.metadata JSONB
+-- 7. Clean redundant keys (source_type, source_id, chunk_index) from embedding_chunks.metadata JSONB
 UPDATE embedding_chunks
 SET metadata = metadata - 'source_type' - 'source_id' - 'chunk_index'
 WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_index';
 
--- 6. Safe transactional pruning of obsolete retired/failed generations
+-- 8. Safe transactional pruning of obsolete retired/failed generations
 DELETE FROM embedding_generations
 WHERE status IN ('RETIRED', 'FAILED');
 
--- 7. Safe cleanup of stale failed embedding jobs older than 6 hours
+-- 9. Safe cleanup of stale failed embedding jobs older than 6 hours
 DELETE FROM embedding_jobs
 WHERE status = 'failed'
   AND updated_at < NOW() - INTERVAL '6 hours';

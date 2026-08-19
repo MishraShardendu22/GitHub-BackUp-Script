@@ -136,7 +136,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 func loadLatestAnalytics(ctx context.Context) (*models.RepoAnalyticsSnapshot, error) {
 	var snapshot models.RepoAnalyticsSnapshot
 	err := db.Pool.QueryRow(ctx,
-		`SELECT id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files,
+		`SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files,
 		total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes,
 		archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
 		FROM analytics_snapshots ORDER BY captured_at DESC LIMIT 1`).Scan(

@@ -46,7 +46,7 @@ func GetAnalyticsRuns(c *fiber.Ctx) error {
 	}
 
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
+		SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
 		FROM analytics_snapshots
 		ORDER BY captured_at DESC
 		LIMIT $1 OFFSET $2
@@ -100,7 +100,7 @@ func GetAnalyticsForLatestRun(c *fiber.Ctx) error {
 	err := db.Pool.QueryRow(
 		ctx,
 		`
-		SELECT id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
+		SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
 		FROM analytics_snapshots
 		ORDER BY captured_at DESC
 		LIMIT 1
@@ -132,7 +132,7 @@ func GetAnalyticsForSpecificRun(c *fiber.Ctx) error {
 	err = db.Pool.QueryRow(
 		ctx,
 		`
-		SELECT id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
+		SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
 		FROM analytics_snapshots
 		WHERE run_id = $1
 		LIMIT 1

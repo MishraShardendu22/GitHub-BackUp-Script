@@ -48,6 +48,35 @@ CREATE INDEX IF NOT EXISTS idx_ai_session_metadata_session
 -- Drop obsolete metadata column from ai_chat_sessions if present
 ALTER TABLE ai_chat_sessions DROP COLUMN IF EXISTS metadata;
 
+-- Normalize analytics_snapshots: drop redundant surrogate id column and use run_id as primary key
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'analytics_snapshots' AND column_name = 'id'
+    ) THEN
+        ALTER TABLE analytics_snapshots DROP CONSTRAINT IF EXISTS analytics_snapshots_pkey;
+        ALTER TABLE analytics_snapshots DROP CONSTRAINT IF EXISTS analytics_snapshots_run_id_key;
+        DROP INDEX IF EXISTS idx_analytics_snapshots_run_id_unique;
+        DROP INDEX IF EXISTS idx_analytics_snapshots_run;
+        ALTER TABLE analytics_snapshots DROP COLUMN IF EXISTS id;
+        ALTER TABLE analytics_snapshots ADD CONSTRAINT analytics_snapshots_pkey PRIMARY KEY (run_id);
+    END IF;
+END $$;
+
+-- Normalize ai_tool_calls: convert empty JSON objects and empty strings to clean SQL NULL
+UPDATE ai_tool_calls
+SET args = NULL
+WHERE args = '{}'::jsonb;
+
+UPDATE ai_tool_calls
+SET result = NULL
+WHERE result = '{}'::jsonb;
+
+UPDATE ai_tool_calls
+SET error = NULL
+WHERE error = '' OR error = 'null';
+
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors
     ON backup_results (run_id, status)
     WHERE error_message IS NOT NULL;

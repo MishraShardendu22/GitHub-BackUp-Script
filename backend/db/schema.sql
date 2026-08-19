@@ -35,8 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_execution_logs_run ON execution_logs(run_id);
 CREATE INDEX IF NOT EXISTS idx_execution_logs_time ON execution_logs(created_at);
 
 CREATE TABLE IF NOT EXISTS analytics_snapshots (
-    id SERIAL PRIMARY KEY,
-    run_id INT REFERENCES backup_runs(id) ON DELETE SET NULL,
+    run_id INT PRIMARY KEY REFERENCES backup_runs(id) ON DELETE CASCADE,
     captured_at TIMESTAMPTZ DEFAULT NOW(),
     head_commit TEXT DEFAULT '',
     head_commit_message TEXT DEFAULT '',
@@ -56,8 +55,6 @@ CREATE TABLE IF NOT EXISTS analytics_snapshots (
     largest_archive_size_bytes BIGINT DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_time ON analytics_snapshots(captured_at);
-CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_run ON analytics_snapshots(run_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_snapshots_run_id_unique ON analytics_snapshots(run_id) WHERE run_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS ai_chat_sessions (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
