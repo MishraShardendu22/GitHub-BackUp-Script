@@ -73,9 +73,9 @@ func UpdateGenerationStatus(ctx context.Context, id int, status models.Generatio
 
 	switch status {
 	case models.GenerationStatusReady:
-		query = `UPDATE embedding_generations SET status = $1, completed_at = $2 WHERE id = $3`
+		query = `UPDATE embedding_generations SET status = $1, completed_at = COALESCE(completed_at, $2) WHERE id = $3`
 	case models.GenerationStatusActive:
-		query = `UPDATE embedding_generations SET status = $1, activated_at = $2 WHERE id = $3`
+		query = `UPDATE embedding_generations SET status = $1, activated_at = $2, completed_at = COALESCE(completed_at, $2), retired_at = NULL WHERE id = $3`
 	case models.GenerationStatusRetired:
 		query = `UPDATE embedding_generations SET status = $1, retired_at = $2 WHERE id = $3`
 	default:
@@ -244,7 +244,7 @@ func PromoteGenerationToActive(ctx context.Context, generationID int) error {
 	// Promote new generation to active
 	tag, err := tx.Exec(ctx,
 		`UPDATE embedding_generations
-		 SET status = 'ACTIVE', activated_at = $1, completed_at = COALESCE(completed_at, $1)
+		 SET status = 'ACTIVE', activated_at = $1, completed_at = COALESCE(completed_at, $1), retired_at = NULL
 		 WHERE id = $2`,
 		now, generationID,
 	)

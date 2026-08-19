@@ -164,11 +164,20 @@ UPDATE embedding_chunks
 SET metadata = NULL
 WHERE metadata = '{}'::jsonb;
 
--- 9. Safe transactional pruning of obsolete retired/failed generations
+-- 9. Fix any active/ready/retired generations missing completed_at or having active with retired_at
+UPDATE embedding_generations
+SET completed_at = COALESCE(activated_at, created_at, NOW())
+WHERE completed_at IS NULL AND status IN ('READY', 'ACTIVE', 'RETIRED');
+
+UPDATE embedding_generations
+SET retired_at = NULL
+WHERE status = 'ACTIVE' AND retired_at IS NOT NULL;
+
+-- 10. Safe transactional pruning of obsolete retired/failed generations
 DELETE FROM embedding_generations
 WHERE status IN ('RETIRED', 'FAILED');
 
--- 10. Safe cleanup of stale failed embedding jobs older than 6 hours
+-- 11. Safe cleanup of stale failed embedding jobs older than 6 hours
 DELETE FROM embedding_jobs
 WHERE status = 'failed'
   AND updated_at < NOW() - INTERVAL '6 hours';

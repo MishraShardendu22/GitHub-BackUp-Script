@@ -137,3 +137,12 @@ WHERE metadata ? 'source_type' OR metadata ? 'source_id' OR metadata ? 'chunk_in
 UPDATE embedding_chunks
 SET metadata = NULL
 WHERE metadata = '{}'::jsonb;
+
+-- Fix any active/ready/retired generations missing completed_at or having active with retired_at
+UPDATE embedding_generations
+SET completed_at = COALESCE(activated_at, created_at, NOW())
+WHERE completed_at IS NULL AND status IN ('READY', 'ACTIVE', 'RETIRED');
+
+UPDATE embedding_generations
+SET retired_at = NULL
+WHERE status = 'ACTIVE' AND retired_at IS NOT NULL;

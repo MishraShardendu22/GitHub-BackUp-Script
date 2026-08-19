@@ -678,7 +678,7 @@ async def activate_generation(generation_id: int) -> bool:
         await session.execute(
             text(
                 "UPDATE embedding_generations SET status = 'ACTIVE', activated_at = NOW(), "
-                "completed_at = COALESCE(completed_at, NOW()) "
+                "completed_at = COALESCE(completed_at, NOW()), retired_at = NULL "
                 "WHERE id = :id"
             ),
             {"id": generation_id},
