@@ -57,4 +57,21 @@ CREATE TABLE IF NOT EXISTS analytics_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_time ON analytics_snapshots(captured_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_run ON analytics_snapshots(run_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_snapshots_run_id_unique ON analytics_snapshots(run_id) WHERE run_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS backup_fixes (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    commit_hash TEXT DEFAULT '',
+    author TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS backup_run_fixes (
+    run_id INT REFERENCES backup_runs(id) ON DELETE CASCADE,
+    fix_id INT REFERENCES backup_fixes(id) ON DELETE CASCADE,
+    PRIMARY KEY (run_id, fix_id)
+);
+CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_run ON backup_run_fixes(run_id);
+CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_fix ON backup_run_fixes(fix_id);

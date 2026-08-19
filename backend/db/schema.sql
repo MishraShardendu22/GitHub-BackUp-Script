@@ -57,6 +57,16 @@ CREATE TABLE IF NOT EXISTS analytics_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_time ON analytics_snapshots(captured_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_run ON analytics_snapshots(run_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_snapshots_run_id_unique ON analytics_snapshots(run_id) WHERE run_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS ai_session_metadata (
+    session_id UUID NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (session_id, key)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_session_metadata_session ON ai_session_metadata (session_id);
 
 CREATE TABLE IF NOT EXISTS backup_fixes (
     id SERIAL PRIMARY KEY,

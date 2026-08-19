@@ -57,7 +57,7 @@ func Init() error {
 	url := config.LoadConfig().PostgreSql
 	if url == "" {
 		instance = &Monitor{enabled: false}
-		util.Logger().Info("Monitor: POSTGRES_URL not set — monitoring disabled")
+		util.Logger().Info("Monitor: DATABASE_URL not set — monitoring disabled")
 		return nil
 	}
 
@@ -123,14 +123,16 @@ func (m *Monitor) CompleteRun(successful, failed, skipped int, durationMs int64,
 		return
 	}
 	status := "completed"
+	var errMsgPtr *string
 	if errMsg != "" {
 		status = "failed"
+		errMsgPtr = &errMsg
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := m.pool.Exec(ctx,
 		`UPDATE backup_runs SET status=$1, completed_at=NOW(), successful=$2, failed=$3, skipped=$4, duration_ms=$5, error_message=$6 WHERE id=$7`,
-		status, successful, failed, skipped, durationMs, errMsg, m.runID)
+		status, successful, failed, skipped, durationMs, errMsgPtr, m.runID)
 	if err != nil {
 		util.Logger().Error("Monitor: failed to complete run", zap.Error(err))
 	}
@@ -141,12 +143,20 @@ func (m *Monitor) LogRepoResult(repoFullName, status, commitHash string, archive
 	if !m.enabled || m.runID == 0 {
 		return
 	}
+	var commitHashPtr *string
+	if commitHash != "" {
+		commitHashPtr = &commitHash
+	}
+	var errMsgPtr *string
+	if errMsg != "" {
+		errMsgPtr = &errMsg
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := m.pool.Exec(ctx,
 		`INSERT INTO backup_results (run_id, repo_full_name, status, commit_hash, archive_size_bytes, duration_ms, error_message)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		m.runID, repoFullName, status, commitHash, archiveSize, durationMs, errMsg)
+		m.runID, repoFullName, status, commitHashPtr, archiveSize, durationMs, errMsgPtr)
 	if err != nil {
 		util.Logger().Error("Monitor: failed to log repo result", zap.String("repo", repoFullName), zap.Error(err))
 	}
@@ -214,13 +224,22 @@ func (m *Monitor) SaveAnalyticsSnapshot(snapshot *models.RepoAnalyticsSnapshot) 
 		runID = *snapshot.RunID
 	}
 
+	var headCommitPtr *string
+	if snapshot.HeadCommit != "" {
+		headCommitPtr = &snapshot.HeadCommit
+	}
+	var headCommitMsgPtr *string
+	if snapshot.HeadCommitMessage != "" {
+		headCommitMsgPtr = &snapshot.HeadCommitMessage
+	}
+
 	_, err := m.pool.Exec(
 		ctx,
 		query,
 		snapshot.CapturedAt,
 		runID,
-		snapshot.HeadCommit,
-		snapshot.HeadCommitMessage,
+		headCommitPtr,
+		headCommitMsgPtr,
 		snapshot.HeadCommitAt,
 		snapshot.TotalCommits,
 		snapshot.BranchCount,
