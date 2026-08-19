@@ -164,13 +164,38 @@ CREATE INDEX IF NOT EXISTS idx_ai_tool_calls_success_false
     ON ai_tool_calls (name)
     WHERE success = FALSE;
 
+-- Normalize backup_fixes: extract commit_hash into backup_fix_commits
+CREATE TABLE IF NOT EXISTS backup_fix_commits (
+    id SERIAL PRIMARY KEY,
+    fix_id INT NOT NULL UNIQUE REFERENCES backup_fixes(id) ON DELETE CASCADE,
+    commit_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_fix_commits_fix ON backup_fix_commits(fix_id);
+CREATE INDEX IF NOT EXISTS idx_backup_fix_commits_hash ON backup_fix_commits (commit_hash);
+
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit
     ON backup_results (commit_hash)
     WHERE commit_hash IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit
-    ON backup_fixes (commit_hash)
-    WHERE commit_hash IS NOT NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'backup_fixes' AND column_name = 'commit_hash'
+    ) THEN
+        DROP INDEX IF EXISTS idx_backup_fixes_commit;
+
+        INSERT INTO backup_fix_commits (fix_id, commit_hash)
+        SELECT id, commit_hash
+        FROM backup_fixes
+        WHERE commit_hash IS NOT NULL AND commit_hash != '' AND commit_hash != 'null'
+        ON CONFLICT (fix_id) DO UPDATE
+        SET commit_hash = EXCLUDED.commit_hash;
+
+        ALTER TABLE backup_fixes DROP COLUMN IF EXISTS commit_hash;
+    END IF;
+END $$;
 
 -- Normalize embedding_chunks metadata: clean redundant relational keys and set empty JSON objects to SQL NULL
 DO $$

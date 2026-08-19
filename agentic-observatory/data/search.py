@@ -258,10 +258,11 @@ async def _search_raw_sources(
         try:
             res = await session.execute(
                 text(
-                    "SELECT id, title, description, author, commit_hash, created_at "
-                    "FROM backup_fixes "
-                    "WHERE title ILIKE :q OR description ILIKE :q OR author ILIKE :q "
-                    "ORDER BY id DESC LIMIT :limit"
+                    "SELECT f.id, f.title, f.description, f.author, COALESCE(bfc.commit_hash, '') AS commit_hash, f.created_at "
+                    "FROM backup_fixes f "
+                    "LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id "
+                    "WHERE f.title ILIKE :q OR f.description ILIKE :q OR f.author ILIKE :q "
+                    "ORDER BY f.id DESC LIMIT :limit"
                 ),
                 {"q": like_q, "limit": limit},
             )

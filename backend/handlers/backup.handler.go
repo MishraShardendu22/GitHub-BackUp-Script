@@ -96,9 +96,10 @@ func GetBackupRuns(c *fiber.Ctx) error {
 
 		// fetch the fixes from database
 		fixesQuery := `
-			SELECT f.id, f.title, f.description, f.commit_hash, f.author, f.created_at, f.updated_at, rf.run_id
+			SELECT f.id, f.title, f.description, COALESCE(bfc.commit_hash, ''), f.author, f.created_at, f.updated_at, rf.run_id
 			FROM backup_fixes f
 			JOIN backup_run_fixes rf ON f.id = rf.fix_id
+			LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id
 			WHERE rf.run_id = ANY($1)
 		`
 		fixesRows, err := db.Pool.Query(ctx, fixesQuery, runIDs)
@@ -211,9 +212,10 @@ func GetBackupRun(c *fiber.Ctx) error {
 
 	// Fetch associated fixes
 	fixesRows, err := db.Pool.Query(ctx,
-		`SELECT f.id, f.title, f.description, f.commit_hash, f.author, f.created_at, f.updated_at
+		`SELECT f.id, f.title, f.description, COALESCE(bfc.commit_hash, ''), f.author, f.created_at, f.updated_at
 		 FROM backup_fixes f
 		 JOIN backup_run_fixes rf ON f.id = rf.fix_id
+		 LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id
 		 WHERE rf.run_id = $1`, r.ID)
 	if err == nil {
 		defer fixesRows.Close()

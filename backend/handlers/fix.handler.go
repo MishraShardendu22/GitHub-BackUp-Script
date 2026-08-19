@@ -20,8 +20,10 @@ func GetBackupFixes(c *fiber.Ctx) error {
 	defer cancel()
 
 	rows, err := db.Pool.Query(ctx,
-		`SELECT id, title, description, commit_hash, author, created_at, updated_at 
-		 FROM backup_fixes ORDER BY created_at DESC`)
+		`SELECT f.id, f.title, f.description, COALESCE(bfc.commit_hash, ''), f.author, f.created_at, f.updated_at 
+		 FROM backup_fixes f
+		 LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id
+		 ORDER BY f.created_at DESC`)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -78,8 +80,10 @@ func GetBackupFix(c *fiber.Ctx) error {
 
 	var f models.BackupFix
 	err := db.Pool.QueryRow(ctx,
-		`SELECT id, title, description, commit_hash, author, created_at, updated_at 
-		 FROM backup_fixes WHERE id = $1`, id).Scan(
+		`SELECT f.id, f.title, f.description, COALESCE(bfc.commit_hash, ''), f.author, f.created_at, f.updated_at 
+		 FROM backup_fixes f
+		 LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id
+		 WHERE f.id = $1`, id).Scan(
 		&f.ID, &f.Title, &f.Description, &f.CommitHash, &f.Author, &f.CreatedAt, &f.UpdatedAt)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "fix not found"})
@@ -118,9 +122,10 @@ func GetBackupRunFixes(c *fiber.Ctx) error {
 	defer cancel()
 
 	rows, err := db.Pool.Query(ctx,
-		`SELECT f.id, f.title, f.description, f.commit_hash, f.author, f.created_at, f.updated_at 
+		`SELECT f.id, f.title, f.description, COALESCE(bfc.commit_hash, ''), f.author, f.created_at, f.updated_at 
 		 FROM backup_fixes f
 		 JOIN backup_run_fixes rf ON f.id = rf.fix_id
+		 LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id
 		 WHERE rf.run_id = $1
 		 ORDER BY f.created_at DESC`, runID)
 	if err != nil {

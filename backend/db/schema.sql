@@ -111,11 +111,18 @@ CREATE TABLE IF NOT EXISTS backup_fixes (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    commit_hash TEXT DEFAULT '',
     author TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS backup_fix_commits (
+    id SERIAL PRIMARY KEY,
+    fix_id INT NOT NULL UNIQUE REFERENCES backup_fixes(id) ON DELETE CASCADE,
+    commit_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_backup_fix_commits_fix ON backup_fix_commits(fix_id);
 
 CREATE TABLE IF NOT EXISTS backup_run_fixes (
     run_id INT REFERENCES backup_runs(id) ON DELETE CASCADE,
@@ -129,7 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_backup_run_fixes_fix ON backup_run_fixes(fix_id);
 CREATE INDEX IF NOT EXISTS idx_backup_results_errors ON backup_results (run_id, status) WHERE error_message IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_backup_runs_status_failed ON backup_runs (status) WHERE status = 'failed';
 CREATE INDEX IF NOT EXISTS idx_backup_results_commit ON backup_results (commit_hash) WHERE commit_hash IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_backup_fixes_commit ON backup_fixes (commit_hash) WHERE commit_hash IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_backup_fix_commits_hash ON backup_fix_commits (commit_hash);
 
 -- =============================================================================
 -- Phase 1: Retrieval Foundation (pgvector + FTS + pg_trgm)

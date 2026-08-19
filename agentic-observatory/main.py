@@ -599,8 +599,8 @@ async def create_backup_fix(
             # 1. Insert into backup_fixes
             fix_query = text(
                 """
-                INSERT INTO backup_fixes (title, description, commit_hash, author, created_at, updated_at)
-                VALUES (:title, :description, :commit_hash, :author, NOW(), NOW())
+                INSERT INTO backup_fixes (title, description, author, created_at, updated_at)
+                VALUES (:title, :description, :author, NOW(), NOW())
                 RETURNING id
                 """
             )
@@ -609,7 +609,6 @@ async def create_backup_fix(
                 {
                     "title": request.title,
                     "description": request.description or "",
-                    "commit_hash": request.commitHash or None,
                     "author": request.author or "",
                 }
             )
@@ -618,6 +617,19 @@ async def create_backup_fix(
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to create fix record"
+                )
+
+            # Insert commit hash if provided
+            if request.commitHash and request.commitHash.strip():
+                await session.execute(
+                    text(
+                        """
+                        INSERT INTO backup_fix_commits (fix_id, commit_hash, created_at)
+                        VALUES (:fix_id, :commit_hash, NOW())
+                        ON CONFLICT (fix_id) DO UPDATE SET commit_hash = EXCLUDED.commit_hash
+                        """
+                    ),
+                    {"fix_id": fix_id, "commit_hash": request.commitHash.strip()}
                 )
 
             # 2. Insert mapping rows into backup_run_fixes
@@ -644,17 +656,19 @@ async def create_backup_fix(
             await session.commit()
             return {
                 "id": fix_id,
-                "title": request.title,
-                "description": request.description,
-                "commit_hash": request.commitHash,
-                "author": request.author,
-                "affected_runs": request.affectedRuns,
+                "message": "Fix logged successfully",
+                "affectedRuns": request.affectedRuns
             }
-        except Exception as exc:
+
+        except HTTPException:
             await session.rollback()
+            raise
+        except Exception as e:
+            await session.rollback()
+            logger.error("Failed to create backup fix: %s", e)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database transaction failed: {str(exc)}"
+                detail=f"Database error: {str(e)}"
             )
 
 
@@ -666,12 +680,18 @@ class UpdateFixRequest(BaseModel):
     affectedRuns: list[int] | None = None
 
 
-@app.put("/backup-fixes/{fix_id}")
+@app.patch("/api/fixes/{fix_id}")
 async def update_backup_fix(
     fix_id: int,
     request: UpdateFixRequest,
-    current_user: str = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user)
 ):
+    """
+    Update an existing manual fix and adjust its run associations.
+    """
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
     if not async_session:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -682,7 +702,7 @@ async def update_backup_fix(
         try:
             # Check if fix exists
             fix_check = await session.execute(
-                text("SELECT id, title, description, commit_hash, author FROM backup_fixes WHERE id = :fix_id"),
+                text("SELECT f.id, f.title, f.description, COALESCE(bfc.commit_hash, ''), f.author FROM backup_fixes f LEFT JOIN backup_fix_commits bfc ON f.id = bfc.fix_id WHERE f.id = :fix_id"),
                 {"fix_id": fix_id}
             )
             fix_row = fix_check.fetchone()
@@ -702,7 +722,7 @@ async def update_backup_fix(
             update_query = text(
                 """
                 UPDATE backup_fixes
-                SET title = :title, description = :description, commit_hash = :commit_hash, author = :author, updated_at = NOW()
+                SET title = :title, description = :description, author = :author, updated_at = NOW()
                 WHERE id = :fix_id
                 """
             )
@@ -712,10 +732,27 @@ async def update_backup_fix(
                     "fix_id": fix_id,
                     "title": title,
                     "description": description or "",
-                    "commit_hash": commit_hash or None,
                     "author": author or "",
                 }
             )
+
+            # Update backup_fix_commits
+            if commit_hash and commit_hash.strip():
+                await session.execute(
+                    text(
+                        """
+                        INSERT INTO backup_fix_commits (fix_id, commit_hash, created_at)
+                        VALUES (:fix_id, :commit_hash, NOW())
+                        ON CONFLICT (fix_id) DO UPDATE SET commit_hash = EXCLUDED.commit_hash
+                        """
+                    ),
+                    {"fix_id": fix_id, "commit_hash": commit_hash.strip()}
+                )
+            else:
+                await session.execute(
+                    text("DELETE FROM backup_fix_commits WHERE fix_id = :fix_id"),
+                    {"fix_id": fix_id}
+                )
 
             # Update mapping rows in backup_run_fixes if affectedRuns is provided
             if request.affectedRuns is not None:
