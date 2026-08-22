@@ -9,6 +9,7 @@ import (
 	"github.com/MishraShardendu22/github-backup/database"
 	"github.com/MishraShardendu22/github-backup/model"
 	"github.com/MishraShardendu22/github-backup/service/collect"
+	"github.com/MishraShardendu22/github-backup/service/helper"
 	"github.com/MishraShardendu22/github-backup/service/monitor"
 	"github.com/MishraShardendu22/github-backup/util"
 	"go.uber.org/zap"
@@ -47,6 +48,18 @@ func RunBackupFlow(cfg *model.ConfigModel, db *sql.DB) {
 	// print repos then send to processing
 	printRepoList(allRepos)
 	ProcessRepos(allRepos, cfg, db)
+
+	// checkpoint SQLite WAL
+	_ = database.Checkpoint(db)
+
+	// auto-sync database changes if enabled
+	if cfg.AutoSyncDB {
+		if err := helper.CommitAndPushDatabase(cfg.DBPath); err != nil {
+			util.Logger().Warn("Failed to sync database to remote repository",
+				zap.Error(err),
+			)
+		}
+	}
 }
 
 /*

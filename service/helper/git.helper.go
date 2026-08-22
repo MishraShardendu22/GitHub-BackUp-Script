@@ -247,3 +247,83 @@ func buildInitScript(backupRepoPath string) string {
 		git push origin main || (git pull --no-rebase --allow-unrelated-histories origin main --no-edit && git push origin main) && \
 		cd ..`, backupRepoPath)
 }
+
+/*
+PullRootRepo pulls the latest repository and database changes from remote.
+Called before every backup run starts to ensure multi-OS database sync.
+*/
+func PullRootRepo() error {
+	util.Logger().Info("Pulling latest repository & database changes...")
+	err := retryCommand(func() *exec.Cmd {
+		return exec.Command("git", "pull", "--no-edit")
+	}, "Root repository git pull", 2*time.Minute)
+	if err != nil {
+		util.Logger().Warn("Failed to pull latest repository updates (continuing with local database)",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	util.Logger().Info("Root repository & database successfully pulled")
+	return nil
+}
+
+/*
+CommitAndPushDatabase checks if SQLite database has changes after a backup run.
+If changed, it stages app.db, commits with timestamped message, and pushes to remote.
+*/
+func CommitAndPushDatabase(dbPath string) error {
+	if dbPath == "" {
+		dbPath = "./app.db"
+	}
+
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		util.Logger().Warn("Database file not found for sync", zap.String("path", dbPath))
+		return nil
+	}
+
+	stageCmd := exec.Command("git", "add", dbPath)
+	if out, err := stageCmd.CombinedOutput(); err != nil {
+		util.Logger().Warn("Failed to stage database file",
+			zap.String("path", dbPath),
+			zap.Error(err),
+			zap.String("output", string(out)),
+		)
+		return err
+	}
+
+	// Exit 0 from git diff --staged --quiet means NO changes staged
+	diffCmd := exec.Command("git", "diff", "--staged", "--quiet", "--", dbPath)
+	if err := diffCmd.Run(); err == nil {
+		util.Logger().Info("No database changes detected; skipping commit and push",
+			zap.String("path", dbPath),
+		)
+		return nil
+	}
+
+	commitMsg := BuildDBCommitMessage(time.Now())
+	util.Logger().Info("Committing updated database",
+		zap.String("path", dbPath),
+		zap.String("commit_message", commitMsg),
+	)
+
+	commitCmd := exec.Command("git", "commit", "-m", commitMsg, "-s")
+	if out, err := commitCmd.CombinedOutput(); err != nil {
+		util.Logger().Warn("Failed to commit database changes",
+			zap.Error(err),
+			zap.String("output", string(out)),
+		)
+		return err
+	}
+
+	err := retryCommand(func() *exec.Cmd {
+		return exec.Command("git", "push")
+	}, "Root database git push", pushTimeout)
+	if err != nil {
+		util.Logger().Warn("Failed to push database commit", zap.Error(err))
+		return err
+	}
+
+	util.Logger().Info("✓ Database successfully committed and pushed to remote")
+	return nil
+}
