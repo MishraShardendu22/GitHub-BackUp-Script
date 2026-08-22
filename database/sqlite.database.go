@@ -31,3 +31,11 @@ func ConnectSQLite(config *model.ConfigModel) (*sql.DB, error) {
 
 	return db, nil
 }
+
+func Checkpoint(db *sql.DB) error {
+	if db == nil {
+		return nil
+	}
+	_, err := db.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
+	return err
+}

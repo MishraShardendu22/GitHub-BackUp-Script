@@ -3,6 +3,7 @@ package helper
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRepoHelpers(t *testing.T) {
@@ -38,6 +39,17 @@ func TestRepoHelpers(t *testing.T) {
 		sanitized := SanitizeCommitMessage(raw)
 		if !strings.Contains(sanitized, `\$vars`) {
 			t.Errorf("expected \\$vars to be in %q", sanitized)
+		}
+	})
+
+	t.Run("BuildDBCommitMessage", func(t *testing.T) {
+		fixedTime := time.Date(2026, 8, 23, 1, 30, 0, 0, time.UTC)
+		msg := BuildDBCommitMessage(fixedTime)
+		if !strings.Contains(msg, "chore(db): update database with run on") {
+			t.Errorf("expected chore(db) prefix in %q", msg)
+		}
+		if !strings.Contains(msg, "2026-08-23") {
+			t.Errorf("expected date 2026-08-23 in %q", msg)
 		}
 	})
 }
