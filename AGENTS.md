@@ -67,21 +67,15 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 * **Branch-First Development Workflow**: All development MUST follow a branch-first workflow on the primary repository clone:
   1. Determine the appropriate base branch (typically `main`).
   2. Ensure the base branch is up to date (`git pull origin main`).
-  3. Create and switch to a new branch: `git switch -c <type>/<short-description>`.
+  3. Create and switch to a new branch: `git switch -c <github-username>/<parent-branch>/<feature>`.
   4. Perform all development directly on that branch.
   5. Validate with `make pre-commit` and create local signed commits.
   6. Push and open PR targeting `main` only upon explicit user request.
 * **Strict No-Worktree Rule**: Agents MUST NOT create Git worktrees for standard feature development, bug fixes, or maintenance tasks. Worktrees are strictly prohibited unless explicitly requested by the human user.
-* **Branch Naming Conventions**: All branches MUST follow `<type>/<short-description>`:
-  * `feature/<short-description>`: New capabilities or enhancements.
-  * `fix/<short-description>`: Bug fixes and issue resolutions.
-  * `refactor/<short-description>`: Code restructuring without functional changes.
-  * `docs/<short-description>`: Documentation additions and updates.
-  * `chore/<short-description>`: Routine tasks, configs, and dependency updates.
-  * `perf/<short-description>`: Performance and query optimizations.
-  * `test/<short-description>`: Test suite creation and expansion.
-  * `ci/<short-description>`: CI/CD workflows and pre-commit automation.
-  * `hotfix/<short-description>`: Urgent production fixes.
+* **Branch Naming Conventions**: All branches MUST follow `<github-username>/<parent-branch>/<feature>`:
+  * `<github-username>`: GitHub username of the author (e.g. `MishraShardendu22`).
+  * `<parent-branch>`: Base branch (typically `main`).
+  * `<feature>`: Concise kebab-case description of the feature or fix (e.g. `database-auto-sync`, `precommit-workflow`, `branch-first-migration`).
   * *Rules*: Lowercase, hyphen-separated (kebab-case), concise, no timestamps, no random suffixes.
 * **Local Commits & Mandatory Signing**: Agents are permitted and encouraged to create local Git commits once all code quality and pre-commit checks pass. All commits MUST include the `-s` (sign-off) and `-S` (GPG signature) flags: `git commit -s -S -m "<type>(<scope>): <message>"`.
 * **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.

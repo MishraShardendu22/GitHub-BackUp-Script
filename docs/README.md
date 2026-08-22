@@ -20,7 +20,7 @@ This directory serves as the centralized technical documentation hub for develop
 ## Core Repository Guides
 
 * [Root README](../README.md): System overview, live demo links, and developer getting started guide.
-* [Branching Policy](../BRANCHING.md): Branch-first development workflow, canonical naming (`<type>/<short-description>`), and lifecycle rules.
+* [Branching Policy](../BRANCHING.md): Branch-first development workflow, hierarchical naming (`<github-username>/<parent-branch>/<feature>`), and lifecycle rules.
 * [Repository Workflow](../WORKFLOW.md): Complete engineering lifecycle and explicit **Human-In-The-Loop Push Boundary**.
 * [Agent Rules](../AGENTS.md): Operational boundaries and verification checklists for AI agents.
 * [Agent Skills](../agents/README.md): Specialized runbooks and procedural skills for AI agents.

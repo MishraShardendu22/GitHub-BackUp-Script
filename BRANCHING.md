@@ -8,7 +8,7 @@ This document defines the official branch lifecycle, branch-first workflow, nami
 
 1. **Branch-First Development**: All new features, bug fixes, performance improvements, tests, and documentation are developed directly on dedicated Git branches originating from an up-to-date base branch (`main`).
 2. **Strict No-Worktree Rule**: Git worktrees must **NO LONGER** be used for normal development tasks. Contributors and AI agents must work within the primary clone by switching branches using standard Git tooling (`git switch -c`).
-3. **Structured Type-Prefixed Naming**: Branch names use standard functional prefixes (`<type>/<short-description>`) to categorize changes cleanly.
+3. **Structured Hierarchical Naming**: Branch names use the standard format `<github-username>/<parent-branch>/<feature>` to clearly declare ownership, lineage, and purpose.
 4. **All Pull Requests Target `main`**: `main` is the sole production release and integration branch. All PRs target `main`.
 5. **Agent Safety Boundaries**:
    * AI agents are permitted to create, switch, and inspect local branches.
@@ -22,14 +22,11 @@ This document defines the official branch lifecycle, branch-first workflow, nami
 ```text
 main (Production / Stable Release Line)
 │
-├── feature/postgres-failover      (New capability / enhancement)
-├── fix/auth-token-refresh         (Bug fix / error resolution)
-├── refactor/logging-pipeline      (Code simplification / cleanup)
-├── perf/vector-indexing-speed     (Performance optimization)
-├── test/worker-failure-suite      (Test suite additions)
-├── docs/api-telemetry-guide       (Documentation update)
-├── ci/precommit-fastpath          (CI/CD and automation updates)
-└── hotfix/security-middleware     (Urgent production patch)
+├── MishraShardendu22/main/database-auto-sync    (Feature: SQLite auto pull/push sync)
+├── MishraShardendu22/main/precommit-workflow     (Feature: Intelligent pre-commit gate)
+├── MishraShardendu22/main/branch-first-migration (Refactor: Worktree deprecation)
+├── MishraShardendu22/main/fix-auth-token-refresh (Fix: Token refresh bug)
+└── MishraShardendu22/main/perf-vector-indexing   (Perf: Embedding optimization)
 ```
 
 ---
@@ -39,26 +36,18 @@ main (Production / Stable Release Line)
 All development branches MUST follow this format:
 
 ```text
-<type>/<short-description>
+<github-username>/<parent-branch>/<feature>
 ```
 
-### Allowed Types
+### Components Breakdown
 
-| Prefix | Purpose | Example |
-| :--- | :--- | :--- |
-| `feature/` | New features, enhancements, or user-facing capabilities | `feature/worker-database-sync` |
-| `fix/` | Bug fixes, error handling corrections, or regression fixes | `fix/db-connection-leak` |
-| `refactor/` | Code refactoring without behavioral changes | `refactor/branch-first-workflow` |
-| `docs/` | Documentation additions, guides, sitemaps, and changelogs | `docs/streaming-architecture` |
-| `chore/` | Routine maintenance, dependency updates, and config tweaks | `chore/upgrade-biome` |
-| `perf/` | Performance optimizations, caching, and database query tuning | `perf/vector-search-early-exit` |
-| `test/` | Test creation, test fixtures, and mock expansion | `test/agent-failover-suite` |
-| `ci/` | CI/CD workflows, GitHub Actions, and pre-commit hooks | `ci/precommit-selective-gate` |
-| `hotfix/` | Critical, time-sensitive fixes applied directly to production | `hotfix/cors-header-patch` |
+* **`<github-username>`**: The GitHub username of the author (e.g. `MishraShardendu22`).
+* **`<parent-branch>`**: The base branch name (typically `main`).
+* **`<feature>`**: Concise, kebab-case description of the feature, fix, or refactor (e.g. `database-auto-sync`, `precommit-workflow`, `branch-first-migration`).
 
 ### Branch Naming Rules
-* **Lowercase**: All characters must be lowercase (e.g. `feature/rate-limiter`, not `feature/RateLimiter`).
-* **Kebab-Case**: Separate words with single hyphens (`-`).
+* **Lowercase**: All characters must be lowercase (e.g. `MishraShardendu22/main/database-sync`, not `MishraShardendu22/main/DatabaseSync`).
+* **Kebab-Case Feature Description**: Separate words with single hyphens (`-`).
 * **Concise & Descriptive**: 2–4 descriptive words indicating the specific change.
 * **No Timestamps or Random Hashes**: Avoid adding dates, timestamps, or arbitrary IDs unless uniqueness strictly requires it.
 
@@ -69,11 +58,11 @@ All development branches MUST follow this format:
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 1. Base Update:       git fetch origin && git checkout main && git pull
-2. Branch Creation:   git switch -c <type>/<short-description>
+2. Branch Creation:   git switch -c <github-username>/<parent-branch>/<feature>
 3. Implementation:    Develop code, write tests, update documentation
 4. Local Validation:  make pre-commit (Formatting, Linters, Tests, Builds)
 5. Local Commit:      git commit -s -S -m "<type>(<scope>): <description>"
-6. Remote Push:       git push -u origin <type>/<short-description> (on request)
+6. Remote Push:       git push -u origin <github-username>/<parent-branch>/<feature> (on request)
 7. Pull Request:      gh pr create --base main (on request)
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -88,8 +77,8 @@ All development branches MUST follow this format:
 git checkout main
 git pull origin main
 
-# 2. Create and switch to your feature/fix branch
-git switch -c feature/my-new-feature
+# 2. Create and switch to your feature branch
+git switch -c MishraShardendu22/main/my-new-feature
 
 # 3. Implement changes, validate, and commit
 make pre-commit
@@ -97,8 +86,8 @@ git add .
 git commit -s -S -m "feat(worker): add new repository sync mechanism"
 
 # 4. Push and open PR
-git push -u origin feature/my-new-feature
-gh pr create --base main --head feature/my-new-feature --title "feat(worker): add new repository sync mechanism" --body "..."
+git push -u origin MishraShardendu22/main/my-new-feature
+gh pr create --base main --head MishraShardendu22/main/my-new-feature --title "feat(worker): add new repository sync mechanism" --body "..."
 ```
 
 ### For AI Agents
@@ -110,7 +99,7 @@ git branch -a
 # 2. Update base and branch off main
 git switch main
 git pull origin main
-git switch -c <type>/<short-description>
+git switch -c <github-username>/<parent-branch>/<feature>
 
 # 3. Develop directly on the branch, run pre-commit gate, and commit locally
 make pre-commit
@@ -122,11 +111,33 @@ git commit -s -S -m "<type>(<scope>): <clear message>"
 
 ---
 
-## 6. Agent Permissions Summary
+## 6. Managing Multiple PRs & Merge Conflicts
+
+When working with multiple features or sequential pull requests, merge conflicts can arise if multiple PRs touch overlapping files (such as `CHANGELOG.md` or shared packages).
+
+### Conflict Prevention & Resolution Strategy
+1. **Consolidated PRs for Interdependent Tasks**: Group tightly coupled changes into a single comprehensive PR to avoid inter-PR merge conflicts.
+2. **Rebasing on Updated `main`**: If another PR merges into `main` before yours, synchronize your branch locally:
+   ```bash
+   # Fetch latest main
+   git fetch origin
+   git rebase origin/main
+   # Or: git merge origin/main
+
+   # Re-run validations
+   make pre-commit
+
+   # Force-with-lease update your feature branch
+   git push --force-with-lease origin <github-username>/<parent-branch>/<feature>
+   ```
+
+---
+
+## 7. Agent Permissions Summary
 
 | Action | Allowed for AI Agent? | Notes |
 | :--- | :--- | :--- |
-| **Create Local Branch** | **YES** | Follows `<type>/<short-description>` |
+| **Create Local Branch** | **YES** | Follows `<github-username>/<parent-branch>/<feature>` |
 | **Switch Local Branch** | **YES** | Uses `git switch` or `git checkout` |
 | **Create Git Worktree** | **STRICTLY NO** | Prohibited unless explicitly requested by user |
 | **Create Local Commit** | **YES** | Mandatory `-s` (sign-off) and `-S` (GPG sign) |

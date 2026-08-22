@@ -15,7 +15,7 @@ This skill guides AI agents and human contributors on how to create, name, struc
 
 1. **Branch-First Development**: All changes (features, fixes, refactoring, tests, docs) are developed directly on Git branches created from `main`.
 2. **Strict No-Worktree Rule**: AI agents and contributors must **NOT** create or use Git worktrees for standard development tasks. All work occurs in the primary repository clone via branch switching (`git switch -c`).
-3. **Structured Type-Prefixed Naming**: Branch names follow the standard format `<type>/<short-description>`.
+3. **Structured Hierarchical Naming**: Branch names follow the standard format `<github-username>/<parent-branch>/<feature>`.
 4. **All Pull Requests Target `main`**: `main` is the sole production integration branch. Never open PRs against `dev` or temporary feature branches.
 5. **Agent Safety Boundaries**:
    * Agents may create or switch between local branches directly.
@@ -29,26 +29,17 @@ This skill guides AI agents and human contributors on how to create, name, struc
 All development branches MUST follow the standard structure:
 
 ```text
-<type>/<short-description>
+<github-username>/<parent-branch>/<feature>
 ```
 
-### Allowed Types
-
-| Prefix | Purpose | Example |
-| :--- | :--- | :--- |
-| `feature/` | New capabilities, enhancements, or additions | `feature/worker-database-sync` |
-| `fix/` | Bug fixes and defect resolutions | `fix/sqlite-wal-checkpoint` |
-| `refactor/` | Code refactoring without behavior change | `refactor/branch-first-workflow` |
-| `docs/` | Documentation additions and updates | `docs/streaming-architecture` |
-| `chore/` | Routine tasks, configs, dependencies | `chore/upgrade-biome` |
-| `perf/` | Performance optimizations | `perf/vector-search-early-exit` |
-| `test/` | Test suite creation and expansion | `test/agent-failover-suite` |
-| `ci/` | CI/CD workflows and pre-commit hooks | `ci/precommit-selective-gate` |
-| `hotfix/` | Critical production fixes | `hotfix/cors-header-patch` |
+### Components Breakdown
+* `<github-username>`: GitHub username of the author (e.g. `MishraShardendu22`).
+* `<parent-branch>`: Target base branch name (typically `main`).
+* `<feature>`: Concise, kebab-case description of the feature or fix (e.g. `database-auto-sync`, `precommit-workflow`, `branch-first-migration`).
 
 ### Rules
 * **Lowercase**: All characters lowercase.
-* **Kebab-Case**: Hyphen-separated words.
+* **Kebab-Case**: Hyphen-separated words for the feature portion.
 * **Concise**: 2–4 descriptive words.
 * **No Timestamps/Hashes**: Avoid timestamps or random suffixes unless required for uniqueness.
 
@@ -63,7 +54,7 @@ git checkout main
 git pull origin main
 
 # 2. Create and switch to new branch
-git switch -c feature/my-feature
+git switch -c MishraShardendu22/main/my-feature
 
 # 3. Develop, validate, and commit
 make pre-commit
@@ -71,8 +62,8 @@ git add .
 git commit -s -S -m "feat(worker): add new capability"
 
 # 4. Push and open PR
-git push -u origin feature/my-feature
-gh pr create --base main --head feature/my-feature --title "feat(worker): add new capability" --body "..."
+git push -u origin MishraShardendu22/main/my-feature
+gh pr create --base main --head MishraShardendu22/main/my-feature --title "feat(worker): add new capability" --body "..."
 ```
 
 ### For AI Agents
@@ -88,14 +79,22 @@ gh pr create --base main --head feature/my-feature --title "feat(worker): add ne
    ```
 3. Create local branch:
    ```bash
-   git switch -c <type>/<short-description>
+   git switch -c <github-username>/<parent-branch>/<feature>
    ```
 4. Develop directly on that branch, run `make pre-commit`, and commit locally with `-s` and `-S`.
 5. When explicitly requested by the user, push to remote and open a PR targeting `main`.
 
 ---
 
-## 4. Merging & Local Branch Cleanup
+## 4. Managing Multiple PRs & Merge Conflicts
+
+When multiple feature branches or PRs are in flight:
+* **Consolidated PRs**: Combine interdependent changes into a single PR rather than multiple overlapping PRs to avoid merge conflicts.
+* **Rebasing**: If another PR merges into `main`, rebase your branch on `origin/main` (`git fetch origin && git rebase origin/main`), re-verify with `make pre-commit`, and update your PR.
+
+---
+
+## 5. Merging & Local Branch Cleanup
 
 1. Once a Pull Request is merged into `main`, delete the local branch:
    ```bash
