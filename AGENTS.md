@@ -62,9 +62,16 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
   2. UI displays modal to user. User responds via `POST /chat/confirm`.
   3. Rejection or timeout (120s) gracefully feeds rejection message into LLM reasoning without crashing the session.
 
+## 7. Git Branching, Commit Standards & Push Safety Boundary
+
+* **Local Commits Allowed**: Agents are permitted and encouraged to create local Git commits (`git commit`) once all code quality and pre-commit checks pass.
+* **STRICT PUSH FORBIDDEN RULE**: Agents MUST **NEVER** execute `git push`, create remote branches, or modify remote repository state under any circumstances. All commits MUST be reviewed and pushed personally by the human developer.
+* **Branch Naming**: All branches created must follow the hierarchical convention: `<github-username>/<parent-branch>/<change>` (e.g. `MishraShardendu22/dev/cleanup/precommit-workflow`). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
+* **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes.
+
 ---
 
-## 7. Verification Checklist
+## 8. Verification Checklist
 
 Before finishing any task, you MUST run:
 ```bash
@@ -80,3 +87,4 @@ cd agentic-observatory && uv run --with pyright pyright
 # 4. Run Frontend lint and Turbopack build
 cd frontend && pnpm run lint && pnpm run build
 ```
+

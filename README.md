@@ -13,6 +13,9 @@ A distributed backup automation and AI-driven telemetry observatory. The system 
 
 - **Production Dashboard**: [github.mishrashardendu22.is-a.dev](https://github.mishrashardendu22.is-a.dev)
 - **API Documentation**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
+- **Branching Policy**: [BRANCHING.md](BRANCHING.md)
+- **Repository Workflow**: [WORKFLOW.md](WORKFLOW.md)
+- **Pre-Commit Gate**: [docs/PRECOMMIT_WORKFLOW.md](docs/PRECOMMIT_WORKFLOW.md)
 - **Video Walkthrough**: [YouTube Demonstration](https://www.youtube.com/watch?v=be0UBwk2asc)
 
 ---
