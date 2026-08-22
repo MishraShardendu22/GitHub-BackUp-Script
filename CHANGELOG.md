@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Git Branching Policy & Creation Rules ([`BRANCHING.md`](BRANCHING.md)):
+  - Established hierarchical branch naming standard `<github-username>/<parent-branch>/<change>`.
+  - Clarified parent/base lineage, branch relations, and lifecycle management.
+- Repository Workflow & Safety Guidelines ([`WORKFLOW.md`](WORKFLOW.md)):
+  - Established end-to-end engineering pipeline: `branch -> dev -> validation -> local commit -> human review -> push -> merge`.
+  - Enforced strict **Human-In-The-Loop Push Boundary**: AI agents are permitted to commit locally but are strictly forbidden from executing `git push`.
+- Specialized Agent Skills Suite (`.agents/skills/` and `agents/`):
+  - `git-branch-management`: Hierarchical naming, base branch resolution, and safe branch navigation.
+  - `git-commit-workflow`: Conventional Commits, validation checklist, and human review boundaries.
+  - `test-creation-and-execution`: Test creation patterns and runbooks across Go, Python, and TypeScript.
+  - `ci-cd-workflow`: GitHub Actions matrix, Render/Vercel boundaries, and containerless architecture.
+  - `code-quality-and-validation`: Formatting, linting, and type checking standards.
+  - `precommit-workflow-management`: Operations, bypasses, and staged file filtering for `.githooks/pre-commit`.
+  - `repository-maintenance`: Idempotent SQL migrations, pgvector embedding lifecycle, and backup/restore runbooks.
 - Intelligent Git Pre-Commit Hook Workflow (`.githooks/pre-commit`):
   - Automatically inspects staged files and selectively triggers targeted validations across Go Backend/Worker, Python Agentic Observatory, and Next.js Frontend.
   - Multi-tier validation pipeline: code formatting (`gofmt`, Biome), static analysis & type checking (`go vet`, `pyright`, `tsc`), test suites, and production artifact builds.
