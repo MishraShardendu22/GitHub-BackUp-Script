@@ -52,11 +52,11 @@ make pre-commit
 ### Bypass Flags (Emergency Only)
 ```bash
 # Skip tests for quick drafts
-SKIP_TESTS=1 git commit -m "chore: draft"
+SKIP_TESTS=1 git commit -s -S -m "chore: draft"
 
 # Skip builds for lightweight edits
-SKIP_BUILDS=1 git commit -m "fix: comment"
+SKIP_BUILDS=1 git commit -s -S -m "fix: comment"
 
 # Force full validation across all subsystems
-PRECOMMIT_ALL=1 git commit -m "feat: core change"
+PRECOMMIT_ALL=1 git commit -s -S -m "feat: core change"
 ```
