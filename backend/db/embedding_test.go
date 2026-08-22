@@ -854,4 +854,3 @@ func TestPruneStaleGenerations(t *testing.T) {
 		t.Errorf("expected gen 2 to be deleted, got %v", g2)
 	}
 }
-

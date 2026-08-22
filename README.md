@@ -56,15 +56,25 @@ Run individual services or the unified development environment using the provide
 # 1. Start all 3 services concurrently (Go: 8080, Python: 8000, Frontend: 3000)
 make dev
 
-# 2. Run all test suites across Go and Python
+# 2. Configure Git pre-commit validation hooks (.githooks/)
+make hooks-install
+
+# 3. Run full pre-commit validation gate across all services
+make pre-commit
+
+# 4. Run linters and formatters across Go, Python, and TypeScript
+make lint
+make format
+make typecheck
+
+# 5. Run all test suites across Go and Python
 make test
 
-# 3. Run linters across Go, Python, and TypeScript
-make lint
-
-# 4. Build Go binaries and Next.js frontend
+# 6. Build Go binaries and Next.js frontend
 make build
 ```
+
+> **Pre-Commit Workflow**: Learn how the intelligent staged-file validation gate works in [`docs/PRECOMMIT_WORKFLOW.md`](docs/PRECOMMIT_WORKFLOW.md).
 
 ### Default Port Mappings
 - **Frontend Dashboard**: `http://localhost:3000`

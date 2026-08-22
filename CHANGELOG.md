@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Intelligent Git Pre-Commit Hook Workflow (`.githooks/pre-commit`):
+  - Automatically inspects staged files and selectively triggers targeted validations across Go Backend/Worker, Python Agentic Observatory, and Next.js Frontend.
+  - Multi-tier validation pipeline: code formatting (`gofmt`, Biome), static analysis & type checking (`go vet`, `pyright`, `tsc`), test suites, and production artifact builds.
+  - Fail-fast execution with timing diagnostics, colorized logging, and remediation advice.
+  - Documentation-only fast-path bypassing heavy builds on non-code changes.
+  - Developer automation targets in `Makefile`: `make hooks-install`, `make pre-commit`, `make format`, `make typecheck`.
+  - Comprehensive documentation in `docs/PRECOMMIT_WORKFLOW.md`.
 - Initial release of Backup Observatory (GitHub Backup)
 - Worker (CLI) for cloning, archiving, and pushing GitHub repositories
 - Backend (Dashboard/API) with PostgreSQL-backed metrics, run history, and live logs
