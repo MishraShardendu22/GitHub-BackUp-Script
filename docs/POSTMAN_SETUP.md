@@ -15,7 +15,7 @@ This guide helps you import and use the GitHub Backup API collection and environ
 1. Open **Postman**
 2. Click on the **Import** button (top-left)
 3. Select **Upload Files**
-4. Choose `docs/GitHub-Backup-API.postman_collection.json`
+4. Choose `docs/postman/GitHub-Backup-API.postman_collection.json`
 5. Click **Import**
 
 The collection will appear in your sidebar with all API endpoints organized by category.
@@ -25,7 +25,7 @@ The collection will appear in your sidebar with all API endpoints organized by c
 1. Click the **Settings** icon (⚙️) in the top-right corner
 2. Navigate to **Environments**
 3. Click **Import**
-4. Select `docs/GitHub-Backup-Environment.postman_environment.json`
+4. Select `docs/postman/GitHub-Backup-Environment.postman_environment.json`
 5. Close the settings panel
 
 ### 3. Select Environment
