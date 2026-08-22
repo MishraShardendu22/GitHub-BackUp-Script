@@ -1,17 +1,18 @@
 # Git Branching Strategy & Creation Policy
 
-This document defines the official branch lifecycle, hierarchical naming convention, and permission boundaries for all human contributors and AI agents working on the **GitHub Backup Automation System** repository.
+This document defines the official branch lifecycle, branch-first workflow, naming conventions, and permission boundaries for all human contributors and AI agents working on the **GitHub Backup Automation System** repository.
 
 ---
 
 ## 1. Core Principles
 
-1. **Explicit Parent Lineage**: Every branch represents a purposeful line of development rooted in a designated parent/base branch (`main` or an epic feature branch).
-2. **Hierarchical Logical Naming**: Branch names use `/` separators to group branches logically by owner, parent context, and feature scope.
-3. **Git Branches Are Not Directories**: In Git, branch names are flat string references. The forward slash (`/`) is purely a naming and organization convention to provide readable structural hierarchy in Git tooling and terminal outputs.
-4. **Agent Safety Boundaries**:
+1. **Branch-First Development**: All new features, bug fixes, performance improvements, tests, and documentation are developed directly on dedicated Git branches originating from an up-to-date base branch (`main`).
+2. **Strict No-Worktree Rule**: Git worktrees must **NO LONGER** be used for normal development tasks. Contributors and AI agents must work within the primary clone by switching branches using standard Git tooling (`git switch -c`).
+3. **Structured Type-Prefixed Naming**: Branch names use standard functional prefixes (`<type>/<short-description>`) to categorize changes cleanly.
+4. **All Pull Requests Target `main`**: `main` is the sole production release and integration branch. All PRs target `main`.
+5. **Agent Safety Boundaries**:
    * AI agents are permitted to create, switch, and inspect local branches.
-   * **STRICT RULE**: AI agents MUST NEVER run `git push` to push branches or commits to any remote repository.
+   * **STRICT RULE**: AI agents MUST NEVER run `git push` or create remote branches automatically. Pushing and opening PRs is permitted ONLY upon explicit human request.
    * **STRICT RULE**: AI agents MUST NEVER force-push (`--force`) or delete remote branches.
 
 ---
@@ -21,125 +22,116 @@ This document defines the official branch lifecycle, hierarchical naming convent
 ```text
 main (Production / Stable Release Line)
 │
-└── MishraShardendu22/dev/cleanup (Feature Epic / Refactoring Baseline)
-    │
-    ├── MishraShardendu22/dev/cleanup/precommit-workflow (Task: Pre-commit gate)
-    ├── MishraShardendu22/dev/cleanup/testing            (Task: Test suite expansion)
-    └── MishraShardendu22/dev/cleanup/ci-cd              (Task: GitHub Actions workflow)
+├── feature/postgres-failover      (New capability / enhancement)
+├── fix/auth-token-refresh         (Bug fix / error resolution)
+├── refactor/logging-pipeline      (Code simplification / cleanup)
+├── perf/vector-indexing-speed     (Performance optimization)
+├── test/worker-failure-suite      (Test suite additions)
+├── docs/api-telemetry-guide       (Documentation update)
+├── ci/precommit-fastpath          (CI/CD and automation updates)
+└── hotfix/security-middleware     (Urgent production patch)
 ```
-
-### Hierarchy Descriptions
-* **`main`**: The primary, production-ready branch. All code in `main` is deployable and passes all validation gates.
-* **`<github-username>/<epic>`** (e.g. `MishraShardendu22/dev/cleanup`): A feature epic or milestone branch that serves as the parent/base for sub-tasks within a major initiative.
-* **`<github-username>/<parent-branch>/<change>`** (e.g. `MishraShardendu22/dev/cleanup/precommit-workflow`): A task-specific branch containing atomic, focused work that targets its parent epic branch.
 
 ---
 
-## 3. Branch Naming Convention
+## 3. Canonical Branch Naming Convention
 
 All development branches MUST follow this format:
 
 ```text
-<github-username>/<parent-branch>/<change>
+<type>/<short-description>
 ```
 
-### Format Breakdown
-* `<github-username>`: Author's GitHub username (e.g. `MishraShardendu22`).
-* `<parent-branch>`: The base branch name without author prefix (e.g. `dev/cleanup` or `main`).
-* `<change>`: Kebab-case description of the feature, fix, or task (e.g. `precommit-workflow`, `agent-skills`, `postgres-indexes`).
+### Allowed Types
 
-### Valid Examples
-* `MishraShardendu22/dev/cleanup/precommit-workflow` (Task branching off `MishraShardendu22/dev/cleanup`)
-* `MishraShardendu22/dev/cleanup/testing` (Task branching off `MishraShardendu22/dev/cleanup`)
-* `MishraShardendu22/dev/cleanup/ci-cd` (Task branching off `MishraShardendu22/dev/cleanup`)
-* `MishraShardendu22/main/hotfix-auth` (Emergency fix branching directly off `main`)
-
----
-
-## 4. Determining the Correct Parent Branch
-
-| Change Scope | Target Parent Branch | Example New Branch Name |
+| Prefix | Purpose | Example |
 | :--- | :--- | :--- |
-| **Epic Sub-Task** (part of ongoing refactor or multi-step feature) | Active Epic Branch (e.g. `MishraShardendu22/dev/cleanup`) | `MishraShardendu22/dev/cleanup/task-name` |
-| **Standalone Feature** (independent of active epics) | `main` | `MishraShardendu22/main/feature-name` |
-| **Production Hotfix** (critical bugfix destined directly for release) | `main` | `MishraShardendu22/main/hotfix-name` |
+| `feature/` | New features, enhancements, or user-facing capabilities | `feature/worker-database-sync` |
+| `fix/` | Bug fixes, error handling corrections, or regression fixes | `fix/db-connection-leak` |
+| `refactor/` | Code refactoring without behavioral changes | `refactor/branch-first-workflow` |
+| `docs/` | Documentation additions, guides, sitemaps, and changelogs | `docs/streaming-architecture` |
+| `chore/` | Routine maintenance, dependency updates, and config tweaks | `chore/upgrade-biome` |
+| `perf/` | Performance optimizations, caching, and database query tuning | `perf/vector-search-early-exit` |
+| `test/` | Test creation, test fixtures, and mock expansion | `test/agent-failover-suite` |
+| `ci/` | CI/CD workflows, GitHub Actions, and pre-commit hooks | `ci/precommit-selective-gate` |
+| `hotfix/` | Critical, time-sensitive fixes applied directly to production | `hotfix/cors-header-patch` |
+
+### Branch Naming Rules
+* **Lowercase**: All characters must be lowercase (e.g. `feature/rate-limiter`, not `feature/RateLimiter`).
+* **Kebab-Case**: Separate words with single hyphens (`-`).
+* **Concise & Descriptive**: 2–4 descriptive words indicating the specific change.
+* **No Timestamps or Random Hashes**: Avoid adding dates, timestamps, or arbitrary IDs unless uniqueness strictly requires it.
 
 ---
 
-## 5. When to Create a New Branch vs Continue Existing
+## 4. The Canonical Development Workflow
 
-### Create a NEW Branch When:
-* Starting a new discrete task or feature with its own logical scope.
-* Introducing architectural changes or new infrastructure tooling.
-* Working concurrently on a separate component without blocking the parent branch.
-
-### Continue on an EXISTING Branch When:
-* Addressing direct feedback or review comments on the active branch's task.
-* Applying small, incremental fixes strictly related to the current task scope.
-* Completing the immediate milestones defined for the active worktree.
+```text
+┌─────────────────────────────────────────────────────────────┐
+1. Base Update:       git fetch origin && git checkout main && git pull
+2. Branch Creation:   git switch -c <type>/<short-description>
+3. Implementation:    Develop code, write tests, update documentation
+4. Local Validation:  make pre-commit (Formatting, Linters, Tests, Builds)
+5. Local Commit:      git commit -s -S -m "<type>(<scope>): <description>"
+6. Remote Push:       git push -u origin <type>/<short-description> (on request)
+7. Pull Request:      gh pr create --base main (on request)
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 6. Step-by-Step Branch Creation Runbooks
+## 5. Step-by-Step Runbooks
 
 ### For Human Contributors
 ```bash
-# 1. Fetch latest changes from remote
-git fetch origin
+# 1. Ensure main branch is clean and up to date
+git checkout main
+git pull origin main
 
-# 2. Checkout and pull the desired parent branch
-git checkout MishraShardendu22/dev/cleanup
-git pull origin MishraShardendu22/dev/cleanup
+# 2. Create and switch to your feature/fix branch
+git switch -c feature/my-new-feature
 
-# 3. Create and switch to the new hierarchical branch
-git switch -c MishraShardendu22/dev/cleanup/precommit-workflow
+# 3. Implement changes, validate, and commit
+make pre-commit
+git add .
+git commit -s -S -m "feat(worker): add new repository sync mechanism"
+
+# 4. Push and open PR
+git push -u origin feature/my-new-feature
+gh pr create --base main --head feature/my-new-feature --title "feat(worker): add new repository sync mechanism" --body "..."
 ```
 
 ### For AI Agents
 ```bash
-# 1. Inspect existing branch state and worktrees
+# 1. Verify current branch state (do NOT spawn worktrees)
 git status
 git branch -a
 
-# 2. Verify HEAD and lineage
-git log -n 1 --oneline
+# 2. Update base and branch off main
+git switch main
+git pull origin main
+git switch -c <type>/<short-description>
 
-# 3. Create local branch (DO NOT push remotely)
-git switch -c <github-username>/<parent-branch>/<change>
-```
-
----
-
----
-
-## 7. Pull Requests & Integration Runbook
-
-> [!IMPORTANT]
-> **ALL PULL REQUESTS TARGET `main` ONLY**:
-> Every Pull Request opened in this repository MUST target **`main`**. Do not open PRs against `dev` or feature branches.
-
-Once all development and tests pass the pre-commit gate:
-
-```bash
-# 1. Ensure all local tests and pre-commit checks pass
+# 3. Develop directly on the branch, run pre-commit gate, and commit locally
 make pre-commit
+git add <modified-files>
+git commit -s -S -m "<type>(<scope>): <clear message>"
 
-# 2. Push branch to remote and open PR against main (when requested by user)
-git push -u origin <branch-name>
-gh pr create --base main --head <branch-name> --title "<type>(<scope>): <title>" --body "..."
+# 4. Stop and notify human developer (push/PR only when explicitly instructed)
 ```
 
 ---
 
-## 8. Agent Permissions Summary
+## 6. Agent Permissions Summary
 
 | Action | Allowed for AI Agent? | Notes |
 | :--- | :--- | :--- |
-| **Create Local Branch** | **YES** | Follows `<github-username>/<parent-branch>/<change>` |
-| **Switch Local Branch** | **YES** | Safe local navigation |
-| **Create Local Commit** | **YES** | Must pass `make pre-commit` first |
-| **Push to Remote (`git push`)** | **ON EXPLICIT USER REQUEST ONLY** | Permitted only when specifically instructed by the human user to push/create PR; never automated |
-| **Create Pull Request** | **ON EXPLICIT USER REQUEST ONLY** | Must target `main` only; never created automatically |
+| **Create Local Branch** | **YES** | Follows `<type>/<short-description>` |
+| **Switch Local Branch** | **YES** | Uses `git switch` or `git checkout` |
+| **Create Git Worktree** | **STRICTLY NO** | Prohibited unless explicitly requested by user |
+| **Create Local Commit** | **YES** | Mandatory `-s` (sign-off) and `-S` (GPG sign) |
+| **Push to Remote (`git push`)** | **ON EXPLICIT USER REQUEST ONLY** | Never push automatically |
+| **Create Pull Request** | **ON EXPLICIT USER REQUEST ONLY** | Must target `main` only via `gh pr create` |
 | **Force Push (`--force`)** | **STRICTLY NO** | Prohibited |
 | **Delete Remote Branch** | **STRICTLY NO** | Prohibited |
 

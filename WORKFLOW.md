@@ -9,13 +9,13 @@ This document defines the complete engineering lifecycle for contributors and AI
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. BRANCH CREATION                                          │
-│    Create local branch: <user>/<parent>/<change>            │
+│    Create local branch: <type>/<short-description>          │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 2. DEVELOPMENT                                              │
-│    Implement focused changes, update docs, maintain types   │
+│    Implement focused changes directly on the branch         │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                                ▼
@@ -42,14 +42,14 @@ This document defines the complete engineering lifecycle for contributors and AI
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 6. REMOTE PUSH (HUMAN ONLY)                                 │
-│    Human runs 'git push origin <branch>'                    │
+│ 6. REMOTE PUSH (ON USER REQUEST)                            │
+│    Run 'git push origin <branch>'                           │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 7. PR & CI/CD MERGE                                         │
-│    GitHub Actions CI validation → PR Merge into Parent      │
+│    GitHub Actions CI validation → PR Merge into main        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -58,10 +58,11 @@ This document defines the complete engineering lifecycle for contributors and AI
 ## 2. Stage Breakdown & Protocol
 
 ### Stage 1: Branch Creation
-* Determine the appropriate parent branch (`main` or an active epic such as `MishraShardendu22/dev/cleanup`).
-* Create a local branch adhering to [`BRANCHING.md`](BRANCHING.md):
+* Ensure `main` is checked out and up to date: `git checkout main && git pull origin main`.
+* Create a local branch adhering to [`BRANCHING.md`](BRANCHING.md) (do **not** create Git worktrees):
   ```bash
-  git switch -c MishraShardendu22/dev/cleanup/feature-name
+  git switch -c <type>/<short-description>
+  # Example: git switch -c feature/worker-database-sync
   ```
 
 ### Stage 2: Development & Documentation

@@ -3,7 +3,7 @@
 Thanks for your interest in contributing. A few quick notes to help you get started:
 
 - **Pre-Commit Gate**: Run `make hooks-install` upon setting up your local repository to activate the automated `.githooks/pre-commit` validation gate. Run `make pre-commit` to manually test the full validation pipeline.
-- **Branching Policy**: Follow the branch naming structure `<github-username>/<parent-branch>/<change>` and hierarchy described in [BRANCHING.md](BRANCHING.md).
+- **Branching Policy**: Follow the branch-first development workflow and `<type>/<short-description>` naming convention described in [BRANCHING.md](BRANCHING.md).
 - **Engineering Workflow**: Follow the complete development lifecycle and human-review push boundary described in [WORKFLOW.md](WORKFLOW.md).
 - **Code Style & Formatting**: Follow existing conventions. Auto-format your code using `make format` (`gofmt` for Go, `biome format` for TypeScript/React).
 - **Static Analysis & Linting**: Run `make lint` and `make typecheck` before submitting pull requests.

@@ -64,11 +64,29 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ## 7. Git Branching, Commit Standards, Push & Pull Request Rules
 
+* **Branch-First Development Workflow**: All development MUST follow a branch-first workflow on the primary repository clone:
+  1. Determine the appropriate base branch (typically `main`).
+  2. Ensure the base branch is up to date (`git pull origin main`).
+  3. Create and switch to a new branch: `git switch -c <type>/<short-description>`.
+  4. Perform all development directly on that branch.
+  5. Validate with `make pre-commit` and create local signed commits.
+  6. Push and open PR targeting `main` only upon explicit user request.
+* **Strict No-Worktree Rule**: Agents MUST NOT create Git worktrees for standard feature development, bug fixes, or maintenance tasks. Worktrees are strictly prohibited unless explicitly requested by the human user.
+* **Branch Naming Conventions**: All branches MUST follow `<type>/<short-description>`:
+  * `feature/<short-description>`: New capabilities or enhancements.
+  * `fix/<short-description>`: Bug fixes and issue resolutions.
+  * `refactor/<short-description>`: Code restructuring without functional changes.
+  * `docs/<short-description>`: Documentation additions and updates.
+  * `chore/<short-description>`: Routine tasks, configs, and dependency updates.
+  * `perf/<short-description>`: Performance and query optimizations.
+  * `test/<short-description>`: Test suite creation and expansion.
+  * `ci/<short-description>`: CI/CD workflows and pre-commit automation.
+  * `hotfix/<short-description>`: Urgent production fixes.
+  * *Rules*: Lowercase, hyphen-separated (kebab-case), concise, no timestamps, no random suffixes.
 * **Local Commits & Mandatory Signing**: Agents are permitted and encouraged to create local Git commits once all code quality and pre-commit checks pass. All commits MUST include the `-s` (sign-off) and `-S` (GPG signature) flags: `git commit -s -S -m "<type>(<scope>): <message>"`.
 * **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.
 * **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create`.
-* **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
-* **Branch Naming**: All branches created must follow the hierarchical convention: `<github-username>/<parent-branch>/<change>` (e.g. `MishraShardendu22/dev/cleanup/precommit-workflow`).
+* **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or temporary feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
 * **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes or opening a PR.
 
 ---
