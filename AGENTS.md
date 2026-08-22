@@ -64,7 +64,7 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ## 7. Git Branching, Commit Standards, Push & Pull Request Rules
 
-* **Local Commits Allowed**: Agents are permitted and encouraged to create local Git commits (`git commit`) once all code quality and pre-commit checks pass.
+* **Local Commits & Mandatory Signing**: Agents are permitted and encouraged to create local Git commits once all code quality and pre-commit checks pass. All commits MUST include the `-s` (sign-off) and `-S` (GPG signature) flags: `git commit -s -S -m "<type>(<scope>): <message>"`.
 * **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.
 * **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create`.
 * **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).

@@ -94,7 +94,17 @@ All commits MUST follow the Conventional Commits specification:
 
 ---
 
-## 4. Local Commit Runbook for AI Agents
+## 4. Mandatory Sign-off (`-s`) and Signing (`-S`) Flags
+
+> [!IMPORTANT]
+> **ALL COMMITS MUST BE SIGNED AND SIGNED-OFF**:
+> Whenever an agent creates a Git commit, it MUST include both `-s` and `-S` flags:
+> * **`-s` (`--signoff`)**: Adds the standard `Signed-off-by: Author <email>` trailer (DCO compliance).
+> * **`-S` (`--gpg-sign`)**: Cryptographically signs the commit with the configured GPG/SSH signing key.
+
+---
+
+## 5. Local Commit Runbook for AI Agents
 
 1. Check current branch and staged files:
    ```bash
@@ -104,12 +114,12 @@ All commits MUST follow the Conventional Commits specification:
    ```bash
    git add <path/to/modified-files>
    ```
-3. Commit with an informative, conventional message:
+3. Commit with mandatory `-s` and `-S` flags and a conventional message:
    ```bash
-   git commit -m "<type>(<scope>): <clear description>"
+   git commit -s -S -m "<type>(<scope>): <clear description>"
    ```
-4. Verify the commit was recorded locally:
+4. Verify the commit was recorded locally with signature and sign-off:
    ```bash
-   git log -n 1 --stat
+   git log -n 1 --show-signature --stat
    ```
 5. **STOP and inform the human developer**: Present the commit hash, summary, and notify the developer that the changes are ready for their personal review and push.

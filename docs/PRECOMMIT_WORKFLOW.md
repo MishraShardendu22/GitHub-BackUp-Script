@@ -124,19 +124,19 @@ In specific development scenarios (e.g. drafting intermediate commits or quick e
 
 * **Bypass Test Suites**:
   ```bash
-  SKIP_TESTS=1 git commit -m "chore: quick update"
+  SKIP_TESTS=1 git commit -s -S -m "chore: quick update"
   ```
 * **Bypass Build Compilation**:
   ```bash
-  SKIP_BUILDS=1 git commit -m "refactor: type adjustment"
+  SKIP_BUILDS=1 git commit -s -S -m "refactor: type adjustment"
   ```
 * **Force Full Monorepo Validation**:
   ```bash
-  PRECOMMIT_ALL=1 git commit -m "feat: monorepo change"
+  PRECOMMIT_ALL=1 git commit -s -S -m "feat: monorepo change"
   ```
 * **Complete Git Bypass (Native Git)**:
   ```bash
-  git commit --no-verify -m "wip: draft checkpoint"
+  git commit -s -S --no-verify -m "wip: draft checkpoint"
   ```
 
 ---

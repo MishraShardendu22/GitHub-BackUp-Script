@@ -77,10 +77,10 @@ This document defines the complete engineering lifecycle for contributors and AI
 * Ensure all 8 validation phases succeed (formatting, static analysis, unit tests, agent tests, binary builds, and Next.js Turbopack compilation).
 
 ### Stage 4: Local Commit
-* Create an atomic Conventional Commit:
+* Create an atomic Conventional Commit with mandatory sign-off (`-s`) and cryptographic signing (`-S`):
   ```bash
   git add <modified-files>
-  git commit -m "feat(scope): concise description"
+  git commit -s -S -m "feat(scope): concise description"
   ```
 
 ---
