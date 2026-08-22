@@ -64,7 +64,7 @@ The pre-commit hook automatically executes the following suite of validations:
 
 ## 4. Installation & Activation
 
-To activate the pre-commit hook in your local clone or worktree:
+To activate the pre-commit hook in your local repository clone:
 
 ```bash
 # Recommended: Using Makefile
@@ -97,7 +97,7 @@ The pre-commit workflow optimizes developer feedback loops by detecting staged f
 
 ## 6. Developer CLI Commands
 
-The [`Makefile`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/Makefile) provides unified developer shortcuts:
+The [`Makefile`](../Makefile) provides unified developer shortcuts:
 
 ```bash
 # Run full pre-commit gate manually at any time
@@ -143,4 +143,4 @@ In specific development scenarios (e.g. drafting intermediate commits or quick e
 
 ## 8. Continuous Integration Alignment
 
-The pre-commit validation rules mirror the repository's GitHub Actions CI workflow in [`.github/workflows/ci.yml`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.github/workflows/ci.yml). Any commit that passes the local pre-commit hook is guaranteed to pass the remote CI pipeline.
+The pre-commit validation rules mirror the repository's GitHub Actions CI workflow in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Any commit that passes the local pre-commit hook is guaranteed to pass the remote CI pipeline.

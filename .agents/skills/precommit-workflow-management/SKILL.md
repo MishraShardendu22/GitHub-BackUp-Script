@@ -12,7 +12,7 @@ This skill explains how to maintain, configure, and execute the intelligent pre-
 
 ## 1. Pre-Commit Architecture
 
-The pre-commit workflow lives in [`.githooks/pre-commit`](file:///home/ms22/.gemini/antigravity/worktrees/github-backup-automation-system/generate_precommit_workflow/.githooks/pre-commit) and is tracked directly in version control.
+The pre-commit workflow lives in `.githooks/pre-commit` and is tracked directly in version control.
 
 ```text
 Staged Changes Detected (git diff --cached)

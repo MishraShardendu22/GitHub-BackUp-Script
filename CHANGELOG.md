@@ -8,14 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Git Branching Policy & Creation Rules ([`BRANCHING.md`](BRANCHING.md)):
-  - Established hierarchical branch naming standard `<github-username>/<parent-branch>/<change>`.
-  - Clarified parent/base lineage, branch relations, and lifecycle management.
+- Canonical Branch-First Development Workflow ([`BRANCHING.md`](BRANCHING.md)):
+  - Established canonical branch naming standard `<type>/<short-description>` (`feature/`, `fix/`, `refactor/`, `docs/`, `chore/`, `perf/`, `test/`, `ci/`, `hotfix/`).
+  - Deprecated Git worktrees across the project in favor of direct branch switching (`git switch -c`).
+  - Enforced that all development branches originate from `main` and all Pull Requests target `main`.
 - Repository Workflow & Safety Guidelines ([`WORKFLOW.md`](WORKFLOW.md)):
   - Established end-to-end engineering pipeline: `branch -> dev -> validation -> local commit -> human review -> push -> merge`.
-  - Enforced strict **Human-In-The-Loop Push Boundary**: AI agents are permitted to commit locally but are strictly forbidden from executing `git push`.
+  - Enforced strict **Human-In-The-Loop Push Boundary**: AI agents are permitted to commit locally but are strictly forbidden from executing `git push` without explicit user instruction.
 - Specialized Agent Skills Suite (`.agents/skills/` and `agents/`):
-  - `git-branch-management`: Hierarchical naming, base branch resolution, and safe branch navigation.
+  - `git-branch-management`: Canonical branch-first workflow, type-prefixed naming, base branch resolution, and safe branch navigation.
   - `git-commit-workflow`: Conventional Commits, validation checklist, and human review boundaries.
   - `test-creation-and-execution`: Test creation patterns and runbooks across Go, Python, and TypeScript.
   - `ci-cd-workflow`: GitHub Actions matrix, Render/Vercel boundaries, and containerless architecture.
