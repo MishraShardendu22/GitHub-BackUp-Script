@@ -36,8 +36,6 @@ __pycache__
 .pytest_cache
 
 # Database & Local State
-app.db
-*.db
 _Repos
 backup
 backups/postgres
