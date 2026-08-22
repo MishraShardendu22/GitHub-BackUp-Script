@@ -16,6 +16,7 @@ This directory provides specialized operational skills and procedural runbooks f
 | **Pre-Commit Management** | [`skills/precommit-workflow-management/`](skills/precommit-workflow-management/SKILL.md) | Operating `.githooks/pre-commit`, staged-file detection, and bypass flags. |
 | **Repository Maintenance** | [`skills/repository-maintenance/`](skills/repository-maintenance/SKILL.md) | Database integrity, idempotent SQL migrations, backup/restore runbooks, and dependency management. |
 | **Documentation Sync** | [`skills/doc-synchronization/`](skills/doc-synchronization/SKILL.md) | Procedures for keeping documentation, architecture guides, changelogs, and skills synchronized with code. |
+| **Pull Request Management** | [`skills/pull-request-management/`](skills/pull-request-management/SKILL.md) | Guidelines and runbooks for creating PRs to `main` upon explicit user request. |
 | **Observatory Architecture** | [`skills/agent-observatory-workflow/`](skills/agent-observatory-workflow/SKILL.md) | Python AI Observatory, LangChain tools, pgvector embeddings, and OpenRouter multi-key failover. |
 | **Codebase Simplification** | [`skills/codebase-simplification-guide/`](skills/codebase-simplification-guide/SKILL.md) | Principles for keeping code minimal, maintainable, and free of unnecessary abstractions. |
 | **System Architecture** | [`skills/github-backup-architecture/`](skills/github-backup-architecture/SKILL.md) | End-to-end architecture, database schema, and cross-service communication. |

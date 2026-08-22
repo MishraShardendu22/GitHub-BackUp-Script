@@ -62,12 +62,14 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
   2. UI displays modal to user. User responds via `POST /chat/confirm`.
   3. Rejection or timeout (120s) gracefully feeds rejection message into LLM reasoning without crashing the session.
 
-## 7. Git Branching, Commit Standards & Push Safety Boundary
+## 7. Git Branching, Commit Standards, Push & Pull Request Rules
 
 * **Local Commits Allowed**: Agents are permitted and encouraged to create local Git commits (`git commit`) once all code quality and pre-commit checks pass.
-* **STRICT PUSH FORBIDDEN RULE**: Agents MUST **NEVER** execute `git push`, create remote branches, or modify remote repository state under any circumstances. All commits MUST be reviewed and pushed personally by the human developer.
-* **Branch Naming**: All branches created must follow the hierarchical convention: `<github-username>/<parent-branch>/<change>` (e.g. `MishraShardendu22/dev/cleanup/precommit-workflow`). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
-* **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes.
+* **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.
+* **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create`.
+* **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
+* **Branch Naming**: All branches created must follow the hierarchical convention: `<github-username>/<parent-branch>/<change>` (e.g. `MishraShardendu22/dev/cleanup/precommit-workflow`).
+* **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes or opening a PR.
 
 ---
 

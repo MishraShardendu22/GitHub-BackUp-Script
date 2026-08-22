@@ -85,21 +85,25 @@ This document defines the complete engineering lifecycle for contributors and AI
 
 ---
 
-## 3. The Human Review Safety Boundary
+## 3. The Human Review Safety Boundary & Pull Request Policy
 
 > [!IMPORTANT]
-> **STRICT AGENT PERMISSION RULE**:
-> * **AI agents are NEVER allowed to push to any remote repository.**
-> * The command `git push` is reserved exclusively for the human developer.
-> * Once a local commit is created, the agent's turn is complete. The agent must present a clear summary of the local commits and await human review.
+> **PULL REQUESTS TARGET `main` ONLY**:
+> All Pull Requests in this repository MUST target the **`main`** branch. `main` is the sole production integration branch. Never target `dev` or temporary feature branches.
+
+> [!IMPORTANT]
+> **AGENT PUSH & PR PERMISSION BOUNDARY**:
+> * By default, AI agents commit locally and **do not push** or create Pull Requests automatically.
+> * When the human developer **specifically and explicitly instructs the agent to open a PR** (e.g. *"create a PR to main"*), the agent is authorized to push the local branch and open the PR against `main` via `gh pr create --base main`.
 
 ### Human Review Checklist
 1. Inspect commit history: `git log -n 5 --stat`
-2. Inspect diff against parent: `git diff <parent-branch>...HEAD`
+2. Inspect diff against parent: `git diff main...HEAD`
 3. Verify test runs locally if needed: `make test`
-4. If approved, the human executes:
+4. If opening PR yourself:
    ```bash
-   git push origin <branch-name>
+   git push -u origin <branch-name>
+   gh pr create --base main --head <branch-name> --title "<type>(<scope>): <title>" --body "..."
    ```
 
 ---
@@ -112,6 +116,8 @@ This document defines the complete engineering lifecycle for contributors and AI
 | **Code Changes** | Contributor / Agent | **YES** |
 | **Testing & Linting** | Contributor / Agent | **YES** |
 | **Local Commit** | Contributor / Agent | **YES** (Must pass pre-commit gate) |
-| **Commit Review** | Human Developer | **HUMAN ONLY** |
-| **Remote Push (`git push`)** | Human Developer | **HUMAN ONLY (Never Agent)** |
-| **Pull Request & Merge** | Human Developer | **HUMAN ONLY** |
+| **Commit Review** | Human Developer | **HUMAN REVIEW** |
+| **Remote Push (`git push`)** | Human / Agent (on request) | **ONLY WHEN EXPLICITLY REQUESTED BY USER** |
+| **Create PR (`gh pr create --base main`)** | Human / Agent (on request) | **ONLY WHEN EXPLICITLY REQUESTED BY USER (Target: `main` only)** |
+| **PR Merge into `main`** | Human Developer | **HUMAN ONLY** |
+

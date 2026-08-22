@@ -18,7 +18,8 @@ This skill guides AI agents and human contributors on how to create, name, struc
 3. **Task-Specific & Ephemeral**: Feature and bugfix branches are short-lived lines of development meant to be merged back into their parent branch upon review.
 4. **Agent Branch Boundaries**:
    * Agents may create or switch between local branches when instructed.
-   * **STRICT RULE**: Agents MUST NEVER push branches to a remote repository (`git push` is strictly forbidden).
+   * **STRICT RULE**: Agents MUST NOT push branches to a remote repository automatically. Pushing and opening PRs is permitted ONLY upon explicit human request.
+   * **ALL PRS TARGET `main`**: All Pull Requests must target `main` only (never `dev` or feature branches).
    * **STRICT RULE**: Agents MUST NEVER force-push (`git push --force`) or delete remote branches.
 
 ---

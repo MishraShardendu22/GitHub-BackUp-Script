@@ -8,7 +8,7 @@ Thanks for your interest in contributing. A few quick notes to help you get star
 - **Code Style & Formatting**: Follow existing conventions. Auto-format your code using `make format` (`gofmt` for Go, `biome format` for TypeScript/React).
 - **Static Analysis & Linting**: Run `make lint` and `make typecheck` before submitting pull requests.
 - **Tests**: Write and run unit/integration tests for your changes. Validate your test suites with `make test` (or `make test-agents` for AI agent flows).
-- **Branches & PRs**: Create a feature branch and open a PR against `main` or active epic using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
+- **Branches & PRs**: Create a feature branch following [BRANCHING.md](BRANCHING.md) and open Pull Requests targeting **`main`** only (never `dev`) using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
 - **Secrets**: Do not commit tokens or credentials. Use `.env` or environment variables locally.
 - **Issues**: Please use the [issue template](.github/ISSUE_TEMPLATE.md) when reporting bugs or suggesting features.
 - **Changelog**: Update [CHANGELOG.md](CHANGELOG.md) under the `[Unreleased]` section with your changes.
