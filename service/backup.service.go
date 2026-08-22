@@ -49,16 +49,12 @@ func RunBackupFlow(cfg *model.ConfigModel, db *sql.DB) {
 	printRepoList(allRepos)
 	ProcessRepos(allRepos, cfg, db)
 
-	// checkpoint SQLite WAL
+	// checkpoint SQLite WAL and commit/push database
 	_ = database.Checkpoint(db)
-
-	// auto-sync database changes if enabled
-	if cfg.AutoSyncDB {
-		if err := helper.CommitAndPushDatabase(cfg.DBPath); err != nil {
-			util.Logger().Warn("Failed to sync database to remote repository",
-				zap.Error(err),
-			)
-		}
+	if err := helper.CommitAndPushDatabase(cfg.DBPath); err != nil {
+		util.Logger().Warn("Failed to sync database to remote repository",
+			zap.Error(err),
+		)
 	}
 }
 

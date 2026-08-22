@@ -19,9 +19,7 @@ func main() {
 	config.LoadEnv()
 	cfg := config.LoadConfig()
 
-	if cfg.AutoSyncDB {
-		_ = helper.PullRootRepo()
-	}
+	_ = helper.PullRootRepo()
 
 	db, err := database.ConnectSQLite(cfg)
 	util.ErrorHandler(err)

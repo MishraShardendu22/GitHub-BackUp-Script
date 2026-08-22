@@ -20,16 +20,6 @@ func TestConfigLoading(t *testing.T) {
 	if cfg.DBPath != "./app.db" {
 		t.Errorf("expected default ./app.db, got %s", cfg.DBPath)
 	}
-	if !cfg.AutoSyncDB {
-		t.Errorf("expected default AutoSyncDB true, got %v", cfg.AutoSyncDB)
-	}
-
-	os.Setenv("AUTO_SYNC_DB", "false")
-	cfgDisabled := LoadConfig()
-	if cfgDisabled.AutoSyncDB {
-		t.Errorf("expected AutoSyncDB false when set to false, got %v", cfgDisabled.AutoSyncDB)
-	}
-	os.Unsetenv("AUTO_SYNC_DB")
 
 	urls := ImportantURL(cfg)
 	expectedOrg := "https://api.github.com/orgs/test-org/repos?type=all&per_page=50&page="

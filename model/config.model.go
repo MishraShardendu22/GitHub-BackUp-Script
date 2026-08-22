@@ -13,7 +13,6 @@ type ConfigModel struct {
 	GitHubTokenPrivate  string
 	GitHubTokenPersonal string
 	PostgreSql          string
-	AutoSyncDB          bool
 }
 
 type Repos struct {
