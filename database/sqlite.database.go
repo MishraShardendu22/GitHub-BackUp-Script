@@ -32,6 +32,11 @@ func ConnectSQLite(config *model.ConfigModel) (*sql.DB, error) {
 	return db, nil
 }
 
+/*
+Checkpoint forces SQLite to flush all pending transactions from the write-ahead
+log (app.db-wal) into the primary app.db file and truncate the WAL file.
+This guarantees that app.db contains 100% of latest records before committing to Git.
+*/
 func Checkpoint(db *sql.DB) error {
 	if db == nil {
 		return nil
