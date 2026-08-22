@@ -29,6 +29,7 @@ func LoadConfig() *model.ConfigModel {
 		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),
 		GitHubTokenPrivate:  util.GetEnv("GITHUB_TOKEN_PRIVATE", ""),
 		GitHubTokenPersonal: util.GetEnv("GITHUB_TOKEN_PERSONAL", ""),
+		AutoSyncDB:          util.GetEnv("AUTO_SYNC_DB", "true") != "false",
 	}
 }
 

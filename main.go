@@ -4,6 +4,7 @@ import (
 	"github.com/MishraShardendu22/github-backup/config"
 	"github.com/MishraShardendu22/github-backup/database"
 	"github.com/MishraShardendu22/github-backup/service"
+	"github.com/MishraShardendu22/github-backup/service/helper"
 	"github.com/MishraShardendu22/github-backup/service/monitor"
 	"github.com/MishraShardendu22/github-backup/util"
 	"go.uber.org/zap"
@@ -17,6 +18,10 @@ func main() {
 
 	config.LoadEnv()
 	cfg := config.LoadConfig()
+
+	if cfg.AutoSyncDB {
+		_ = helper.PullRootRepo()
+	}
 
 	db, err := database.ConnectSQLite(cfg)
 	util.ErrorHandler(err)

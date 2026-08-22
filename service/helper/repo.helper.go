@@ -23,6 +23,11 @@ func BuildCommitMessage(repoName string) string {
 		repoName))
 }
 
+func BuildDBCommitMessage(runDate time.Time) string {
+	return SanitizeCommitMessage(fmt.Sprintf("chore(db): update database with run on %s",
+		runDate.Format("2006-01-02 Monday 15:04:05")))
+}
+
 func SanitizeCommitMessage(msg string) string {
 	msg = strings.ReplaceAll(msg, "'", "'\\''")
 	msg = strings.ReplaceAll(msg, "\"", "\\\"")
