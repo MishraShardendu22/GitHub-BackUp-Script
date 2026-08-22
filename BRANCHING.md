@@ -110,22 +110,23 @@ git switch -c <github-username>/<parent-branch>/<change>
 
 ---
 
-## 7. Merging & Integration Runbook
+---
+
+## 7. Pull Requests & Integration Runbook
+
+> [!IMPORTANT]
+> **ALL PULL REQUESTS TARGET `main` ONLY**:
+> Every Pull Request opened in this repository MUST target **`main`**. Do not open PRs against `dev` or feature branches.
 
 Once all development and tests pass the pre-commit gate:
 
 ```bash
-# 1. Switch back to the parent branch
-git checkout MishraShardendu22/dev/cleanup
-
-# 2. Merge or rebase the task branch
-git merge MishraShardendu22/dev/cleanup/precommit-workflow
-
-# 3. Run full validation gate to confirm integrity
+# 1. Ensure all local tests and pre-commit checks pass
 make pre-commit
 
-# 4. Human developer performs final review and executes push:
-git push origin MishraShardendu22/dev/cleanup
+# 2. Push branch to remote and open PR against main (when requested by user)
+git push -u origin <branch-name>
+gh pr create --base main --head <branch-name> --title "<type>(<scope>): <title>" --body "..."
 ```
 
 ---
@@ -137,6 +138,8 @@ git push origin MishraShardendu22/dev/cleanup
 | **Create Local Branch** | **YES** | Follows `<github-username>/<parent-branch>/<change>` |
 | **Switch Local Branch** | **YES** | Safe local navigation |
 | **Create Local Commit** | **YES** | Must pass `make pre-commit` first |
-| **Push to Remote (`git push`)** | **STRICTLY NO** | Reserved exclusively for human review |
+| **Push to Remote (`git push`)** | **ON EXPLICIT USER REQUEST ONLY** | Permitted only when specifically instructed by the human user to push/create PR; never automated |
+| **Create Pull Request** | **ON EXPLICIT USER REQUEST ONLY** | Must target `main` only; never created automatically |
 | **Force Push (`--force`)** | **STRICTLY NO** | Prohibited |
 | **Delete Remote Branch** | **STRICTLY NO** | Prohibited |
+

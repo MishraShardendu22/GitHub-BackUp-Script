@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `code-quality-and-validation`: Formatting, linting, and type checking standards.
   - `precommit-workflow-management`: Operations, bypasses, and staged file filtering for `.githooks/pre-commit`.
   - `repository-maintenance`: Idempotent SQL migrations, pgvector embedding lifecycle, and backup/restore runbooks.
+  - `pull-request-management`: Explicit user-triggered PR workflow ensuring all PRs target `main` only.
 - Intelligent Git Pre-Commit Hook Workflow (`.githooks/pre-commit`):
   - Automatically inspects staged files and selectively triggers targeted validations across Go Backend/Worker, Python Agentic Observatory, and Next.js Frontend.
   - Multi-tier validation pipeline: code formatting (`gofmt`, Biome), static analysis & type checking (`go vet`, `pyright`, `tsc`), test suites, and production artifact builds.

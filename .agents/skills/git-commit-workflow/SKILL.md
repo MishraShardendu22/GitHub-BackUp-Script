@@ -34,11 +34,11 @@ This skill defines the commit standards, message format, validation requirements
 ```
 
 > [!CAUTION]
-> **CRITICAL RULE FOR AI AGENTS**:
+> **PUSH & PULL REQUEST PERMISSION BOUNDARY**:
 > * Agents are **permitted** to create local Git commits (`git commit`).
-> * Agents are **STRICTLY FORBIDDEN** from running `git push`, directly or indirectly, under any circumstances.
-> * Agents must **never** modify remote repository state, create remote branches, or trigger remote pushes.
-> * Every single commit must be personally inspected and pushed by the human developer.
+> * Agents must **never** run `git push` or create Pull Requests automatically.
+> * Pushing to remote and opening a Pull Request is permitted **ONLY when explicitly requested by the human user** (e.g. *"create a PR to main"*).
+> * All Pull Requests must target **`main`** only (never `dev`).
 
 ---
 
