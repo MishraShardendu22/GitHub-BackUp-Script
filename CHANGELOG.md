@@ -14,8 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enforced that all development branches originate from `main` and all Pull Requests target `main`.
 - Automated SQLite Database Cross-OS Synchronization:
   - Added pre-run pull (`PullRootRepo()`) to fetch the latest `app.db` before running backups.
-  - Added post-run commit & push (`CommitAndPushDatabase()`) and WAL checkpointing (`Checkpoint()`) to synchronize `app.db` back to GitHub after every backup execution.
-  - Added `AutoSyncDB` configuration flag (`model/config.model.go` and `config/data.config.go`).
+  - Seamless, always-on synchronization ensuring cross-OS database consistency without requiring environment configuration.
 - Repository Workflow & Safety Guidelines ([`WORKFLOW.md`](WORKFLOW.md)):
   - Established end-to-end engineering pipeline: `branch -> dev -> validation -> local commit -> human review -> push -> merge`.
   - Enforced strict **Human-In-The-Loop Push Boundary**: AI agents are permitted to commit locally but are strictly forbidden from executing `git push` without explicit user instruction.
