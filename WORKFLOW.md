@@ -9,7 +9,7 @@ This document defines the complete engineering lifecycle for contributors and AI
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. BRANCH CREATION                                          │
-│    Create local branch: <type>/<short-description>          │
+│    Create local branch: <user>/<parent>/<feature>           │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                                ▼
@@ -61,8 +61,8 @@ This document defines the complete engineering lifecycle for contributors and AI
 * Ensure `main` is checked out and up to date: `git checkout main && git pull origin main`.
 * Create a local branch adhering to [`BRANCHING.md`](BRANCHING.md) (do **not** create Git worktrees):
   ```bash
-  git switch -c <type>/<short-description>
-  # Example: git switch -c feature/worker-database-sync
+  git switch -c <github-username>/<parent-branch>/<feature>
+  # Example: git switch -c MishraShardendu22/main/database-auto-sync
   ```
 
 ### Stage 2: Development & Documentation

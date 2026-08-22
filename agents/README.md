@@ -8,7 +8,7 @@ This directory provides specialized operational skills and procedural runbooks f
 
 | Skill | Directory | Description |
 | :--- | :--- | :--- |
-| **Branch Management** | [`skills/git-branch-management/`](skills/git-branch-management/SKILL.md) | Branch-first development policy, canonical naming (`<type>/<short-description>`), and lifecycle rules. |
+| **Branch Management** | [`skills/git-branch-management/`](skills/git-branch-management/SKILL.md) | Branch-first development policy, hierarchical naming (`<github-username>/<parent-branch>/<feature>`), and lifecycle rules. |
 | **Commit Workflow** | [`skills/git-commit-workflow/`](skills/git-commit-workflow/SKILL.md) | Conventional Commits, validation checklist, and the strict **Human-In-The-Loop Push Boundary** (agents never push remotely). |
 | **Test Creation & Execution** | [`skills/test-creation-and-execution/`](skills/test-creation-and-execution/SKILL.md) | Writing and executing test suites across Go, Python Observatory, and Next.js frontend. |
 | **CI/CD & Deployments** | [`skills/ci-cd-workflow/`](skills/ci-cd-workflow/SKILL.md) | GitHub Actions CI matrix, deployment targets (Vercel & Render), and zero-containerization rule. |
