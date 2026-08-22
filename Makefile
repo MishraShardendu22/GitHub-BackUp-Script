@@ -1,4 +1,4 @@
-.PHONY: help dev test test-go test-py test-agents lint build backup-db restore-db
+.PHONY: help dev test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck
 
 help:
 	@echo "======================================================================"
@@ -10,7 +10,11 @@ help:
 	@echo "  make test-py      - Run Python Observatory unit tests"
 	@echo "  make test-agents  - Run comprehensive AI Agent test suite"
 	@echo "  make lint         - Run linters across Go, Python, and TypeScript"
+	@echo "  make typecheck    - Run Pyright (Python) and tsc (TypeScript) type checks"
+	@echo "  make format       - Auto-format Go and Frontend source code"
 	@echo "  make build        - Compile Go binaries and Next.js build"
+	@echo "  make hooks-install- Configure Git pre-commit hooks (.githooks)"
+	@echo "  make pre-commit   - Run full pre-commit validation pipeline"
 	@echo "  make backup-db    - Execute automated PostgreSQL backup"
 	@echo "  make restore-db   - Restore PostgreSQL from backup file"
 	@echo "======================================================================"
@@ -41,12 +45,34 @@ lint:
 	@cd frontend && pnpm run lint
 	@echo "🔍 Running Go vet..."
 	@go vet ./...
+	@echo "🔍 Running Pyright on Python Observatory..."
+	@cd agentic-observatory && uv run --with pyright pyright
+
+typecheck:
+	@echo "🔍 Running Pyright on Python Observatory..."
+	@cd agentic-observatory && uv run --with pyright pyright
+	@echo "🔍 Running TypeScript typecheck on Frontend..."
+	@cd frontend && pnpm exec tsc --noEmit
+
+format:
+	@echo "✨ Formatting Go source code..."
+	@gofmt -w backend/ config/ controller/ database/ model/ service/ util/ main.go 2>/dev/null || gofmt -w .
+	@echo "✨ Formatting Frontend source code..."
+	@cd frontend && pnpm run format
 
 build:
 	@echo "🏗️ Building Go binaries..."
 	@go build -v ./...
 	@echo "🏗️ Building Next.js Frontend..."
 	@cd frontend && pnpm run build
+
+hooks-install:
+	@./scripts/install-hooks.sh
+
+init-hooks: hooks-install
+
+pre-commit:
+	@PRECOMMIT_ALL=1 ./.githooks/pre-commit
 
 backup-db:
 	@echo "💾 Executing PostgreSQL backup..."
@@ -55,3 +81,4 @@ backup-db:
 restore-db:
 	@echo "💾 Restoring PostgreSQL from backup..."
 	@./scripts/restore-db.sh $(BACKUP_FILE)
+

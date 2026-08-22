@@ -299,4 +299,3 @@ func PruneStaleEmbeddingJobs(ctx context.Context, olderThan time.Duration) (int6
 	}
 	return tag.RowsAffected(), nil
 }
-

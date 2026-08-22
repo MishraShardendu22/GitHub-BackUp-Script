@@ -12,15 +12,15 @@ import (
 
 // Hardcoded System Constants
 const (
-	DefaultServerPort    = "8080"
-	DefaultDBMaxConns    = int32(10)
-	DefaultDBMinConns    = int32(2)
-	DefaultLogLevel      = "info"
-	MaxBodyLimitBytes    = 10 * 1024 * 1024 // 10MB
-	DBConnectTimeout     = 10 * time.Second
-	DBMigrationTimeout   = 60 * time.Second
-	DBMaxConnLifetime    = 1 * time.Hour
-	DBMaxConnIdleTime    = 30 * time.Minute
+	DefaultServerPort  = "8080"
+	DefaultDBMaxConns  = int32(10)
+	DefaultDBMinConns  = int32(2)
+	DefaultLogLevel    = "info"
+	MaxBodyLimitBytes  = 10 * 1024 * 1024 // 10MB
+	DBConnectTimeout   = 10 * time.Second
+	DBMigrationTimeout = 60 * time.Second
+	DBMaxConnLifetime  = 1 * time.Hour
+	DBMaxConnIdleTime  = 30 * time.Minute
 )
 
 // Config holds all validated configuration extracted from environment.

@@ -37,8 +37,8 @@ func NewEmbeddingClient(apiKey string) *EmbeddingClient {
 	}
 
 	return &EmbeddingClient{
-		apiKeys:    keys,
-		baseURL:    "https://openrouter.ai/api/v1",
+		apiKeys: keys,
+		baseURL: "https://openrouter.ai/api/v1",
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
