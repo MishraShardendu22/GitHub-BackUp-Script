@@ -19,6 +19,7 @@ func main() {
 	config.LoadEnv()
 	cfg := config.LoadConfig()
 
+	// always pull latest repository and database changes before connecting to SQLite
 	_ = helper.PullRootRepo()
 
 	db, err := database.ConnectSQLite(cfg)
