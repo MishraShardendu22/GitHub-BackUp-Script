@@ -14,6 +14,10 @@ This skill guides AI agents and contributors on how to create, format, and manag
 ## 1. Core Pull Request Rules
 
 > [!IMPORTANT]
+> **LOCAL BRANCH-FIRST MANDATE**:
+> * All work MUST be done on a dedicated local branch (`<github-username>/<parent-branch>/<feature>`). Never develop directly on `main`.
+
+> [!IMPORTANT]
 > **EXPLICIT USER REQUEST REQUIRED**:
 > * AI agents MUST **NEVER** create Pull Requests automatically or as a default background action.
 > * Agents are only authorized to push branches and open Pull Requests when **specifically and explicitly instructed by the user** (e.g. *"create a PR to main"*).

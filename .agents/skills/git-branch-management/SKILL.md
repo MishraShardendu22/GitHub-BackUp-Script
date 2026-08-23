@@ -13,11 +13,12 @@ This skill guides AI agents and human contributors on how to create, name, struc
 
 ## 1. Core Branching Principles
 
-1. **Branch-First Development**: All changes (features, fixes, refactoring, tests, docs) are developed directly on Git branches created from `main`.
-2. **Strict No-Worktree Rule**: AI agents and contributors must **NOT** create or use Git worktrees for standard development tasks. All work occurs in the primary repository clone via branch switching (`git switch -c`).
-3. **Structured Hierarchical Naming**: Branch names follow the standard format `<github-username>/<parent-branch>/<feature>`.
-4. **All Pull Requests Target `main`**: `main` is the sole production integration branch. Never open PRs against `dev` or temporary feature branches.
-5. **Agent Safety Boundaries**:
+1. **Mandatory Local Branch Creation**: Prior to modifying any code, configuration, or documentation files for ANY task, you MUST ALWAYS create and switch to a dedicated local branch (`git switch -c <github-username>/<parent-branch>/<feature>`). Never develop or commit directly on `main` or `dev`.
+2. **Branch-First Development**: All changes (features, fixes, refactoring, tests, docs) are developed directly on Git branches created from `main`.
+3. **Strict No-Worktree Rule**: AI agents and contributors must **NOT** create or use Git worktrees for standard development tasks. All work occurs in the primary repository clone via branch switching (`git switch -c`).
+4. **Structured Hierarchical Naming**: Branch names follow the standard format `<github-username>/<parent-branch>/<feature>`.
+5. **All Pull Requests Target `main`**: `main` is the sole production integration branch. Never open PRs against `dev` or temporary feature branches.
+6. **Agent Safety Boundaries**:
    * Agents may create or switch between local branches directly.
    * **STRICT RULE**: Agents MUST NOT push branches to a remote repository automatically. Pushing and opening PRs is permitted ONLY upon explicit human request.
    * **STRICT RULE**: Agents MUST NEVER force-push (`git push --force`) or delete remote branches.

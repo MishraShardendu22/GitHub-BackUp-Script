@@ -8,9 +8,18 @@ description: >-
 
 This skill provides guidelines on how to keep the repository clean, avoid over-engineering, and maintain high developer velocity.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never develop or modify code directly on `main`.
+
 ---
 
-## 1. Core Principles
+## 2. Core Principles
 
 1. **No Unwanted Infrastructure**:
    * Do not add Dockerfiles, docker-compose, Kubernetes manifests, Nginx configs, Prometheus/Grafana server setups, or Terraform scripts.

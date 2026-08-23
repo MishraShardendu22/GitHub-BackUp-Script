@@ -9,20 +9,29 @@ description: >-
 
 This skill defines the testing standards, frameworks, conventions, and execution workflows for the **GitHub Backup Automation System** polyglot monorepo.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never write tests or code directly on `main`.
+
 ---
 
-## 1. Testing Architecture & Frameworks
+## 2. Testing Architecture & Frameworks
 
 | Subsystem | Location | Framework & Tooling | Primary Test Command |
 | :--- | :--- | :--- | :--- |
-| **Go Backend & Worker** | `./` & `backend/` | Standard Go `testing`, `httptest` | `make test-go` (`go test -v -race ./...`) |
+| **Go Backend & Worker** | `backend/` & `backup-worker/` | Standard Go `testing`, `httptest` | `make test-go` (`go test -v -race ./...`) |
 | **Python Observatory** | `agentic-observatory/` | Python `unittest`, `unittest.mock`, `httpx` | `make test-py` |
 | **AI Agent & RAG** | `agentic-observatory/` | Tool-calling mocks, LangChain agent harness | `make test-agents` |
 | **Frontend** | `frontend/` | Next.js Turbopack compiler, TypeScript `tsc` | `cd frontend && pnpm exec tsc --noEmit` |
 
 ---
 
-## 2. Go Test Creation Standards
+## 3. Go Test Creation Standards
 
 ### File Naming & Package Placement
 * Test files MUST reside in the same package and end with `_test.go` (e.g. `backend/handlers/health_test.go`).

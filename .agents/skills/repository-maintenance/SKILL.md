@@ -9,9 +9,18 @@ description: >-
 
 This skill provides procedures for maintaining database integrity, executing database backups, applying schema migrations, and managing dependencies across the **GitHub Backup Automation System**.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never apply maintenance or schema changes directly on `main`.
+
 ---
 
-## 1. Database Schema Integrity & Migrations
+## 2. Database Schema Integrity & Migrations
 
 > [!CAUTION]
 > **CRITICAL RULE**: Never execute destructive SQL statements (`DROP TABLE`, `TRUNCATE`). Production data has historical backup logs spanning months.
