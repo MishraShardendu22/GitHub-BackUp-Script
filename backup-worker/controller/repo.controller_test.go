@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/MishraShardendu22/github-backup/model"
+	"github.com/MishraShardendu22/github-backup/backup-worker/model"
 )
 
 func TestRepoController(t *testing.T) {

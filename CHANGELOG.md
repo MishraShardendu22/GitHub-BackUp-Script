@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
+  - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
+  - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
+  - Relocated and encapsulated `backup-worker/_Repos/` working tree and `backup-worker/app.db` local state.
+  - Updated all Go package import paths to `github.com/MishraShardendu22/github-backup/backup-worker/...`.
 - Canonical Branch-First Development Workflow ([`BRANCHING.md`](BRANCHING.md)):
   - Established canonical hierarchical branch naming standard `<github-username>/<parent-branch>/<feature>`.
   - Deprecated Git worktrees across the project in favor of direct branch switching (`git switch -c`).

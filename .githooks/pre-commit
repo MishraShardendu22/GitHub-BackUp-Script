@@ -102,8 +102,8 @@ else
     while IFS= read -r file; do
         [ -z "$file" ] && continue
 
-        # Go files (Root CLI worker, backend API, shared packages)
-        if [[ "$file" =~ \.go$ ]] || [[ "$file" =~ ^(go\.mod|go\.sum|backend/|controller/|database/|model/|service/|util/|config/|main\.go) ]]; then
+        # Go files (Backup worker CLI, backend API, shared modules)
+        if [[ "$file" =~ \.go$ ]] || [[ "$file" =~ ^(go\.mod|go\.sum|backend/|backup-worker/) ]]; then
             CHECK_GO=1
         fi
 

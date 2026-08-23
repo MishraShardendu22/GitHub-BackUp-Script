@@ -1,10 +1,11 @@
-.PHONY: help dev test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck
+.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck
 
 help:
 	@echo "======================================================================"
 	@echo "  GitHub Backup & Agentic Observatory System — Developer CLI"
 	@echo "======================================================================"
 	@echo "  make dev          - Start Go (8080), Python (8000), and Frontend (3000)"
+	@echo "  make backup       - Run the autonomous Backup Worker CLI"
 	@echo "  make test         - Run all test suites across Go and Python"
 	@echo "  make test-go      - Run Go backend and database unit tests"
 	@echo "  make test-py      - Run Python Observatory unit tests"
@@ -25,6 +26,10 @@ dev:
 		"cd backend && air" \
 		"cd agentic-observatory && uv run uvicorn main:app --reload --port 8000" \
 		"cd frontend && pnpm run dev"
+
+backup:
+	@echo "📦 Running Backup Worker CLI..."
+	@cd backup-worker && go run main.go
 
 test: test-go test-py
 
@@ -56,7 +61,7 @@ typecheck:
 
 format:
 	@echo "✨ Formatting Go source code..."
-	@gofmt -w backend/ config/ controller/ database/ model/ service/ util/ main.go 2>/dev/null || gofmt -w .
+	@gofmt -w backend/ backup-worker/ 2>/dev/null || gofmt -w .
 	@echo "✨ Formatting Frontend source code..."
 	@cd frontend && pnpm run format
 

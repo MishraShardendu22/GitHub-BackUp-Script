@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/MishraShardendu22/github-backup/database"
-	"github.com/MishraShardendu22/github-backup/model"
-	"github.com/MishraShardendu22/github-backup/service/helper"
-	"github.com/MishraShardendu22/github-backup/service/monitor"
-	"github.com/MishraShardendu22/github-backup/util"
+	"github.com/MishraShardendu22/github-backup/backup-worker/database"
+	"github.com/MishraShardendu22/github-backup/backup-worker/model"
+	"github.com/MishraShardendu22/github-backup/backup-worker/service/helper"
+	"github.com/MishraShardendu22/github-backup/backup-worker/service/monitor"
+	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	"go.uber.org/zap"
 )
 

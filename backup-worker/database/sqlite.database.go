@@ -3,8 +3,8 @@ package database
 import (
 	"database/sql"
 
-	"github.com/MishraShardendu22/github-backup/model"
-	"github.com/MishraShardendu22/github-backup/util"
+	"github.com/MishraShardendu22/github-backup/backup-worker/model"
+	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
