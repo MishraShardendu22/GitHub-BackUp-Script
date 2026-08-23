@@ -9,9 +9,18 @@ description: >-
 
 This skill defines the multi-tier code quality, formatting, linting, and type checking standards across the **GitHub Backup Automation System** monorepo.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never develop code or run refactors directly on `main`.
+
 ---
 
-## 1. Tooling Matrix by Language
+## 2. Tooling Matrix by Language
 
 | Language | Subsystem | Formatter | Linter | Static Type Checker |
 | :--- | :--- | :--- | :--- | :--- |

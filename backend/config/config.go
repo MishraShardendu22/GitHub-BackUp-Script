@@ -43,13 +43,14 @@ var (
 // Get returns the globally loaded configuration singleton.
 func Get() *Config {
 	mu.RLock()
-	defer mu.RUnlock()
-	if instance == nil {
-		// Fallback auto-load
-		cfg, _ := LoadAndValidate()
-		return cfg
+	cfg := instance
+	mu.RUnlock()
+
+	if cfg == nil {
+		// Fallback auto-load (LoadAndValidate calls Set(cfg) which acquires write lock cleanly)
+		cfg, _ = LoadAndValidate()
 	}
-	return instance
+	return cfg
 }
 
 // GetInternalSecret returns the configured internal secret from singleton or env.

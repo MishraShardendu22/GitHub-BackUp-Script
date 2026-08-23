@@ -9,9 +9,18 @@ description: >-
 
 This skill ensures that whenever any changes are introduced to the codebase, all corresponding architectural documents, API references, READMEs, changelogs, and AI agent skills are automatically inspected, updated, and expanded.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never develop docs or code directly on `main`.
+
 ---
 
-## 1. When to Trigger Documentation Updates
+## 2. When to Trigger Documentation Updates
 
 Any of the following changes MUST trigger documentation synchronization:
 

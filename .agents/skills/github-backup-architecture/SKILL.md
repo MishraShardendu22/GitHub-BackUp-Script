@@ -9,9 +9,18 @@ description: >-
 
 This skill provides an overview of the system architecture, data models, communication protocols, and deployment environments.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never make changes directly on `main`.
+
 ---
 
-## 1. System Topology
+## 2. System Topology
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

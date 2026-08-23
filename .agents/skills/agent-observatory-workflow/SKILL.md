@@ -9,9 +9,18 @@ description: >-
 
 This skill guides agents and engineers on how to safely build, modify, test, and enhance AI agent features within `agentic-observatory/`.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never develop or modify agent code directly on `main`.
+
 ---
 
-## 1. Adding a New Agent Tool
+## 2. Adding a New Agent Tool
 
 1. Create or update a tool file under [`agentic-observatory/data/tools/`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/agentic-observatory/data/tools/):
    ```python

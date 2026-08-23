@@ -9,9 +9,18 @@ description: >-
 
 This skill guides AI agents and contributors in maintaining GitHub Actions CI pipelines and adhering to the serverless and managed hosting architecture of the **GitHub Backup Automation System**.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never make changes directly on `main`.
+
 ---
 
-## 1. Deployment Boundaries & Hosting Targets
+## 2. Deployment Boundaries & Hosting Targets
 
 ```text
 ┌───────────────────────────┐      ┌───────────────────────────┐

@@ -11,7 +11,20 @@ This skill defines the commit standards, message format, validation requirements
 
 ---
 
-## 1. The Strict Push Permission Boundary
+## 1. Mandatory Local Branch First
+ 
+> [!IMPORTANT]
+> **ALWAYS CREATE A LOCAL BRANCH FIRST**:
+> Before modifying any files or creating commits, the agent MUST verify they are on a dedicated local feature branch (`<github-username>/<parent-branch>/<feature>`).
+> If currently on `main` or another base branch:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> NEVER make changes, staging, or commits directly on `main` or `dev`.
+
+---
+
+## 2. The Strict Push Permission Boundary
 
 ```text
 ┌─────────────────────────────────────────────────────────┐

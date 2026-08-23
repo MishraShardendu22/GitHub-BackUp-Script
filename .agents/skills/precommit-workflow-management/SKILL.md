@@ -8,9 +8,18 @@ description: >-
 
 This skill explains how to maintain, configure, and execute the intelligent pre-commit hook workflow in the **GitHub Backup Automation System** monorepo.
 
+## 1. Branch-First Development
+
+> [!IMPORTANT]
+> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> ```bash
+> git switch -c MishraShardendu22/main/<feature-name>
+> ```
+> Never make changes directly on `main`.
+
 ---
 
-## 1. Pre-Commit Architecture
+## 2. Pre-Commit Architecture
 
 The pre-commit workflow lives in `.githooks/pre-commit` and is tracked directly in version control.
 
