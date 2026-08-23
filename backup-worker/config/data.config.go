@@ -4,17 +4,25 @@ import (
 	"github.com/MishraShardendu22/github-backup/backup-worker/model"
 	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	"github.com/joho/godotenv"
-	"go.uber.org/zap"
 )
 
 func LoadEnv() {
 	currEnv := "development"
 
 	if currEnv == "development" {
-		if err := godotenv.Load(".env", "../.env"); err != nil {
-			util.Logger().Warn("Error loading .env file",
-				zap.Error(err),
-			)
+		// 1. Try local service .env (.env)
+		if err := godotenv.Load(".env"); err == nil {
+			return
+		}
+
+		// 2. Try root-level .env (../.env)
+		if err := godotenv.Load("../.env"); err == nil {
+			return
+		}
+
+		// 3. If neither file exists, log warning only if key variables are missing
+		if util.GetEnv("DATABASE_URL", "") == "" && util.GetEnv("GITHUB_TOKEN_PERSONAL", "") == "" {
+			util.Logger().Warn("No .env file found in service directory (.env) or parent root (../.env)")
 		}
 	}
 }
