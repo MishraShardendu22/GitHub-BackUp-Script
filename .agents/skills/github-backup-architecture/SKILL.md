@@ -70,12 +70,14 @@ This skill provides an overview of the system architecture, data models, communi
   * Exposing database metrics and telemetry.
 * **Config**: [`backend/config/config.go`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/backend/config/config.go).
 
-### Backup Worker (`./`)
-* **Framework**: Go CLI (`main.go`).
+### Backup Worker (`backup-worker/`)
+* **Framework**: Go CLI (`backup-worker/main.go`).
 * **Responsibilities**:
   * Discovering repositories from GitHub Organizations & Personal accounts.
-  * Cloning / pulling mirrors locally.
+  * Cloning / pulling mirrors locally into `backup-worker/_Repos/`.
+  * Caching remote HEAD commit hashes in `backup-worker/app.db`.
   * Recording telemetry, logs, and failure fixes to PostgreSQL.
+* **Config**: [`backup-worker/config/data.config.go`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/backup-worker/config/data.config.go).
 
 ---
 

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/MishraShardendu22/github-backup/model"
+	"github.com/MishraShardendu22/github-backup/backup-worker/model"
 )
 
 /*

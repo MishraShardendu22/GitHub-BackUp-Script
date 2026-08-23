@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/MishraShardendu22/github-backup/model"
-	"github.com/MishraShardendu22/github-backup/util"
+	"github.com/MishraShardendu22/github-backup/backup-worker/model"
+	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
 )

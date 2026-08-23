@@ -46,7 +46,7 @@ graph TD
 | **Frontend** | Next.js 16, React 19, Tailwind CSS | **Vercel** | Interactive dashboard with real-time WebSocket feeds, analytics charts, and AI chat playground. |
 | **Observatory** | FastAPI, Python 3.12, SQLAlchemy, LangChain | **Vercel** | AI telemetry service with OpenRouter LLM integration, hybrid vector + full-text search, and automated reports. |
 | **Backend API** | Go 1.24, Fiber v2, pgxpool | **Render** | High-performance REST and WebSocket API with connection pooling, structured logging (`slog`), and versioned SQL migrations. |
-| **Worker Engine** | Go 1.24 CLI | **Local / Cron Worker** | Autonomous CLI backup engine with incremental SHA-HEAD verification, concurrency controls, and `.tar.gz` archiving. |
+| **Worker Engine** | Go 1.24 CLI (`backup-worker/`) | **Local / Cron Worker** | Autonomous CLI backup engine with incremental SHA-HEAD verification, concurrency controls, and `.tar.gz` archiving. |
 | **Database** | PostgreSQL 16 + `pgvector` | **Cloud Managed DB** | Persistent relational storage for backup runs, execution logs, analytics snapshots, and embedding vectors. |
 
 ---
@@ -56,24 +56,27 @@ graph TD
 Run individual services or the unified development environment using the provided `Makefile`:
 
 ```bash
-# 1. Start all 3 services concurrently (Go: 8080, Python: 8000, Frontend: 3000)
+# 1. Start all 3 web services concurrently (Go: 8080, Python: 8000, Frontend: 3000)
 make dev
 
-# 2. Configure Git pre-commit validation hooks (.githooks/)
+# 2. Run the autonomous Backup Worker CLI
+make backup
+
+# 3. Configure Git pre-commit validation hooks (.githooks/)
 make hooks-install
 
-# 3. Run full pre-commit validation gate across all services
+# 4. Run full pre-commit validation gate across all services
 make pre-commit
 
-# 4. Run linters and formatters across Go, Python, and TypeScript
+# 5. Run linters and formatters across Go, Python, and TypeScript
 make lint
 make format
 make typecheck
 
-# 5. Run all test suites across Go and Python
+# 6. Run all test suites across Go and Python
 make test
 
-# 6. Build Go binaries and Next.js frontend
+# 7. Build Go binaries and Next.js frontend
 make build
 ```
 
@@ -86,7 +89,7 @@ make build
 
 ---
 
-## Deployment Configuration
+## Deployment & Service Configuration
 
 ### 1. Frontend (Vercel)
 - **Root Directory**: `frontend/`
@@ -113,6 +116,17 @@ make build
 - **Environment Variables**:
   - `DATABASE_URL`: PostgreSQL connection string (`postgresql://...`)
   - `INTERNAL_SECRET`: Shared secret for protected endpoints
+
+### 4. Autonomous Backup Worker (Local / Scheduled Cron)
+- **Root Directory**: `backup-worker/`
+- **Run Command**: `make backup` or `cd backup-worker && go run main.go`
+- **Environment Variables**:
+  - `GITHUB_TOKEN_PERSONAL`: Personal access token for public & user repo discovery
+  - `GITHUB_TOKEN_PRIVATE`: Personal access token with `repo` scope for private repos
+  - `PROJECT_ACCOUNT`: Target GitHub username
+  - `ORG_ACCOUNT`: Target GitHub organization
+  - `BACKUP_REPO_PATH`: Git SSH clone URL of target backup repository
+  - `DATABASE_URL`: PostgreSQL connection string for real-time telemetry
 
 ---
 

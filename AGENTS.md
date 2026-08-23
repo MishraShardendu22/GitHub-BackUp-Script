@@ -9,7 +9,7 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 * **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel**.
 * **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel**.
 * **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render**.
-* **Backup Worker**: Go CLI -> Local / Scheduled Cron.
+* **Backup Worker**: Go CLI -> Dedicated `backup-worker/` directory (Local / Scheduled Cron via `make backup`).
 
 > **CRITICAL RULE**: Do **NOT** introduce Docker, Docker Compose, Kubernetes, Helm, Nginx, Prometheus servers, Grafana containers, or container registries. All deployments use serverless Vercel and Render native runtimes.
 
@@ -40,6 +40,7 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 * **Centralized Extractors Only**:
   * **Go Backend**: `backend/config/config.go` (`config.Get()`).
+  * **Backup Worker**: `backup-worker/config/data.config.go` (`config.LoadConfig()`).
   * **Python Observatory**: `agentic-observatory/config/settings.py` & `agentic-observatory/utils/env.py`.
   * **Frontend**: `frontend/src/config/env.ts` (`@/config/env`).
 * **Secrets vs Hardcoded Defaults**:

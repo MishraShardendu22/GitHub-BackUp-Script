@@ -37,6 +37,7 @@ __pycache__
 
 # Database & Local State
 _Repos
+backup-worker/_Repos
 backup
 backups/postgres
 api_responses

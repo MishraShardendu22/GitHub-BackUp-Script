@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/MishraShardendu22/github-backup/backend/models"
-	"github.com/MishraShardendu22/github-backup/config"
-	"github.com/MishraShardendu22/github-backup/util"
+	"github.com/MishraShardendu22/github-backup/backup-worker/config"
+	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )

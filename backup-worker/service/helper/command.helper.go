@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MishraShardendu22/github-backup/util"
+	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	"go.uber.org/zap"
 )
 

@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/MishraShardendu22/github-backup/model"
-	"github.com/MishraShardendu22/github-backup/util"
+	"github.com/MishraShardendu22/github-backup/backup-worker/model"
+	"github.com/MishraShardendu22/github-backup/backup-worker/util"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
@@ -11,7 +11,7 @@ func LoadEnv() {
 	currEnv := "development"
 
 	if currEnv == "development" {
-		if err := godotenv.Load(); err != nil {
+		if err := godotenv.Load(".env", "../.env"); err != nil {
 			util.Logger().Warn("Error loading .env file",
 				zap.Error(err),
 			)

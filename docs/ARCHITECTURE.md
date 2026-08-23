@@ -80,13 +80,13 @@ graph TD
   * **Structured Logging & Metrics**: `log/slog` structured logging and native Prometheus metrics (`/metrics`).
   * **WebSocket Hub**: Concurrent pub-sub hub for broadcasting live worker logs to connected dashboard clients.
 
-### Tier 4: Autonomous Backup Worker (Go 1.24 CLI)
-* **Hosting**: **Local Machine / Scheduled Cron Runner**.
+### Tier 4: Autonomous Backup Worker (Go 1.24 CLI — `backup-worker/`)
+* **Hosting**: **Local Machine / Scheduled Cron Runner** (`make backup` / `backup-worker/main.go`).
 * **Role**: Repository discovery, delta detection, and secure archiving.
 * **Key Features**:
-  * **Incremental Sync**: Queries remote repository HEAD hashes via `git ls-remote` and compares with local SQLite state.
+  * **Incremental Sync**: Queries remote repository HEAD hashes via `git ls-remote` and compares with local SQLite state (`backup-worker/app.db`).
   * **Parallel Execution**: Concurrent hash verification and cloning with configurable worker pools (`hashCheckWorkers`, `cloneWorkers`).
-  * **Deterministic Archiving**: Shallow clones, `.git` directory stripping, `.tar.gz` compression, and atomic serial commits to the central backup repository.
+  * **Deterministic Archiving**: Shallow clones, `.git` directory stripping, `.tar.gz` compression into `backup-worker/_Repos/`, and atomic serial commits to the central backup repository.
   * **PostgreSQL Telemetry**: Direct batch telemetry logging to PostgreSQL (`execution_logs`, `backup_results`, `backup_runs`).
 
 ---
