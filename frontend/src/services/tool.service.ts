@@ -94,7 +94,7 @@ export const toolService = {
     );
   },
 
-  async fetchStats(token?: string): Promise<ObservatoryStats | null> {
+  async fetchStats(token?: string | null): Promise<ObservatoryStats | null> {
     try {
       const headers: Record<string, string> = {};
       if (token) {
