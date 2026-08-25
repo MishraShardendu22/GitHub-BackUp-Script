@@ -72,9 +72,9 @@ def get_llm(model: str | None = None, api_key: str | None = None) -> ChatOpenRou
         api_key=SecretStr(key) if key else None,
     )
 
-# Bind tools to the LLM, so that it can call them when needed
+# Bind tools to the LLM, enabling unrestricted parallel tool calling
 def get_bound_llm(model: str | None = None, api_key: str | None = None):
-    return get_llm(model=model, api_key=api_key).bind_tools(TOOLS, strict=True)
+    return get_llm(model=model, api_key=api_key).bind_tools(TOOLS, parallel_tool_calls=True)
 
 
 async def _retrieve_hybrid_context(question: str) -> tuple[str, list[dict]]:
@@ -153,10 +153,10 @@ async def invoke_agent(
 
     logger.info(f"[request_id={request_id}] Agent question: {question}")
 
-    # Loop to allow multi-turn tool calling (up to 5 iterations)
+    # Loop to allow multi-turn tool calling (up to 10 iterations)
     executed_tools: list[ToolExecution] = []
     
-    for iteration in range(5):
+    for iteration in range(10):
         logger.info(f"[request_id={request_id}] LLM Turn {iteration + 1}...")
         response = await llm.ainvoke(messages)
         messages.append(response)
@@ -219,15 +219,15 @@ async def invoke_agent(
                 )
                 return exec_tool, msg
 
-        # Execute multiple tools in parallel
+        # Execute all tool calls in parallel without artificial caps
         tool_outcomes = await asyncio.gather(*[_run_tool(tc) for tc in response.tool_calls])
         for exec_tool, tool_msg in tool_outcomes:
             executed_tools.append(exec_tool)
             messages.append(tool_msg)
                 
-    # Fallback if iterations exceed 5
+    # Fallback if iterations exceed 10
     duration = time.perf_counter() - start
-    logger.warn(f"[request_id={request_id}] Agent hit loop limit (5) and forced completion in {duration:.2f}s")
+    logger.warning(f"[request_id={request_id}] Agent hit loop limit (10) and forced completion in {duration:.2f}s")
     return AgentResponse(
         request_id=request_id,
         question=question,
@@ -335,7 +335,7 @@ async def stream_agent(
 
     executed_tools: list[ToolExecution] = []
     
-    for iteration in range(5):
+    for iteration in range(10):
         # Yield a status update: LLM reasoning
         yield json.dumps({"type": "agent_reasoning", "iteration": iteration, "request_id": request_id})
         
