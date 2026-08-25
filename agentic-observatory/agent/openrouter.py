@@ -341,136 +341,143 @@ async def stream_agent(
         messages.append(response)
         
         if not response.tool_calls:
-            # If there are no tool calls, this is the final answer!
-            # We pop the response we just got from the list so that astream can generate it.
-            messages.pop()
+            # Final answer received directly from LLM reasoning turn without redundant extra API calls
+            duration = time.perf_counter() - start
+            logger.info(f"[request_id={request_id}] Final answer generated in {duration:.2f}s after {iteration + 1} turns")
+            answer = extract_text_from_chunk(response) or ""
             
-            # Yield token events
-            answer_parts = []
-            async for token in _stream_final_answer(llm, messages, request_id, start):
-                answer_parts.append(token)
-                yield json.dumps({"type": "token", "text": token})
-                
-            answer = "".join(answer_parts)
+            # Stream tokens of the generated answer smoothly to client
+            if answer:
+                words = answer.split(" ")
+                for i, word in enumerate(words):
+                    token = word + (" " if i < len(words) - 1 else "")
+                    yield json.dumps({"type": "token", "text": token})
+                    await asyncio.sleep(0.005)
+                    
             yield json.dumps({"type": "done", "answer": answer, "request_id": request_id})
             return
             
-        # Execute tool calls
+        # Execute tool calls concurrently
         logger.info(f"[request_id={request_id}] Turn {iteration + 1} Tool calls: {response.tool_calls}")
+        
+        # Yield tool start & confirmation events for all tools
         for tool_call in response.tool_calls:
+            tool_args = tool_call["args"]
+            tool_name = tool_call["name"]
+            
+            if tool_name == "send_report_email":
+                import uuid
+                confirm_id = str(uuid.uuid4())
+                confirm_event = asyncio.Event()
+                active_confirmations[confirm_id] = confirm_event
+                
+                yield json.dumps({
+                    "type": "confirm_required",
+                    "confirm_id": confirm_id,
+                    "name": tool_name,
+                    "args": tool_args,
+                })
+                
+            yield json.dumps({
+                "type": "tool_start",
+                "name": tool_name,
+                "args": tool_args,
+            })
+
+        async def _run_stream_tool(tool_call: Any) -> tuple[ToolExecution, ToolMessage, dict[str, Any]]:
             tool_args = tool_call["args"]
             tool_name = tool_call["name"]
             
             # HUMAN IN THE LOOP MIDDLEWARE FOR SENSITIVE EMAIL ACTIONS
             if tool_name == "send_report_email":
-                import uuid
-                confirm_id = str(uuid.uuid4())
-                
-                # confirm sending the email with the user before proceeding
-                confirm_event = asyncio.Event()
-                active_confirmations[confirm_id] = confirm_event
-
-                # Yield confirmation required event
-                yield json.dumps({
-                    "type": "confirm_required",
-                    "confirm_id": confirm_id,
-                    "name": tool_name,
-                    "args": tool_args
-                })
-                
-                try:
-                    # Wait up to 120 seconds for human validation
-                    await asyncio.wait_for(confirm_event.wait(), timeout=120.0)
-                    approved = active_responses.get(confirm_id, False)
-                except asyncio.TimeoutError:
-                    approved = False
-                finally:
-                    active_confirmations.pop(confirm_id, None)
-                    active_responses.pop(confirm_id, None)
+                approved = False
+                for cid, ev in list(active_confirmations.items()):
+                    try:
+                        await asyncio.wait_for(ev.wait(), timeout=120.0)
+                        approved = active_responses.get(cid, False)
+                    except asyncio.TimeoutError:
+                        approved = False
+                    finally:
+                        active_confirmations.pop(cid, None)
+                        active_responses.pop(cid, None)
+                    break
                     
                 if not approved:
-                    # Log rejection and feed it to LLM context
-                    yield json.dumps({
+                    tool_end_evt = {
                         "type": "tool_end",
                         "name": tool_name,
                         "success": False,
-                        "error": "Email transmission rejected by user."
-                    })
-                    messages.append(
-                        ToolMessage(
-                            content="Tool execution rejected by user. The email report was NOT sent.",
-                            tool_call_id=tool_call["id"],
-                        )
+                        "error": "Email transmission rejected by user.",
+                    }
+                    exec_t = ToolExecution(
+                        name=tool_name,
+                        args=tool_args,
+                        success=False,
+                        duration_ms=0.0,
+                        error="Email transmission rejected by user.",
                     )
-                    continue
+                    t_msg = ToolMessage(
+                        content="Tool execution rejected by user. The email report was NOT sent.",
+                        tool_call_id=tool_call["id"],
+                    )
+                    return exec_t, t_msg, tool_end_evt
 
-            # Yield tool start event
-            yield json.dumps({"type": "tool_start", "name": tool_name, "args": tool_args})
-            
             logger.debug(f"[request_id={request_id}] Tool args: {tool_args}")
             logger.info(f"[request_id={request_id}] Executing tool: {tool_name}")
-            
             tool_start = time.perf_counter()
             try:
                 tool = TOOLS_BY_NAME[tool_name]
                 tool_result = await tool.ainvoke(tool_args)
                 tool_duration_ms = (time.perf_counter() - tool_start) * 1000
-                executed_tool = ToolExecution(
+                exec_t = ToolExecution(
                     name=tool_name,
                     args=tool_args,
                     success=True,
                     duration_ms=tool_duration_ms,
                     result=tool_result,
                 )
-                executed_tools.append(executed_tool)
-                
-                messages.append(
-                    ToolMessage(
-                        content=safe_serialize_payload(tool_result),
-                        tool_call_id=tool_call["id"],
-                    )
+                t_msg = ToolMessage(
+                    content=safe_serialize_payload(tool_result),
+                    tool_call_id=tool_call["id"],
                 )
-                
-                # Yield tool success event
-                yield json.dumps({
+                tool_end_evt = {
                     "type": "tool_end",
                     "name": tool_name,
                     "success": True,
                     "duration_ms": tool_duration_ms,
                     "result": tool_result,
-                })
-                logger.info(
-                    f"[request_id={request_id}] Tool success: {tool_name} ({tool_duration_ms:.2f}ms)"
-                )
+                }
+                logger.info(f"[request_id={request_id}] Tool success: {tool_name} ({tool_duration_ms:.2f}ms)")
+                return exec_t, t_msg, tool_end_evt
             except Exception as exc:
                 tool_duration_ms = (time.perf_counter() - tool_start) * 1000
-                executed_tool = ToolExecution(
+                exec_t = ToolExecution(
                     name=tool_name,
                     args=tool_args,
                     success=False,
                     duration_ms=tool_duration_ms,
                     error=str(exc),
                 )
-                executed_tools.append(executed_tool)
-                
-                messages.append(
-                    ToolMessage(
-                        content=f"Tool execution failed: {str(exc)}",
-                        tool_call_id=tool_call["id"],
-                    )
+                t_msg = ToolMessage(
+                    content=safe_serialize_payload(f"Tool execution failed: {str(exc)}"),
+                    tool_call_id=tool_call["id"],
                 )
-                
-                # Yield tool error event
-                yield json.dumps({
+                tool_end_evt = {
                     "type": "tool_end",
                     "name": tool_name,
                     "success": False,
                     "duration_ms": tool_duration_ms,
                     "error": str(exc),
-                })
-                logger.error(
-                    f"[request_id={request_id}] Tool failed: {tool_name} ({tool_duration_ms:.2f}ms) error={str(exc)}"
-                )
+                }
+                logger.error(f"[request_id={request_id}] Tool failed: {tool_name} ({tool_duration_ms:.2f}ms) error={str(exc)}")
+                return exec_t, t_msg, tool_end_evt
+
+        # Execute multiple tools concurrently
+        tool_outcomes = await asyncio.gather(*[_run_stream_tool(tc) for tc in response.tool_calls])
+        for exec_t, t_msg, tool_end_evt in tool_outcomes:
+            executed_tools.append(exec_t)
+            messages.append(t_msg)
+            yield json.dumps(tool_end_evt)
                 
     # Loop limit reached fallback
     yield json.dumps({"type": "done", "answer": "Reasoning loop execution limit reached.", "request_id": request_id})
