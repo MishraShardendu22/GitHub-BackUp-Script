@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import httpx
 from sqlalchemy import text
 
@@ -48,16 +49,6 @@ async def hybrid_search(
     semantic_rows: list[dict] = []
 
     if gen_id is not None:
-        # Embed the query
-        query_embedding = None
-        try:
-            query_embeddings = await embed_texts([clean_query], model_id)
-            if query_embeddings:
-                query_embedding = query_embeddings[0]
-        except Exception as e:
-            logger.warning("Query vector embedding unavailable (%s), using PostgreSQL Full-Text Search fallback", e)
-
-        # Build optional source type filter
         type_filter = ""
         params: dict = {
             "gen_id": gen_id,
@@ -69,48 +60,66 @@ async def hybrid_search(
             type_filter = "AND source_type = ANY(:source_types)"
             params["source_types"] = source_types
 
-        if async_session is not None:
-            async with async_session() as session:
-                # Full-text search + Substring fallback
-                fts_sql = f"""
-                    SELECT c.id, c.source_type, c.source_id, c.content, ecm.metadata,
-                           COALESCE(ts_rank_cd(c.content_tsv, plainto_tsquery('english', :query)), 0.1) AS fts_score
-                    FROM embedding_chunks c
-                    LEFT JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
-                    WHERE c.generation_id = :gen_id
-                      AND (
-                          c.content_tsv @@ plainto_tsquery('english', :query)
-                          OR c.content ILIKE :like_query
-                      )
-                      {type_filter}
-                    ORDER BY fts_score DESC
-                    LIMIT :fetch_limit
-                """
-                try:
-                    fts_result = await session.execute(text(fts_sql), params)
-                    fts_rows = [dict(r) for r in fts_result.mappings().all()]
-                except Exception as e:
-                    logger.warning("FTS query failed: %s", e)
+        fts_sql = f"""
+            SELECT c.id, c.source_type, c.source_id, c.content, ecm.metadata,
+                   COALESCE(ts_rank_cd(c.content_tsv, plainto_tsquery('english', :query)), 0.1) AS fts_score
+            FROM embedding_chunks c
+            LEFT JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
+            WHERE c.generation_id = :gen_id
+              AND (
+                  c.content_tsv @@ plainto_tsquery('english', :query)
+                  OR c.content ILIKE :like_query
+              )
+              {type_filter}
+            ORDER BY fts_score DESC
+            LIMIT :fetch_limit
+        """
 
-                # Vector semantic search (if query vector embedding is available)
-                if query_embedding:
-                    params["query_vec"] = str(query_embedding)
-                    semantic_sql = f"""
-                        SELECT c.id, c.source_type, c.source_id, c.content, ecm.metadata,
-                               1 - (c.embedding <=> CAST(:query_vec AS vector)) AS semantic_score
-                        FROM embedding_chunks c
-                        LEFT JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
-                        WHERE c.generation_id = :gen_id
-                          AND c.embedding IS NOT NULL
-                          {type_filter}
-                        ORDER BY c.embedding <=> CAST(:query_vec AS vector)
-                        LIMIT :fetch_limit
-                    """
-                    try:
-                        semantic_result = await session.execute(text(semantic_sql), params)
-                        semantic_rows = [dict(r) for r in semantic_result.mappings().all()]
-                    except Exception as e:
-                        logger.warning("Semantic vector query failed: %s", e)
+        async def _fetch_fts() -> list[dict]:
+            if async_session is None:
+                return []
+            try:
+                async with async_session() as session:
+                    fts_result = await session.execute(text(fts_sql), params)
+                    return [dict(r) for r in fts_result.mappings().all()]
+            except Exception as e:
+                logger.warning("FTS query failed: %s", e)
+                return []
+
+        async def _fetch_embedding() -> list[float] | None:
+            try:
+                embeddings = await embed_texts([clean_query], model_id)
+                return embeddings[0] if embeddings else None
+            except Exception as e:
+                logger.warning("Query vector embedding unavailable (%s), using PostgreSQL Full-Text Search fallback", e)
+                return None
+
+        # Execute FTS and embedding vector query concurrently for reduced latency
+        fts_rows, query_embedding = await asyncio.gather(
+            _fetch_fts(),
+            _fetch_embedding(),
+        )
+
+        # Vector semantic search (if query vector embedding is available)
+        if query_embedding and async_session is not None:
+            params["query_vec"] = str(query_embedding)
+            semantic_sql = f"""
+                SELECT c.id, c.source_type, c.source_id, c.content, ecm.metadata,
+                       1 - (c.embedding <=> CAST(:query_vec AS vector)) AS semantic_score
+                FROM embedding_chunks c
+                LEFT JOIN embedding_chunk_metadata ecm ON c.id = ecm.chunk_id
+                WHERE c.generation_id = :gen_id
+                  AND c.embedding IS NOT NULL
+                  {type_filter}
+                ORDER BY c.embedding <=> CAST(:query_vec AS vector)
+                LIMIT :fetch_limit
+            """
+            try:
+                async with async_session() as session:
+                    semantic_result = await session.execute(text(semantic_sql), params)
+                    semantic_rows = [dict(r) for r in semantic_result.mappings().all()]
+            except Exception as e:
+                logger.warning("Semantic vector query failed: %s", e)
 
     # Reciprocal Rank Fusion
     k = 60  # RRF smoothing constant

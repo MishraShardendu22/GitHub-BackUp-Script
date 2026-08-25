@@ -10,7 +10,6 @@ import {
   Pause,
   Play,
   RefreshCw,
-  Sparkles,
   Terminal,
   Zap,
 } from "lucide-react";
@@ -449,7 +448,7 @@ export default function EmbeddingsPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Sparkles size={14} style={{ color: "var(--accent)" }} />
+                  <Layers size={14} style={{ color: "var(--accent)" }} />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>
                     Cross-Encoder Reranker
                   </span>

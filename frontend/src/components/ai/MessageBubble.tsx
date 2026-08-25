@@ -1,8 +1,105 @@
-import { Bot, Sparkles } from "lucide-react";
+import { Bot, ChevronDown, Database } from "lucide-react";
+import { useState } from "react";
 import { formatTime } from "@/lib/utils";
-import type { Message } from "@/types";
+import type { Message, SearchSource } from "@/types";
 import { MessageContentRenderer } from "./MessageContentRenderer";
 import { ToolActivityBlock } from "./ToolActivityBlock";
+
+function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!sources || sources.length === 0) return null;
+
+  return (
+    <div className="ai-tool-activity-card" style={{ marginBottom: "12px" }}>
+      <button
+        type="button"
+        className="ai-tool-activity-header w-full flex items-center justify-between text-left"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        aria-label="Toggle retrieved hybrid search sources"
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Database size={13} style={{ color: "var(--accent)" }} />
+          <strong style={{ fontSize: "12px", color: "var(--text)" }}>
+            Retrieved Hybrid Search Sources
+          </strong>
+          <span
+            className="badge badge-info"
+            style={{ fontSize: "10px", padding: "2px 6px" }}
+          >
+            {sources.length} chunk{sources.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+            {expanded ? "Hide" : "Details"}
+          </span>
+          <ChevronDown
+            size={12}
+            style={{
+              transform: expanded ? "rotate(180deg)" : "none",
+              transition: "transform 0.2s ease",
+            }}
+          />
+        </div>
+      </button>
+      {expanded && (
+        <div className="ai-tool-activity-details">
+          {sources.map((src, idx) => (
+            <div
+              key={
+                src.id
+                  ? String(src.id)
+                  : `${src.source_type}:${src.source_id}:${idx}`
+              }
+              style={{
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                marginBottom: idx === sources.length - 1 ? 0 : "8px",
+                borderBottom:
+                  idx === sources.length - 1
+                    ? "none"
+                    : "1px dashed var(--card-border)",
+                paddingBottom: "6px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span className="badge badge-info" style={{ fontSize: "10px" }}>
+                  {src.source_type}
+                </span>
+                <span
+                  style={{ color: "var(--text-muted)", fontSize: "10.5px" }}
+                >
+                  Score:{" "}
+                  {typeof src.score === "number"
+                    ? src.score.toFixed(4)
+                    : src.score}
+                </span>
+              </div>
+              <div
+                style={{
+                  marginTop: "4px",
+                  color: "var(--text)",
+                  fontSize: "12.5px",
+                  lineHeight: 1.45,
+                }}
+              >
+                {src.content}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MessageBubble({ msg }: { msg: Message }) {
   if (msg.role === "user") {
@@ -17,6 +114,8 @@ export function MessageBubble({ msg }: { msg: Message }) {
       </div>
     );
   }
+
+  const runningTool = msg.toolCalls?.find((t) => t.running);
 
   return (
     <div className="assistantWrap">
@@ -34,84 +133,7 @@ export function MessageBubble({ msg }: { msg: Message }) {
       </div>
       <div className="assistantBubble">
         {msg.sources && msg.sources.length > 0 && (
-          <div
-            style={{
-              marginBottom: "12px",
-              background: "var(--bg-primary)",
-              padding: "10px 14px",
-              borderRadius: "6px",
-              border: "1px solid var(--card-border)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                color: "var(--accent)",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                marginBottom: "8px",
-              }}
-            >
-              <Sparkles size={12} /> Retrieved Hybrid Search Sources (
-              {msg.sources.length})
-            </span>
-            {msg.sources.map((src, idx) => (
-              <div
-                key={
-                  src.id
-                    ? String(src.id)
-                    : `${src.source_type}:${src.source_id}`
-                }
-                style={{
-                  fontSize: "12px",
-                  color: "var(--text-secondary)",
-                  marginBottom:
-                    idx === (msg.sources?.length ?? 0) - 1 ? 0 : "6px",
-                  borderBottom:
-                    idx === (msg.sources?.length ?? 0) - 1
-                      ? "none"
-                      : "1px dashed var(--card-border)",
-                  paddingBottom: "4px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span
-                    className="badge badge-info"
-                    style={{ fontSize: "10px" }}
-                  >
-                    {src.source_type}
-                  </span>
-                  <span
-                    style={{ color: "var(--text-muted)", fontSize: "10.5px" }}
-                  >
-                    Score:{" "}
-                    {typeof src.score === "number"
-                      ? src.score.toFixed(4)
-                      : src.score}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    marginTop: "4px",
-                    color: "var(--text)",
-                    fontSize: "12.5px",
-                  }}
-                >
-                  {src.content}
-                </div>
-              </div>
-            ))}
-          </div>
+          <RetrievedSourcesBlock sources={msg.sources} />
         )}
         {msg.toolCalls && msg.toolCalls.length > 0 && (
           <div style={{ marginBottom: "12px" }}>
@@ -163,9 +185,11 @@ export function MessageBubble({ msg }: { msg: Message }) {
               <span />
             </span>
             <span>
-              {msg.iteration !== undefined
-                ? `Agent reasoning (iteration ${msg.iteration + 1} of 5)...`
-                : "Agent is starting reasoning workflow..."}
+              {runningTool
+                ? `Executing tool: ${runningTool.name}...`
+                : msg.iteration !== undefined
+                  ? `Agent reasoning (turn ${msg.iteration + 1} of 5)...`
+                  : "Agent is starting reasoning workflow..."}
             </span>
           </div>
         )}

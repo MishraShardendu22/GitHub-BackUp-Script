@@ -54,6 +54,8 @@ async def fetch_free_text_models(force_refresh: bool = False) -> list[dict]:
             free_text_models.append({
                 "id": model["id"],
                 "name": model.get("name", model["id"]),
+                "context_length": model.get("context_length", 0),
+                "description": model.get("description", ""),
             })
 
         # Sort alphabetically by display name

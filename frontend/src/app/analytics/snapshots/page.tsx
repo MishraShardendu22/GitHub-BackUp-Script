@@ -148,9 +148,7 @@ export default async function SnapshotsPage({
               <table className="table table-wide">
                 <thead>
                   <tr>
-                    <th style={{ minWidth: "160px", whiteSpace: "nowrap" }}>
-                      Captured at
-                    </th>
+                    <th style={{ whiteSpace: "nowrap" }}>Captured at</th>
                     <th style={{ whiteSpace: "nowrap" }}>Commit</th>
                     <th>Message</th>
                     <th style={{ whiteSpace: "nowrap" }}>Commits</th>

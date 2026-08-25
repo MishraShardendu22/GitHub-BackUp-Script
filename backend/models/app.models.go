@@ -7,6 +7,7 @@ import (
 type PaginationMeta struct {
 	Page       int `json:"page"`
 	Limit      int `json:"limit"`
+	PageSize   int `json:"page_size,omitempty"`
 	TotalItems int `json:"total_items"`
 	TotalPages int `json:"total_pages"`
 }
