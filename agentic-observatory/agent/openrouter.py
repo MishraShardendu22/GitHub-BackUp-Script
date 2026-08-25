@@ -56,6 +56,9 @@ TOOLS = [
     fetch_latest_analytics_snapshot,
 ]
 
+def get_agent_tools() -> list[Any]:
+    return TOOLS
+
 from utils.openrouter_keys import get_active_openrouter_key, rotate_openrouter_key
 
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}

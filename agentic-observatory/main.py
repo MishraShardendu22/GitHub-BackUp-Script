@@ -1,13 +1,15 @@
+import asyncio
 import json
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from contextlib import asynccontextmanager
+from typing import Any
 
 import httpx
 from sqlalchemy import text
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -176,6 +178,11 @@ class SearchRequest(BaseModel):
     rerank_model_id: str | None = None
     fts_weight: float = 0.3
     semantic_weight: float = 0.7
+
+
+class ExecuteToolRequest(BaseModel):
+    tool_name: str
+    args: dict[str, Any] = Field(default_factory=dict)
 
 
 @app.get("/health")
@@ -835,6 +842,83 @@ async def list_embedding_models():
 async def list_reranking_models():
     models = await fetch_free_reranking_models()
     return success_response(data=models, message="Available reranking models")
+
+
+@app.get("/api/tools")
+async def list_agent_tools():
+    """Lists all available agent tools with schemas and arguments."""
+    from agent.openrouter import get_agent_tools
+    tools = get_agent_tools()
+    tool_list = []
+    for t in tools:
+        args_schema = {}
+        if hasattr(t, "args_schema") and t.args_schema:
+            try:
+                args_schema = (
+                    t.args_schema.schema()
+                    if hasattr(t.args_schema, "schema")
+                    else t.args_schema.model_json_schema()
+                )
+            except Exception:
+                args_schema = {}
+        elif hasattr(t, "args"):
+            args_schema = t.args
+
+        tool_list.append({
+            "name": t.name,
+            "description": t.description or "",
+            "args_schema": args_schema,
+        })
+    return success_response(data=tool_list, message="Available agent tools")
+
+
+@app.post("/api/tools/execute")
+async def execute_agent_tool(
+    request: ExecuteToolRequest,
+    current_user: str = Depends(get_current_user),
+):
+    """Directly invokes an agent tool for developer testing and playground experimentation."""
+    from agent.openrouter import get_agent_tools
+    tools = {t.name: t for t in get_agent_tools()}
+    if request.tool_name not in tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tool '{request.tool_name}' not found."
+        )
+
+    tool = tools[request.tool_name]
+    start_t = time.time()
+    try:
+        if asyncio.iscoroutinefunction(getattr(tool, "_arun", None)) or asyncio.iscoroutinefunction(getattr(tool, "ainvoke", None)):
+            res = await tool.ainvoke(request.args)
+        else:
+            res = await asyncio.to_thread(tool.invoke, request.args)
+
+        dur_ms = round((time.time() - start_t) * 1000, 2)
+        return success_response(
+            data={
+                "name": request.tool_name,
+                "args": request.args,
+                "success": True,
+                "duration_ms": dur_ms,
+                "result": res,
+                "error": None,
+            },
+            message=f"Tool {request.tool_name} executed successfully",
+        )
+    except Exception as exc:
+        dur_ms = round((time.time() - start_t) * 1000, 2)
+        return success_response(
+            data={
+                "name": request.tool_name,
+                "args": request.args,
+                "success": False,
+                "duration_ms": dur_ms,
+                "result": None,
+                "error": str(exc),
+            },
+            message=f"Tool {request.tool_name} execution failed",
+        )
 
 
 

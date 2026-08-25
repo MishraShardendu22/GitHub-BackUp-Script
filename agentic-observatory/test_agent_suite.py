@@ -383,6 +383,17 @@ class TestAgentComprehensiveSuite(unittest.IsolatedAsyncioTestCase):
         res2 = await store.delete_session_message("00000000-0000-0000-0000-000000000000", "local-optimistic-msg-id")
         self.assertTrue(res2)
 
+    # -------------------------------------------------------------------------
+    # 11. Agent Tools Listing & Direct Execution Playground
+    # -------------------------------------------------------------------------
+    def test_agent_tools_listing_and_execution(self):
+        from agent.openrouter import get_agent_tools
+        tools = get_agent_tools()
+        self.assertGreaterEqual(len(tools), 10)
+        tool_names = [t.name for t in tools]
+        self.assertIn("fetch_dashboard_statistics", tool_names)
+        self.assertIn("hybrid_search_knowledge_base", tool_names)
+
 
 if __name__ == "__main__":
     unittest.main()
