@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 import json
 import asyncio
+from typing import Any
 
 active_confirmations: dict[str, asyncio.Event] = {}
 active_responses: dict[str, bool] = {}
@@ -102,6 +103,28 @@ async def _retrieve_hybrid_context(question: str) -> tuple[str, list[dict]]:
 
 # Main function to invoke the agent with a user question,
 # handle tool calls, and return the final answer
+async def _fetch_session_history(session_id: str | None) -> list[BaseMessage]:
+    """Fetch session history messages concurrently."""
+    history_messages: list[BaseMessage] = []
+    if not session_id:
+        return history_messages
+    try:
+        from data.persistence import persistence_store
+        db_messages = await persistence_store.get_session_messages(session_id)
+        for msg in db_messages:
+            role = msg.get("role")
+            content = msg.get("content")
+            if role == "user":
+                history_messages.append(HumanMessage(content=content or ""))
+            elif role == "assistant":
+                history_messages.append(AIMessage(content=content or ""))
+    except Exception as e:
+        logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
+    return history_messages
+
+
+# Main function to invoke the agent with a user question,
+# handle tool calls, and return the final answer
 async def invoke_agent(
     question: str,
     session_id: str | None = None,
@@ -112,24 +135,11 @@ async def invoke_agent(
     start = time.perf_counter()
     llm = get_bound_llm(model=model)
 
-    # Retrieve hybrid search RAG context
-    system_prompt_content, retrieved_sources = await _retrieve_hybrid_context(question)
-
-    # Load history messages if session_id is provided
-    history_messages: list[BaseMessage] = []
-    if session_id:
-        try:
-            from data.persistence import persistence_store
-            db_messages = await persistence_store.get_session_messages(session_id)
-            for msg in db_messages:
-                role = msg.get("role")
-                content = msg.get("content")
-                if role == "user":
-                    history_messages.append(HumanMessage(content=content or ""))
-                elif role == "assistant":
-                    history_messages.append(AIMessage(content=content or ""))
-        except Exception as e:
-            logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
+    # Retrieve hybrid search RAG context and session history concurrently
+    (system_prompt_content, retrieved_sources), history_messages = await asyncio.gather(
+        _retrieve_hybrid_context(question),
+        _fetch_session_history(session_id),
+    )
 
     # initialize the conversation with a system prompt, history, and the user's question
     messages: list[BaseMessage] = [
@@ -161,58 +171,56 @@ async def invoke_agent(
                 retrieved_sources=retrieved_sources,
             )
 
-            
         logger.info(f"[request_id={request_id}] Turn {iteration + 1} Tool calls: {response.tool_calls}")
 
-        # execute tools calls by the llm and feed the results back to the llm for the next turn
-        for tool_call in response.tool_calls:
+        async def _run_tool(tool_call: Any) -> tuple[ToolExecution, ToolMessage]:
             tool_args = tool_call["args"]
             tool_name = tool_call["name"]
-            
             logger.debug(f"[request_id={request_id}] Tool args: {tool_args}")
             logger.info(f"[request_id={request_id}] Executing tool: {tool_name}")
-            
             tool_start = time.perf_counter()
             try:
                 tool = TOOLS_BY_NAME[tool_name]
                 tool_result = await tool.ainvoke(tool_args)
                 tool_duration_ms = (time.perf_counter() - tool_start) * 1000
-                executed_tool = ToolExecution(
+                exec_tool = ToolExecution(
                     name=tool_name,
                     args=tool_args,
                     success=True,
                     duration_ms=tool_duration_ms,
                     result=tool_result,
                 )
-                executed_tools.append(executed_tool)
-                messages.append(
-                    ToolMessage(
-                        content=safe_serialize_payload(tool_result),
-                        tool_call_id=tool_call["id"],
-                    )
+                msg = ToolMessage(
+                    content=safe_serialize_payload(tool_result),
+                    tool_call_id=tool_call["id"],
                 )
                 logger.info(
                     f"[request_id={request_id}] Tool success: {tool_name} ({tool_duration_ms:.2f}ms)"
                 )
+                return exec_tool, msg
             except Exception as exc:
                 tool_duration_ms = (time.perf_counter() - tool_start) * 1000
-                executed_tool = ToolExecution(
+                exec_tool = ToolExecution(
                     name=tool_name,
                     args=tool_args,
                     success=False,
                     duration_ms=tool_duration_ms,
                     error=str(exc),
                 )
-                executed_tools.append(executed_tool)
-                messages.append(
-                    ToolMessage(
-                        content=safe_serialize_payload(f"Tool execution failed: {str(exc)}"),
-                        tool_call_id=tool_call["id"],
-                    )
+                msg = ToolMessage(
+                    content=safe_serialize_payload(f"Tool execution failed: {str(exc)}"),
+                    tool_call_id=tool_call["id"],
                 )
                 logger.error(
                     f"[request_id={request_id}] Tool failed: {tool_name} ({tool_duration_ms:.2f}ms) error={str(exc)}"
                 )
+                return exec_tool, msg
+
+        # Execute multiple tools in parallel
+        tool_outcomes = await asyncio.gather(*[_run_tool(tc) for tc in response.tool_calls])
+        for exec_tool, tool_msg in tool_outcomes:
+            executed_tools.append(exec_tool)
+            messages.append(tool_msg)
                 
     # Fallback if iterations exceed 5
     duration = time.perf_counter() - start
@@ -298,8 +306,11 @@ async def stream_agent(
     # get the LLM instance with tools bound to it
     llm = get_bound_llm(model=model)
 
-    # Retrieve hybrid search RAG context
-    system_prompt_content, retrieved_sources = await _retrieve_hybrid_context(question)
+    # Retrieve hybrid search RAG context and session history concurrently
+    (system_prompt_content, retrieved_sources), history_messages = await asyncio.gather(
+        _retrieve_hybrid_context(question),
+        _fetch_session_history(session_id),
+    )
 
     # Yield info event first with retrieved hybrid search sources
     yield json.dumps({
@@ -308,22 +319,6 @@ async def stream_agent(
         "session_id": session_id,
         "sources": retrieved_sources,
     })
-
-    # Load history messages if session_id is provided
-    history_messages: list[BaseMessage] = []
-    if session_id:
-        try:
-            from data.persistence import persistence_store
-            db_messages = await persistence_store.get_session_messages(session_id)
-            for msg in db_messages:
-                role = msg.get("role")
-                content = msg.get("content")
-                if role == "user":
-                    history_messages.append(HumanMessage(content=content or ""))
-                elif role == "assistant":
-                    history_messages.append(AIMessage(content=content or ""))
-        except Exception as e:
-            logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
 
     # initialize the conversation with a system prompt, history, and the user's question
     messages: list[BaseMessage] = [

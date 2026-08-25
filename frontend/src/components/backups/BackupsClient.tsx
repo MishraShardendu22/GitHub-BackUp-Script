@@ -256,9 +256,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 <tr>
                   <th style={{ whiteSpace: "nowrap" }}>Run</th>
                   <th style={{ whiteSpace: "nowrap" }}>Status</th>
-                  <th style={{ minWidth: "160px", whiteSpace: "nowrap" }}>
-                    Date
-                  </th>
+                  <th style={{ whiteSpace: "nowrap" }}>Date</th>
                   <th style={{ whiteSpace: "nowrap" }}>Duration</th>
                   <th style={{ whiteSpace: "nowrap" }}>Total</th>
                   <th style={{ whiteSpace: "nowrap" }}>Success</th>
@@ -268,7 +266,6 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <th
                     style={{
                       textAlign: "right",
-                      minWidth: "160px",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -393,7 +390,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       </td>
                       <td
                         data-label="Actions"
-                        style={{ textAlign: "right", minWidth: "160px" }}
+                        style={{ textAlign: "right", whiteSpace: "nowrap" }}
                       >
                         <div
                           style={{

@@ -2,7 +2,7 @@
 
 import { Radio, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { env, WS_BASE_URL } from "@/config/env";
+import { API_BASE_URL, env, WS_BASE_URL } from "@/config/env";
 import type { WsMessage } from "@/types";
 
 type LiveLog = WsMessage & { clientId: number };
@@ -52,6 +52,47 @@ export function LiveLogStream() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logSequenceRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    async function loadRecentLogs() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/logs?limit=50`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const initialLogs: LiveLog[] = (data.data || []).map(
+          (l: {
+            level?: string;
+            message?: string;
+            repository?: string;
+            created_at?: string;
+          }) => ({
+            type: "log" as const,
+            level: l.level || "info",
+            message: l.message || "",
+            repository: l.repository || "",
+            timestamp: l.created_at || new Date().toISOString(),
+            clientId: logSequenceRef.current++,
+          }),
+        );
+        if (active && initialLogs.length > 0) {
+          setLogs((prev) => (prev.length === 0 ? initialLogs : prev));
+          window.requestAnimationFrame(() =>
+            logsEndRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "end",
+            }),
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    loadRecentLogs();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let disposed = false;

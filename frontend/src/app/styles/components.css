@@ -228,20 +228,19 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 720px;
 }
 
 .table-wide {
-  min-width: 900px;
+  min-width: 720px;
 }
 
 .table th {
   text-align: left;
-  padding: 16px 24px;
+  padding: 12px 14px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
   background: var(--surface2);
@@ -250,8 +249,8 @@
 }
 
 .table td {
-  padding: 18px 24px;
-  font-size: 15px;
+  padding: 14px 14px;
+  font-size: 14px;
   border-bottom: 1px solid var(--border-light);
   color: var(--text);
   transition: background 0.15s ease;

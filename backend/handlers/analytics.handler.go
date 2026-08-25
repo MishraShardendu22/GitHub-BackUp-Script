@@ -15,7 +15,10 @@ func GetAnalyticsRuns(c *fiber.Ctx) error {
 	if page < 1 {
 		page = 1
 	}
-	limit := c.QueryInt("limit", 50)
+	limit := c.QueryInt("limit", 0)
+	if limit <= 0 {
+		limit = c.QueryInt("page_size", 50)
+	}
 	if limit < 1 {
 		limit = 50
 	}
@@ -46,7 +49,26 @@ func GetAnalyticsRuns(c *fiber.Ctx) error {
 	}
 
 	rows, err := db.Pool.Query(ctx, `
-		SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
+		SELECT 
+			COALESCE(run_id, 0) AS id, 
+			run_id, 
+			captured_at, 
+			COALESCE(head_commit, ''), 
+			COALESCE(head_commit_message, ''), 
+			head_commit_at, 
+			COALESCE(total_commits, 0), 
+			COALESCE(branch_count, 0), 
+			COALESCE(tag_count, 0), 
+			COALESCE(tracked_files, 0), 
+			COALESCE(total_blob_size_bytes, 0), 
+			COALESCE(avg_blob_size_bytes, 0), 
+			COALESCE(largest_blob_path, ''), 
+			COALESCE(largest_blob_size_bytes, 0), 
+			COALESCE(archive_count, 0), 
+			COALESCE(total_archive_size_bytes, 0), 
+			COALESCE(avg_archive_size_bytes, 0), 
+			COALESCE(largest_archive_path, ''), 
+			COALESCE(largest_archive_size_bytes, 0)
 		FROM analytics_snapshots
 		ORDER BY captured_at DESC
 		LIMIT $1 OFFSET $2
@@ -81,6 +103,7 @@ func GetAnalyticsRuns(c *fiber.Ctx) error {
 		Pagination: models.PaginationMeta{
 			Page:       page,
 			Limit:      limit,
+			PageSize:   limit,
 			TotalItems: totalItems,
 			TotalPages: totalPages,
 		},
@@ -100,7 +123,26 @@ func GetAnalyticsForLatestRun(c *fiber.Ctx) error {
 	err := db.Pool.QueryRow(
 		ctx,
 		`
-		SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
+		SELECT 
+			COALESCE(run_id, 0) AS id, 
+			run_id, 
+			captured_at, 
+			COALESCE(head_commit, ''), 
+			COALESCE(head_commit_message, ''), 
+			head_commit_at, 
+			COALESCE(total_commits, 0), 
+			COALESCE(branch_count, 0), 
+			COALESCE(tag_count, 0), 
+			COALESCE(tracked_files, 0), 
+			COALESCE(total_blob_size_bytes, 0), 
+			COALESCE(avg_blob_size_bytes, 0), 
+			COALESCE(largest_blob_path, ''), 
+			COALESCE(largest_blob_size_bytes, 0), 
+			COALESCE(archive_count, 0), 
+			COALESCE(total_archive_size_bytes, 0), 
+			COALESCE(avg_archive_size_bytes, 0), 
+			COALESCE(largest_archive_path, ''), 
+			COALESCE(largest_archive_size_bytes, 0)
 		FROM analytics_snapshots
 		ORDER BY captured_at DESC
 		LIMIT 1
@@ -132,7 +174,26 @@ func GetAnalyticsForSpecificRun(c *fiber.Ctx) error {
 	err = db.Pool.QueryRow(
 		ctx,
 		`
-		SELECT run_id AS id, run_id, captured_at, head_commit, head_commit_message, head_commit_at, total_commits, branch_count, tag_count, tracked_files, total_blob_size_bytes, avg_blob_size_bytes, largest_blob_path, largest_blob_size_bytes, archive_count, total_archive_size_bytes, avg_archive_size_bytes, largest_archive_path, largest_archive_size_bytes
+		SELECT 
+			COALESCE(run_id, 0) AS id, 
+			run_id, 
+			captured_at, 
+			COALESCE(head_commit, ''), 
+			COALESCE(head_commit_message, ''), 
+			head_commit_at, 
+			COALESCE(total_commits, 0), 
+			COALESCE(branch_count, 0), 
+			COALESCE(tag_count, 0), 
+			COALESCE(tracked_files, 0), 
+			COALESCE(total_blob_size_bytes, 0), 
+			COALESCE(avg_blob_size_bytes, 0), 
+			COALESCE(largest_blob_path, ''), 
+			COALESCE(largest_blob_size_bytes, 0), 
+			COALESCE(archive_count, 0), 
+			COALESCE(total_archive_size_bytes, 0), 
+			COALESCE(avg_archive_size_bytes, 0), 
+			COALESCE(largest_archive_path, ''), 
+			COALESCE(largest_archive_size_bytes, 0)
 		FROM analytics_snapshots
 		WHERE run_id = $1
 		LIMIT 1

@@ -67,9 +67,7 @@ export default async function RunHistoryPage({
                   <tr>
                     <th style={{ whiteSpace: "nowrap" }}>Run #</th>
                     <th style={{ whiteSpace: "nowrap" }}>Status</th>
-                    <th style={{ minWidth: "160px", whiteSpace: "nowrap" }}>
-                      Started
-                    </th>
+                    <th style={{ whiteSpace: "nowrap" }}>Started</th>
                     <th style={{ whiteSpace: "nowrap" }}>Duration</th>
                     <th style={{ whiteSpace: "nowrap" }}>Repos</th>
                     <th style={{ whiteSpace: "nowrap" }}>Success</th>

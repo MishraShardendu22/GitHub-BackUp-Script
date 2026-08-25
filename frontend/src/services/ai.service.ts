@@ -3,6 +3,8 @@ import { AGENT_URL } from "@/config/env";
 export interface OpenRouterModel {
   id: string;
   name: string;
+  context_length?: number;
+  description?: string;
 }
 
 export const aiService = {

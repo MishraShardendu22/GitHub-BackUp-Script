@@ -88,16 +88,43 @@ export function ModelSelector({
     }
   }, [isOpen]);
 
+  const [sortBy, setSortBy] = useState<"name" | "speed" | "context">("name");
+
   const activeModelObj = models.find((m) => m.id === selectedModel);
   const activeDisplayName = activeModelObj
     ? activeModelObj.name
     : selectedModel || "Select Model";
 
-  const filteredModels = models.filter(
-    (m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.id.toLowerCase().includes(search.toLowerCase()),
-  );
+  const isFastModel = (modelId: string) => {
+    const id = modelId.toLowerCase();
+    return (
+      id.includes("flash") ||
+      id.includes("mini") ||
+      id.includes("8b") ||
+      id.includes("3b") ||
+      id.includes("haiku") ||
+      id.includes("nemotron") ||
+      id.includes("liquid")
+    );
+  };
+
+  const filteredModels = models
+    .filter(
+      (m) =>
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.id.toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort((a, b) => {
+      if (sortBy === "speed") {
+        const aFast = isFastModel(a.id) ? 1 : 0;
+        const bFast = isFastModel(b.id) ? 1 : 0;
+        if (aFast !== bFast) return bFast - aFast;
+      }
+      if (sortBy === "context") {
+        return (b.context_length || 0) - (a.context_length || 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="custom-model-selector-wrap" ref={containerRef}>
@@ -212,9 +239,73 @@ export function ModelSelector({
                 </button>
               )}
             </div>
-            <div className="custom-model-count">
-              {filteredModels.length} free model
-              {filteredModels.length === 1 ? "" : "s"}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 6,
+                fontSize: "11px",
+              }}
+            >
+              <div className="custom-model-count">
+                {filteredModels.length} model
+                {filteredModels.length === 1 ? "" : "s"}
+              </div>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setSortBy("name")}
+                  style={{
+                    fontSize: "10px",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--border)",
+                    background:
+                      sortBy === "name" ? "var(--accent)" : "transparent",
+                    color: sortBy === "name" ? "#fff" : "var(--text-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  A-Z
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy("speed")}
+                  style={{
+                    fontSize: "10px",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--border)",
+                    background:
+                      sortBy === "speed" ? "var(--accent)" : "transparent",
+                    color:
+                      sortBy === "speed" ? "#fff" : "var(--text-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Fastest
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy("context")}
+                  style={{
+                    fontSize: "10px",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--border)",
+                    background:
+                      sortBy === "context" ? "var(--accent)" : "transparent",
+                    color:
+                      sortBy === "context" ? "#fff" : "var(--text-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Context
+                </button>
+              </div>
             </div>
           </div>
 
