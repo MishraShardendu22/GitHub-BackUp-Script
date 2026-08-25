@@ -59,7 +59,7 @@ from utils.openrouter_keys import get_active_openrouter_key, rotate_openrouter_k
 
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}
 
-
+# Initialize the LLM with active OpenRouter key from failover pool
 def get_llm(model: str | None = None, api_key: str | None = None) -> ChatOpenRouter:
     key = api_key or get_active_openrouter_key()
     return ChatOpenRouter(
@@ -68,7 +68,7 @@ def get_llm(model: str | None = None, api_key: str | None = None) -> ChatOpenRou
         api_key=SecretStr(key) if key else None,
     )
 
-
+# Bind tools to the LLM, so that it can call them when needed
 def get_bound_llm(model: str | None = None, api_key: str | None = None):
     return get_llm(model=model, api_key=api_key).bind_tools(TOOLS, strict=True)
 
@@ -100,6 +100,8 @@ async def _retrieve_hybrid_context(question: str) -> tuple[str, list[dict]]:
         return SYSTEM_PROMPT, []
 
 
+# Main function to invoke the agent with a user question,
+# handle tool calls, and return the final answer
 async def invoke_agent(
     question: str,
     session_id: str | None = None,
@@ -110,8 +112,10 @@ async def invoke_agent(
     start = time.perf_counter()
     llm = get_bound_llm(model=model)
 
+    # Retrieve hybrid search RAG context
     system_prompt_content, retrieved_sources = await _retrieve_hybrid_context(question)
 
+    # Load history messages if session_id is provided
     history_messages: list[BaseMessage] = []
     if session_id:
         try:
@@ -127,6 +131,7 @@ async def invoke_agent(
         except Exception as e:
             logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
 
+    # initialize the conversation with a system prompt, history, and the user's question
     messages: list[BaseMessage] = [
         SystemMessage(content=system_prompt_content),
     ]
@@ -135,6 +140,7 @@ async def invoke_agent(
 
     logger.info(f"[request_id={request_id}] Agent question: {question}")
 
+    # Loop to allow multi-turn tool calling (up to 5 iterations)
     executed_tools: list[ToolExecution] = []
     
     for iteration in range(5):
@@ -143,6 +149,7 @@ async def invoke_agent(
         messages.append(response)
         
         if not response.tool_calls:
+            # Final answer received
             duration = time.perf_counter() - start
             logger.info(f"[request_id={request_id}] Agent completed in {duration:.2f}s after {iteration + 1} turns")
             return AgentResponse(
@@ -154,8 +161,10 @@ async def invoke_agent(
                 retrieved_sources=retrieved_sources,
             )
 
+            
         logger.info(f"[request_id={request_id}] Turn {iteration + 1} Tool calls: {response.tool_calls}")
 
+        # execute tools calls by the llm and feed the results back to the llm for the next turn
         for tool_call in response.tool_calls:
             tool_args = tool_call["args"]
             tool_name = tool_call["name"]
@@ -205,6 +214,7 @@ async def invoke_agent(
                     f"[request_id={request_id}] Tool failed: {tool_name} ({tool_duration_ms:.2f}ms) error={str(exc)}"
                 )
                 
+    # Fallback if iterations exceed 5
     duration = time.perf_counter() - start
     logger.warn(f"[request_id={request_id}] Agent hit loop limit (5) and forced completion in {duration:.2f}s")
     return AgentResponse(
@@ -216,20 +226,34 @@ async def invoke_agent(
     )
 
 
+# Take a streaming LLM chunk and extract only the text from it.
+# regardless of how the provider formats the chunk.
 def extract_text_from_chunk(chunk) -> str:
+    # get content safely, wont crash if content is not present, will return None
     content = getattr(chunk, "content", None)
+
+    # if the content is a string, return it directly
     if isinstance(content, str):
         return content
 
+    # if the content is a list, concatenate all the text parts and return it
     if isinstance(content, list):
         text_parts = []
         for item in content:
+            # the item can be a string, apped it directly
             if isinstance(item, str):
                 text_parts.append(item)
+
+            # the item can be an object with a text attribute, get the text attribute and append it
             elif isinstance(item, dict):
                 text_parts.append(item.get("text", "") or item.get("content", ""))
+
+        # concatenate all the text parts and return it
         return "".join(text_parts)
 
+    # some providers store text differently
+    # do the above cases wiht the content_blocks attribute instead of content
+    # some store it as chunk.content_blocks = [...] instead of chunk.content = [...]
     if hasattr(chunk, "content_blocks"):
         text_parts = []
         for block in getattr(chunk, "content_blocks", []) or []:
@@ -239,11 +263,15 @@ def extract_text_from_chunk(chunk) -> str:
                 text_parts.append(getattr(block, "text", ""))
             elif isinstance(block, dict):
                 text_parts.append(block.get("text", "") or block.get("content", ""))
+        
+        # concatenate all the text parts and return it 
         return "".join(text_parts)
 
+    # final fall back
     return ""
 
 
+# an asynchronous generator function, it yields tokens asynchronously as they are generated by the LLM, and also executes tool calls and feeds the results back to the LLM for a final answer
 async def _stream_final_answer(llm, messages, request_id: str, start: float) -> AsyncIterator[str]:
     async for chunk in llm.astream(messages):
         token = extract_text_from_chunk(chunk)
@@ -254,14 +282,20 @@ async def _stream_final_answer(llm, messages, request_id: str, start: float) -> 
     logger.info(f"[request_id={request_id}] Streamed final answer in {duration:.2f}s")
 
 
+# same as invoke_agent but it streams the final answer back to the client as it is generated by the LLM, instead of waiting for the final answer to be generated and then returning it
 async def stream_agent(
     question: str,
     session_id: str | None = None,
     request_id: str | None = None,
     model: str | None = None,
 ) -> AsyncIterator[str]:
+    # if request_id is not provided, create a new one
     request_id = request_id or create_request_id()
+
+    # start the timer to measure the total time taken by the agent to generate the final answer
     start = time.perf_counter()
+
+    # get the LLM instance with tools bound to it
     llm = get_bound_llm(model=model)
 
     # Retrieve hybrid search RAG context
@@ -291,9 +325,11 @@ async def stream_agent(
         except Exception as e:
             logger.error(f"[session_id={session_id}] Failed to load history messages: {e}")
 
+    # initialize the conversation with a system prompt, history, and the user's question
     messages: list[BaseMessage] = [
         SystemMessage(content=system_prompt_content),
     ]
+
     messages.extend(history_messages)
     messages.append(HumanMessage(content=question))
 
@@ -302,6 +338,7 @@ async def stream_agent(
     executed_tools: list[ToolExecution] = []
     
     for iteration in range(5):
+        # Yield a status update: LLM reasoning
         yield json.dumps({"type": "agent_reasoning", "iteration": iteration, "request_id": request_id})
         
         logger.info(f"[request_id={request_id}] LLM Turn {iteration + 1}...")
@@ -309,7 +346,11 @@ async def stream_agent(
         messages.append(response)
         
         if not response.tool_calls:
+            # If there are no tool calls, this is the final answer!
+            # We pop the response we just got from the list so that astream can generate it.
             messages.pop()
+            
+            # Yield token events
             answer_parts = []
             async for token in _stream_final_answer(llm, messages, request_id, start):
                 answer_parts.append(token)
@@ -319,17 +360,22 @@ async def stream_agent(
             yield json.dumps({"type": "done", "answer": answer, "request_id": request_id})
             return
             
+        # Execute tool calls
         logger.info(f"[request_id={request_id}] Turn {iteration + 1} Tool calls: {response.tool_calls}")
         for tool_call in response.tool_calls:
             tool_args = tool_call["args"]
             tool_name = tool_call["name"]
             
+            # HUMAN IN THE LOOP MIDDLEWARE FOR SENSITIVE EMAIL ACTIONS
             if tool_name == "send_report_email":
                 import uuid
                 confirm_id = str(uuid.uuid4())
+                
+                # confirm sending the email with the user before proceeding
                 confirm_event = asyncio.Event()
                 active_confirmations[confirm_id] = confirm_event
 
+                # Yield confirmation required event
                 yield json.dumps({
                     "type": "confirm_required",
                     "confirm_id": confirm_id,
@@ -338,6 +384,7 @@ async def stream_agent(
                 })
                 
                 try:
+                    # Wait up to 120 seconds for human validation
                     await asyncio.wait_for(confirm_event.wait(), timeout=120.0)
                     approved = active_responses.get(confirm_id, False)
                 except asyncio.TimeoutError:
@@ -347,6 +394,7 @@ async def stream_agent(
                     active_responses.pop(confirm_id, None)
                     
                 if not approved:
+                    # Log rejection and feed it to LLM context
                     yield json.dumps({
                         "type": "tool_end",
                         "name": tool_name,
@@ -361,6 +409,7 @@ async def stream_agent(
                     )
                     continue
 
+            # Yield tool start event
             yield json.dumps({"type": "tool_start", "name": tool_name, "args": tool_args})
             
             logger.debug(f"[request_id={request_id}] Tool args: {tool_args}")
@@ -387,6 +436,7 @@ async def stream_agent(
                     )
                 )
                 
+                # Yield tool success event
                 yield json.dumps({
                     "type": "tool_end",
                     "name": tool_name,
@@ -415,6 +465,7 @@ async def stream_agent(
                     )
                 )
                 
+                # Yield tool error event
                 yield json.dumps({
                     "type": "tool_end",
                     "name": tool_name,
@@ -426,4 +477,5 @@ async def stream_agent(
                     f"[request_id={request_id}] Tool failed: {tool_name} ({tool_duration_ms:.2f}ms) error={str(exc)}"
                 )
                 
+    # Loop limit reached fallback
     yield json.dumps({"type": "done", "answer": "Reasoning loop execution limit reached.", "request_id": request_id})
