@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `precommit-workflow-management`: Operations, bypasses, and staged file filtering for `.githooks/pre-commit`.
   - `repository-maintenance`: Idempotent SQL migrations, pgvector embedding lifecycle, and backup/restore runbooks.
   - `pull-request-management`: Explicit user-triggered PR workflow ensuring all PRs target `main` only.
+  - `git-post-merge-cleanup`: Step-by-step procedures for post-merge local Git cleanup, syncing `main` from GitHub, deleting stale local branches, and executing `git gc` and `reflog expire` on explicit user request.
+- `make git-clean` developer and agent target:
+  - Automates switching to `main`, pulling `origin/main`, pruning remote tracking refs, deleting local feature branches, and running aggressive Git garbage collection (`git reflog expire`, `git gc --prune=now --aggressive`).
 - Intelligent Git Pre-Commit Hook Workflow (`.githooks/pre-commit`):
   - Automatically inspects staged files and selectively triggers targeted validations across Go Backend/Worker, Python Agentic Observatory, and Next.js Frontend.
   - Multi-tier validation pipeline: code formatting (`gofmt`, Biome), static analysis & type checking (`go vet`, `pyright`, `tsc`), test suites, and production artifact builds.

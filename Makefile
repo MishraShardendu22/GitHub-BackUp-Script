@@ -1,4 +1,4 @@
-.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck
+.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean
 
 help:
 	@echo "======================================================================"
@@ -16,6 +16,7 @@ help:
 	@echo "  make build        - Compile Go binaries and Next.js build"
 	@echo "  make hooks-install- Configure Git pre-commit hooks (.githooks)"
 	@echo "  make pre-commit   - Run full pre-commit validation pipeline"
+	@echo "  make git-clean    - Sync main branch, delete local feature branches, and run git gc"
 	@echo "  make backup-db    - Execute automated PostgreSQL backup"
 	@echo "  make restore-db   - Restore PostgreSQL from backup file"
 	@echo "======================================================================"
@@ -86,4 +87,17 @@ backup-db:
 restore-db:
 	@echo "Restoring PostgreSQL from backup..."
 	@./scripts/restore-db.sh $(BACKUP_FILE)
+
+git-clean:
+	@echo "Synchronizing main branch and cleaning up repository..."
+	@git switch main
+	@git pull origin main
+	@git fetch --prune origin
+	@echo "Deleting stale local feature branches..."
+	@git branch | grep -v "^\* main$$" | grep -v "^  main$$" | xargs -r git branch -D || true
+	@echo "Running Git garbage collection and reflog pruning..."
+	@git reflog expire --expire=now --all
+	@git gc --prune=now --aggressive
+	@echo "Repository clean. Current active branch: main"
+
 

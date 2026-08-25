@@ -86,7 +86,22 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ---
 
-## 8. Verification Checklist
+## 8. Post-Merge Repository & Branch Cleanup Protocol
+
+* **Strict Human-Triggered Cleanup Only**: Agents MUST NOT run local branch deletions or aggressive Git garbage collection automatically. Cleanup must be executed **ONLY** upon explicit human instruction (e.g. *"clean up local branches"*, *"sync main and do git gc"*, *"I merged the PR, please clean up"*).
+* **Cleanup Execution Sequence**:
+  1. Verify working directory is clean (`git status`).
+  2. Switch to `main` branch (`git switch main`).
+  3. Pull latest changes merged on GitHub (`git pull origin main`).
+  4. Prune stale remote tracking references (`git fetch --prune origin`).
+  5. Delete local merged feature branches (`git branch -d <branch>` / `git branch -D <branch>`) so that only `main` remains.
+  6. Expire unreachable reflogs (`git reflog expire --expire=now --all`).
+  7. Run deep repository garbage collection (`git gc --prune=now --aggressive` or `make git-clean`).
+* See [`.agents/skills/git-post-merge-cleanup/SKILL.md`](.agents/skills/git-post-merge-cleanup/SKILL.md).
+
+---
+
+## 9. Verification Checklist
 
 Before finishing any task, you MUST run:
 ```bash
@@ -102,4 +117,5 @@ cd agentic-observatory && uv run --with pyright pyright
 # 4. Run Frontend lint and Turbopack build
 cd frontend && pnpm run lint && pnpm run build
 ```
+
 
