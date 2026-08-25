@@ -1,4 +1,4 @@
-import { Bot, ChevronDown, Database } from "lucide-react";
+import { Bot, ChevronDown, Database, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { formatTime } from "@/lib/utils";
 import type { Message, SearchSource } from "@/types";
@@ -101,12 +101,37 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
   );
 }
 
-export function MessageBubble({ msg }: { msg: Message }) {
+export function MessageBubble({
+  msg,
+  onDelete,
+}: {
+  msg: Message;
+  onDelete?: (id: string) => void;
+}) {
   if (msg.role === "user") {
     return (
       <div className="userBubbleWrap">
-        <div className="msgHeader" style={{ textAlign: "right" }}>
-          You · {formatTime(msg.timestamp)}
+        <div
+          className="msgHeader"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 8,
+          }}
+        >
+          {onDelete && !msg.streaming && (
+            <button
+              type="button"
+              className="message-delete-btn"
+              onClick={() => onDelete(msg.id)}
+              title="Delete message"
+              aria-label="Delete message"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
+          <span>You · {formatTime(msg.timestamp)}</span>
         </div>
         <div className="userBubble">
           <p className="userText">{msg.content}</p>
@@ -119,17 +144,37 @@ export function MessageBubble({ msg }: { msg: Message }) {
 
   return (
     <div className="assistantWrap">
-      <div className="msgHeader">
-        <Bot
-          size={13}
-          style={{
-            color: "var(--accent)",
-            display: "inline-block",
-            verticalAlign: "-2px",
-            marginRight: 4,
-          }}
-        />{" "}
-        Systems Lab Agent · {formatTime(msg.timestamp)}
+      <div
+        className="msgHeader"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <Bot
+            size={13}
+            style={{
+              color: "var(--accent)",
+              display: "inline-block",
+              verticalAlign: "-2px",
+              marginRight: 4,
+            }}
+          />{" "}
+          Systems Lab Agent · {formatTime(msg.timestamp)}
+        </div>
+        {onDelete && !msg.streaming && (
+          <button
+            type="button"
+            className="message-delete-btn"
+            onClick={() => onDelete(msg.id)}
+            title="Delete message"
+            aria-label="Delete message"
+          >
+            <Trash2 size={11} />
+          </button>
+        )}
       </div>
       <div className="assistantBubble">
         {msg.sources && msg.sources.length > 0 && (

@@ -65,12 +65,28 @@ export function useChat(token: string | null, sessionId: string | null) {
     setMessages([]);
   }, []);
 
+  const deleteMessage = useCallback(
+    async (id: string) => {
+      // Optimistically remove message from state immediately
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      if (token && sessionId) {
+        try {
+          await sessionService.deleteMessage(token, sessionId, id);
+        } catch (e) {
+          console.warn("Failed to delete message from server:", e);
+        }
+      }
+    },
+    [token, sessionId],
+  );
+
   return {
     messages,
     loading,
     error,
     addMessage,
     updateMessage,
+    deleteMessage,
     clearMessages,
     refresh: loadMessages,
   };

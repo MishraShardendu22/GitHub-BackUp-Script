@@ -152,4 +152,23 @@ export const sessionService = {
       return [];
     }
   },
+
+  async deleteMessage(
+    token: string | null,
+    sessionId: string,
+    messageId: string,
+  ): Promise<void> {
+    if (!token || !sessionId || !messageId) return;
+
+    try {
+      await fetch(`${AGENT_URL}/sessions/${sessionId}/messages/${messageId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch {
+      // Best-effort optimistic deletion
+    }
+  },
 };

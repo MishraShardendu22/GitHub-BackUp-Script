@@ -8,6 +8,9 @@ export function useSessions(token?: string | null) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
+    null,
+  );
 
   const fetchSessions = useCallback(async () => {
     if (!token) {
@@ -53,8 +56,18 @@ export function useSessions(token?: string | null) {
   const deleteSession = useCallback(
     async (id: string) => {
       if (!token) return;
-      await sessionService.delete(token, id);
-      await fetchSessions();
+      setDeletingSessionId(id);
+      // Optimistically remove session from local state immediately
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await sessionService.delete(token, id);
+      } catch (e) {
+        // Rollback state from server on failure
+        await fetchSessions();
+        throw e;
+      } finally {
+        setDeletingSessionId((prev) => (prev === id ? null : prev));
+      }
     },
     [token, fetchSessions],
   );
@@ -63,6 +76,7 @@ export function useSessions(token?: string | null) {
     sessions,
     loading,
     error,
+    deletingSessionId,
     createSession,
     renameSession,
     deleteSession,

@@ -77,6 +77,7 @@ export function AIDashboard() {
     loading: messagesLoading,
     addMessage,
     updateMessage,
+    deleteMessage,
   } = useChat(auth.token, activeSessionId);
   const {
     sending,
@@ -443,7 +444,13 @@ export function AIDashboard() {
                   start.
                 </div>
               ) : (
-                messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)
+                messages.map((msg) => (
+                  <MessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    onDelete={deleteMessage}
+                  />
+                ))
               )}
             </div>
           )}

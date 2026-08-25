@@ -350,6 +350,16 @@ async def get_session_messages(session_id: str):
     return success_response(data=messages, message="Session messages retrieved")
 
 
+@app.delete("/sessions/{session_id}/messages/{message_id}")
+async def delete_session_message(
+    session_id: str,
+    message_id: str,
+    current_user: str = Depends(get_current_user),
+):
+    await persistence_store.delete_session_message(session_id, message_id)
+    return success_response(data={"success": True}, message="Message deleted successfully")
+
+
 @app.get("/stats")
 async def get_ai_stats():
     stats = await persistence_store.get_ai_dashboard_stats()

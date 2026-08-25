@@ -267,6 +267,34 @@ body.ai-page-active .app-content-wrapper {
   color: var(--text-muted);
 }
 
+.message-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.35;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.message-delete-btn:hover {
+  opacity: 1;
+  color: var(--danger, #ff6b6b);
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.userBubbleWrap:hover .message-delete-btn,
+.assistantWrap:hover .message-delete-btn {
+  opacity: 0.75;
+}
+
 .userBubbleWrap {
   display: grid;
   justify-items: end;

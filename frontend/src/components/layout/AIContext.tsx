@@ -17,6 +17,7 @@ interface AIContextType {
   sessions: Session[];
   sessionsLoading: boolean;
   sessionsError: string | null;
+  deletingSessionId: string | null;
   createSession: (id: string, name: string) => Promise<void>;
   renameSession: (id: string, name: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
@@ -39,6 +40,7 @@ export function AIContextProvider({ children }: { children: React.ReactNode }) {
     sessions,
     loading: sessionsLoading,
     error: sessionsError,
+    deletingSessionId,
     createSession,
     renameSession,
     deleteSession,
@@ -71,6 +73,7 @@ export function AIContextProvider({ children }: { children: React.ReactNode }) {
         sessions,
         sessionsLoading,
         sessionsError,
+        deletingSessionId,
         createSession,
         renameSession,
         deleteSession,

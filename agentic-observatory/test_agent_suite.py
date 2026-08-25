@@ -370,6 +370,19 @@ class TestAgentComprehensiveSuite(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(backup_meta["repo"], "vuejs/core")
         self.assertEqual(backup_meta["status"], "completed")
 
+    # -------------------------------------------------------------------------
+    # 10. Message Deletion Store Method
+    # -------------------------------------------------------------------------
+    async def test_persistence_delete_message(self):
+        from data.persistence import InvestigationStore
+        store = InvestigationStore(session_factory=None)
+        # Non-integer message ID should return True without error
+        res = await store.delete_message("non-integer-id")
+        self.assertTrue(res)
+
+        res2 = await store.delete_session_message("00000000-0000-0000-0000-000000000000", "non-integer-id")
+        self.assertTrue(res2)
+
 
 if __name__ == "__main__":
     unittest.main()

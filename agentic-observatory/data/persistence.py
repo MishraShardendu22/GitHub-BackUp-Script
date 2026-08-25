@@ -304,6 +304,37 @@ class InvestigationStore:
             await session.commit()
             return True
 
+    async def delete_session_message(self, session_id: str, message_id: str) -> bool:
+        try:
+            m_id = int(message_id)
+        except (ValueError, TypeError):
+            return True
+
+        await self._check()
+        s_id = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+        async with self.session_factory() as session:
+            await session.execute(
+                delete(ai_chat_messages)
+                .where(ai_chat_messages.c.id == m_id)
+                .where(ai_chat_messages.c.session_id == s_id)
+            )
+            await session.commit()
+            return True
+
+    async def delete_message(self, message_id: str) -> bool:
+        try:
+            m_id = int(message_id)
+        except (ValueError, TypeError):
+            return True
+
+        await self._check()
+        async with self.session_factory() as session:
+            await session.execute(
+                delete(ai_chat_messages).where(ai_chat_messages.c.id == m_id)
+            )
+            await session.commit()
+            return True
+
     async def get_session_messages(self, session_id: str) -> list[dict[str, Any]]:
         await self._check()
         s_id = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
