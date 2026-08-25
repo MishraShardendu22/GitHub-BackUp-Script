@@ -88,8 +88,8 @@ export default function EmbeddingsPage() {
       ]);
       setEmbeddingModels(em);
       setRerankModels(rm);
-      if (em.length > 0 && !selectedEmbedding) setSelectedEmbedding(em[0]);
-      if (rm.length > 0 && !selectedRerank) setSelectedRerank(rm[0]);
+      setSelectedEmbedding((prev) => prev ?? (em.length > 0 ? em[0] : null));
+      setSelectedRerank((prev) => prev ?? (rm.length > 0 ? rm[0] : null));
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch models";
@@ -97,7 +97,7 @@ export default function EmbeddingsPage() {
     } finally {
       setLoadingModels(false);
     }
-  }, [selectedEmbedding, selectedRerank]);
+  }, []);
 
   const fetchStatus = useCallback(async () => {
     if (!isAuthenticated || !auth?.token) return;
@@ -106,14 +106,6 @@ export default function EmbeddingsPage() {
       setStatusError(null);
       const status = await searchService.getGenerationStatus(auth.token);
       setGenStatus(status);
-
-      // Sync model selector with active/building generation target model to avoid mismatched info
-      if (status?.model_id && embeddingModels.length > 0) {
-        const matching = embeddingModels.find((m) => m.id === status.model_id);
-        if (matching) {
-          setSelectedEmbedding(matching);
-        }
-      }
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -123,7 +115,7 @@ export default function EmbeddingsPage() {
     } finally {
       setLoadingStatus(false);
     }
-  }, [isAuthenticated, auth?.token, embeddingModels]);
+  }, [isAuthenticated, auth?.token]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -140,27 +132,28 @@ export default function EmbeddingsPage() {
     fetchStatus();
   }, [fetchStatus]);
 
-  // Synchronize matching model if models load after status
+  // Synchronize matching model if models load after status or generation status changes
   useEffect(() => {
     if (genStatus?.model_id && embeddingModels.length > 0) {
       const matching = embeddingModels.find((m) => m.id === genStatus.model_id);
-      if (matching && selectedEmbedding?.id !== matching.id) {
-        setSelectedEmbedding(matching);
+      if (matching) {
+        setSelectedEmbedding((prev) =>
+          prev?.id === matching.id ? prev : matching,
+        );
       }
     }
-  }, [genStatus?.model_id, embeddingModels, selectedEmbedding?.id]);
+  }, [genStatus?.model_id, embeddingModels]);
 
   // Periodic polling when building
   useEffect(() => {
-    if (!isAuthenticated || !genStatus || genStatus.status !== "BUILDING")
-      return;
+    if (!isAuthenticated || genStatus?.status !== "BUILDING") return;
     const interval = setInterval(() => {
       if (!autoProcessRef.current) {
         fetchStatus();
       }
     }, 3500);
     return () => clearInterval(interval);
-  }, [isAuthenticated, genStatus, fetchStatus]);
+  }, [isAuthenticated, genStatus?.status, fetchStatus]);
 
   const handleStartGeneration = async () => {
     if (!selectedEmbedding || !isAuthenticated || !auth?.token) return;
@@ -190,12 +183,13 @@ export default function EmbeddingsPage() {
     }
   };
 
+  const genStatusId = genStatus?.id;
   const processOneBatch = useCallback(async () => {
-    if (!genStatus || !isAuthenticated || !auth?.token) return false;
+    if (!genStatusId || !isAuthenticated || !auth?.token) return false;
     try {
       const res = (await searchService.processBatch(
         auth.token,
-        genStatus.id,
+        genStatusId,
         batchSize,
       )) as {
         processed: number;
@@ -226,7 +220,14 @@ export default function EmbeddingsPage() {
       addLog(`Error processing batch: ${message}`, "error");
       return false;
     }
-  }, [genStatus, isAuthenticated, auth?.token, batchSize, addLog, fetchStatus]);
+  }, [
+    genStatusId,
+    isAuthenticated,
+    auth?.token,
+    batchSize,
+    addLog,
+    fetchStatus,
+  ]);
 
   const handleProcessSingleBatch = async () => {
     setIsProcessingSingle(true);
