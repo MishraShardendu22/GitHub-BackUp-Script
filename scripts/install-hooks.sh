@@ -10,11 +10,11 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "${REPO_ROOT}"
 
-echo "🔧 Installing Git pre-commit hooks for GitHub Backup Automation System..."
+echo "Installing Git pre-commit hooks for GitHub Backup Automation System..."
 
 # Ensure .githooks directory exists
 if [ ! -d ".githooks" ]; then
-    echo "❌ Error: .githooks directory not found at ${REPO_ROOT}/.githooks"
+    echo "Error: .githooks directory not found at ${REPO_ROOT}/.githooks"
     exit 1
 fi
 
@@ -25,7 +25,7 @@ chmod +x scripts/*.sh 2>/dev/null || true
 # Configure git to use .githooks directory
 git config core.hooksPath .githooks
 
-echo "✔ Git hooks directory configured to: $(git config core.hooksPath)"
-echo "✔ Pre-commit hook is active and executable."
+echo "Git hooks directory configured to: $(git config core.hooksPath)"
+echo "Pre-commit hook is active and executable."
 echo ""
-echo "🚀 To run validation manually anytime: make pre-commit"
+echo "To run validation manually anytime: make pre-commit"

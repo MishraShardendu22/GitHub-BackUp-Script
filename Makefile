@@ -21,54 +21,54 @@ help:
 	@echo "======================================================================"
 
 dev:
-	@echo "🚀 Starting Go Backend (8080), Python Agent (8000), and Frontend (3000)..."
+	@echo "Starting Go Backend (8080), Python Agent (8000), and Frontend (3000)..."
 	@npx --yes concurrently -k -p "[{name}]" -n "Go-Backend,Python-Agent,Next-Frontend" -c "cyan.bold,magenta.bold,green.bold" \
 		"cd backend && air" \
 		"cd agentic-observatory && uv run uvicorn main:app --reload --port 8000" \
 		"cd frontend && pnpm run dev"
 
 backup:
-	@echo "📦 Running Backup Worker CLI..."
+	@echo "Running Backup Worker CLI..."
 	@cd backup-worker && go run main.go
 
 test: test-go test-py
 
 test-go:
-	@echo "🧪 Running Go test suite..."
+	@echo "Running Go test suite..."
 	@go test -v ./...
 
 test-py:
-	@echo "🧪 Running Python Observatory test suite..."
+	@echo "Running Python Observatory test suite..."
 	@cd agentic-observatory && uv run python test_observability.py && uv run python test_openrouter_keys.py && uv run python test_agent_template.py && uv run python test_agent_suite.py
 
 test-agents:
-	@echo "🤖 Running AI Agent & Tool-Calling RAG Test Suite..."
+	@echo "Running AI Agent & Tool-Calling RAG Test Suite..."
 	@cd agentic-observatory && uv run python test_agent_suite.py
 
 lint:
-	@echo "🔍 Running Biome linter on Frontend..."
+	@echo "Running Biome linter on Frontend..."
 	@cd frontend && pnpm run lint
-	@echo "🔍 Running Go vet..."
+	@echo "Running Go vet..."
 	@go vet ./...
-	@echo "🔍 Running Pyright on Python Observatory..."
+	@echo "Running Pyright on Python Observatory..."
 	@cd agentic-observatory && uv run --with pyright pyright
 
 typecheck:
-	@echo "🔍 Running Pyright on Python Observatory..."
+	@echo "Running Pyright on Python Observatory..."
 	@cd agentic-observatory && uv run --with pyright pyright
-	@echo "🔍 Running TypeScript typecheck on Frontend..."
+	@echo "Running TypeScript typecheck on Frontend..."
 	@cd frontend && pnpm exec tsc --noEmit
 
 format:
-	@echo "✨ Formatting Go source code..."
+	@echo "Formatting Go source code..."
 	@gofmt -w backend/ backup-worker/ 2>/dev/null || gofmt -w .
-	@echo "✨ Formatting Frontend source code..."
+	@echo "Formatting Frontend source code..."
 	@cd frontend && pnpm run format
 
 build:
-	@echo "🏗️ Building Go binaries..."
+	@echo "Building Go binaries..."
 	@go build -v ./...
-	@echo "🏗️ Building Next.js Frontend..."
+	@echo "Building Next.js Frontend..."
 	@cd frontend && pnpm run build
 
 hooks-install:
@@ -80,10 +80,10 @@ pre-commit:
 	@PRECOMMIT_ALL=1 ./.githooks/pre-commit
 
 backup-db:
-	@echo "💾 Executing PostgreSQL backup..."
+	@echo "Executing PostgreSQL backup..."
 	@./scripts/backup-db.sh
 
 restore-db:
-	@echo "💾 Restoring PostgreSQL from backup..."
+	@echo "Restoring PostgreSQL from backup..."
 	@./scripts/restore-db.sh $(BACKUP_FILE)
 

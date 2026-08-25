@@ -324,6 +324,6 @@ func CommitAndPushDatabase(dbPath string) error {
 		return err
 	}
 
-	util.Logger().Info("✓ Database successfully committed and pushed to remote")
+	util.Logger().Info("Database successfully committed and pushed to remote")
 	return nil
 }

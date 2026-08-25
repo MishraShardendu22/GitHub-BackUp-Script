@@ -277,10 +277,10 @@ export function MessageContentRenderer({ content }: { content: string }) {
               }
 
               const metricRegex =
-                /^(📊|📈|🔋|💾|⚙️)?\s*([^:]+):\s*([\d.,%]+|Healthy|Operational|Active|Failed)$/i;
+                /^(?:[\p{Emoji}\p{Symbol}]\s*)?([^:]+):\s*([\d.,%]+|Healthy|Operational|Active|Failed)$/iu;
               const match = trimmed.match(metricRegex);
               if (match) {
-                const [, emoji, label, value] = match;
+                const [, label, value] = match;
                 return (
                   <div
                     className="ai-metric-stat-card"
@@ -293,10 +293,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
                     }}
                     key={lineKey}
                   >
-                    <span className="ai-metric-val">
-                      {emoji ? `${emoji} ` : ""}
-                      {value}
-                    </span>
+                    <span className="ai-metric-val">{value}</span>
                     <span className="ai-metric-lbl">
                       {renderMarkdownInline(label)}
                     </span>

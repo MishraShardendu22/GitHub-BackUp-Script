@@ -4,7 +4,7 @@ The **Agentic Observatory** is a production FastAPI service providing autonomous
 
 ---
 
-## 🛠️ Tech Stack & Key Libraries
+## Tech Stack & Key Libraries
 
 - **Framework**: FastAPI + Uvicorn (ASGI)
 - **AI & RAG**: LangChain Core, OpenRouter Multi-Model Gateway
@@ -13,7 +13,7 @@ The **Agentic Observatory** is a production FastAPI service providing autonomous
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 ### 1. Dual-Layer Tool-Calling RAG
 * **Pre-Turn Retrieval**: Proactively pulls top relevance chunks across previous logs and backup results to prime system context.
@@ -38,7 +38,7 @@ The **Agentic Observatory** is a production FastAPI service providing autonomous
 
 ---
 
-## 💻 Local Development
+## Local Development
 
 ### Prerequisites
 - Python 3.12+
@@ -71,7 +71,7 @@ uv run --with pyright pyright
 
 ---
 
-## 📁 Package Architecture
+## Package Architecture
 
 ```text
 agentic-observatory/
@@ -105,7 +105,7 @@ agentic-observatory/
 
 ---
 
-## 🔒 Configuration & Secrets
+## Configuration & Secrets
 
 Set the following in `.env` or your Vercel deployment dashboard:
 
