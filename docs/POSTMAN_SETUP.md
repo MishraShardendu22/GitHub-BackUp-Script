@@ -22,7 +22,7 @@ The collection will appear in your sidebar with all API endpoints organized by c
 
 ### 2. Import the Environment
 
-1. Click the **Settings** icon (⚙️) in the top-right corner
+1. Click the **Settings** icon in the top-right corner
 2. Navigate to **Environments**
 3. Click **Import**
 4. Select `docs/postman/GitHub-Backup-Environment.postman_environment.json`
@@ -252,9 +252,9 @@ For issues or questions:
 
 ## Tips
 
-✅ **Use Collections** to organize related requests
-✅ **Save Responses** for reference and testing
-✅ **Use Variables** to avoid hardcoding values
-✅ **Write Tests** to validate responses
-✅ **Use Environments** to switch between deployments
-✅ **Monitor Live Logs** using WebSocket for real-time insights
+- **Use Collections** to organize related requests
+- **Save Responses** for reference and testing
+- **Use Variables** to avoid hardcoding values
+- **Write Tests** to validate responses
+- **Use Environments** to switch between deployments
+- **Monitor Live Logs** using WebSocket for real-time insights

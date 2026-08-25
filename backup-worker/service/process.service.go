@@ -205,7 +205,7 @@ func ProcessRepos(repoNames []string, config *model.ConfigModel, db *sql.DB) {
 			}
 
 			successCount++
-			util.Logger().Info("✓ Backed up and pushed",
+			util.Logger().Info("Backed up and pushed",
 				zap.String("repository", res.FullName),
 			)
 			if mon != nil {
