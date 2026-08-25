@@ -246,6 +246,7 @@
   border-bottom: 1px solid var(--border);
   background: var(--surface2);
   font-family: var(--font-sans);
+  white-space: nowrap;
 }
 
 .table td {
@@ -255,6 +256,11 @@
   color: var(--text);
   transition: background 0.15s ease;
   font-family: var(--font-sans);
+}
+
+.table td.nowrap,
+.table th.nowrap {
+  white-space: nowrap;
 }
 
 .table tr:last-child td {

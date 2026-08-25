@@ -148,21 +148,30 @@ export default async function SnapshotsPage({
               <table className="table table-wide">
                 <thead>
                   <tr>
-                    <th>Captured at</th>
-                    <th>Commit</th>
+                    <th style={{ minWidth: "160px", whiteSpace: "nowrap" }}>
+                      Captured at
+                    </th>
+                    <th style={{ whiteSpace: "nowrap" }}>Commit</th>
                     <th>Message</th>
-                    <th>Commits</th>
-                    <th>Branches</th>
-                    <th>Tags</th>
-                    <th>Files</th>
-                    <th>Blob size</th>
-                    <th>Archive size</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Commits</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Branches</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Tags</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Files</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Blob size</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Archive size</th>
                   </tr>
                 </thead>
                 <tbody>
                   {snapshots.map((snap) => (
                     <tr key={snap.id}>
-                      <td data-label="Captured at" style={{ fontSize: 14 }}>
+                      <td
+                        data-label="Captured at"
+                        style={{
+                          fontSize: 13.5,
+                          color: "var(--text-secondary)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {formatDate(snap.captured_at)}
                       </td>
                       <td

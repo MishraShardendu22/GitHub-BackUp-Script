@@ -65,24 +65,29 @@ export default async function RunHistoryPage({
               <table className="table table-wide">
                 <thead>
                   <tr>
-                    <th>Run #</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>Duration</th>
-                    <th>Repos</th>
-                    <th>✓ OK</th>
-                    <th>✗ Failed</th>
-                    <th>Skipped</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Run #</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Status</th>
+                    <th style={{ minWidth: "160px", whiteSpace: "nowrap" }}>
+                      Started
+                    </th>
+                    <th style={{ whiteSpace: "nowrap" }}>Duration</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Repos</th>
+                    <th style={{ whiteSpace: "nowrap" }}>✓ OK</th>
+                    <th style={{ whiteSpace: "nowrap" }}>✗ Failed</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Skipped</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {runs.map((run) => (
                     <tr key={run.id}>
-                      <td data-label="Run #" style={{ fontWeight: 600 }}>
+                      <td
+                        data-label="Run #"
+                        style={{ fontWeight: 600, whiteSpace: "nowrap" }}
+                      >
                         #{run.id}
                       </td>
-                      <td data-label="Status">
+                      <td data-label="Status" style={{ whiteSpace: "nowrap" }}>
                         <span
                           className={`badge ${
                             run.status === "completed"
@@ -97,7 +102,11 @@ export default async function RunHistoryPage({
                       </td>
                       <td
                         data-label="Started"
-                        style={{ fontSize: 14, color: "var(--text-muted)" }}
+                        style={{
+                          fontSize: 13.5,
+                          color: "var(--text-secondary)",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         {formatDate(run.started_at)}
                       </td>
