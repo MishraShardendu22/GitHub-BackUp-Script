@@ -97,10 +97,19 @@ When multiple feature branches or PRs are in flight:
 
 ## 5. Merging & Local Branch Cleanup
 
-1. Once a Pull Request is merged into `main`, delete the local branch:
+1. Once a Pull Request is merged into `main` on GitHub and upon explicit human user instruction, perform safe branch cleanup and repository garbage collection:
+   ```bash
+   make git-clean
+   ```
+   Or manual sequence:
    ```bash
    git switch main
    git pull origin main
-   git branch -d <branch-name>
+   git fetch --prune origin
+   git branch | grep -v "^\* main$" | grep -v "^  main$" | xargs -r git branch -D
+   git reflog expire --expire=now --all
+   git gc --prune=now --aggressive
    ```
-2. **Preserving History**: Never delete or rename existing branches without inspecting commit history.
+2. **Explicit Instruction Only**: AI agents must only execute branch cleanup when explicitly asked by the user after PR merge.
+3. See [`.agents/skills/git-post-merge-cleanup/SKILL.md`](../git-post-merge-cleanup/SKILL.md).
+
