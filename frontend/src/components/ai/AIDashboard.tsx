@@ -316,67 +316,6 @@ export function AIDashboard() {
                 </div>
 
                 <div className="ai-dashboard-section-title">
-                  Telemetry Tool Call Statistics
-                </div>
-                <div
-                  className="ai-rich-table-container"
-                  style={{ marginBottom: 32 }}
-                >
-                  <table className="ai-rich-table">
-                    <thead>
-                      <tr>
-                        <th>Tool Name</th>
-                        <th>Invocations</th>
-                        <th>Avg Latency</th>
-                        <th>Success Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats?.tool_usage && stats.tool_usage.length > 0 ? (
-                        stats.tool_usage.map((tool) => (
-                          <tr key={tool.name}>
-                            <td
-                              data-label="Tool Name"
-                              style={{
-                                fontFamily: "monospace",
-                                color: "var(--accent)",
-                                fontSize: "14.5px",
-                              }}
-                            >
-                              {tool.name}
-                            </td>
-                            <td data-label="Invocations">{tool.count} runs</td>
-                            <td data-label="Avg Latency">
-                              {tool.avg_duration.toFixed(0)} ms
-                            </td>
-                            <td data-label="Success Rate">
-                              <span
-                                className={`badge ${tool.success_rate > 90 ? "badge-success" : "badge-warning"}`}
-                              >
-                                {tool.success_rate.toFixed(1)}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan={4}
-                            style={{
-                              textAlign: "center",
-                              color: "var(--text-secondary)",
-                              padding: 20,
-                            }}
-                          >
-                            No tool call logs recorded in the database yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="ai-dashboard-section-title">
                   Ask the Agent About Backups
                 </div>
                 {!hasInteracted && (
