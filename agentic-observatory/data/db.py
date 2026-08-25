@@ -19,6 +19,8 @@ from config import settings
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
+# this file whereever meta data exists 
+# we are running those and creating those tables and indexes
 metadata = MetaData()
 
 ai_chat_sessions = Table(

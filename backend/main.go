@@ -74,7 +74,7 @@ func main() {
 		}
 	}()
 
-	fmt.Printf("Backend server running on http://localhost:%s\n", cfg.ServerPort)
+	fmt.Printf("🚀 Backend server running on http://localhost:%s\n", cfg.ServerPort)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
