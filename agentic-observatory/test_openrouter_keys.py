@@ -30,6 +30,18 @@ class TestOpenRouterKeys(unittest.TestCase):
             self.assertEqual(new_key2, "keyC")
             self.assertEqual(openrouter_keys.get_active_openrouter_key(), "keyC")
 
+    def test_get_next_openrouter_key_rotary(self):
+        with patch.object(openrouter_keys.settings, "OPENROUTER_API_KEY", "key1,key2"):
+            with openrouter_keys._lock:
+                openrouter_keys._current_key_index = 0
+
+            # First rotary call moves from key1 to key2
+            self.assertEqual(openrouter_keys.get_next_openrouter_key(), "key2")
+            # Next rotary call wraps around to key1
+            self.assertEqual(openrouter_keys.get_next_openrouter_key(), "key1")
+            # Next rotary call returns key2
+            self.assertEqual(openrouter_keys.get_next_openrouter_key(), "key2")
+
 
 if __name__ == "__main__":
     unittest.main()

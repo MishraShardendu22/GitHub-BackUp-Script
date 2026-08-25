@@ -59,7 +59,12 @@ TOOLS = [
 def get_agent_tools() -> list[Any]:
     return TOOLS
 
-from utils.openrouter_keys import get_active_openrouter_key, rotate_openrouter_key
+from utils.openrouter_keys import (
+    get_active_openrouter_key,
+    get_next_openrouter_key,
+    get_openrouter_api_keys,
+    rotate_openrouter_key,
+)
 
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}
 
@@ -75,6 +80,40 @@ def get_llm(model: str | None = None, api_key: str | None = None) -> ChatOpenRou
 # Bind tools to the LLM, enabling unrestricted parallel tool calling
 def get_bound_llm(model: str | None = None, api_key: str | None = None):
     return get_llm(model=model, api_key=api_key).bind_tools(TOOLS, parallel_tool_calls=True)
+
+
+async def ainvoke_llm_with_failover(
+    messages: list[BaseMessage],
+    model: str | None = None,
+    request_id: str = "",
+) -> AIMessage:
+    """Invoke LLM with automatic multi-key OpenRouter failover upon 429 rate limits or provider errors."""
+    keys = get_openrouter_api_keys()
+    if not keys:
+        llm = get_bound_llm(model=model)
+        return await llm.ainvoke(messages)
+
+    total_keys = len(keys)
+    last_exc: Exception | None = None
+
+    for attempt in range(total_keys):
+        current_key = get_active_openrouter_key()
+        llm = get_bound_llm(model=model, api_key=current_key)
+        try:
+            return await llm.ainvoke(messages)
+        except Exception as exc:
+            last_exc = exc
+            exc_str = str(exc)
+            exc_name = exc.__class__.__name__
+            logger.warning(
+                f"[request_id={request_id}] OpenRouter invocation failed on key (attempt {attempt + 1}/{total_keys}): {exc_name}: {exc_str[:120]}"
+            )
+            if total_keys > 1:
+                rotate_openrouter_key(failed_key=current_key, reason=f"{exc_name}: {exc_str[:60]}")
+            else:
+                raise
+
+    raise RuntimeError(f"All {total_keys} OpenRouter API keys failed. Last error: {last_exc}") from last_exc
 
 
 async def _retrieve_hybrid_context(question: str) -> tuple[str, list[dict]]:
@@ -136,7 +175,9 @@ async def invoke_agent(
 ) -> AgentResponse:
     request_id = request_id or create_request_id()
     start = time.perf_counter()
-    llm = get_bound_llm(model=model)
+
+    # Advance to next key in round-robin rotary fashion across user requests
+    get_next_openrouter_key()
 
     # Retrieve hybrid search RAG context and session history concurrently
     (system_prompt_content, retrieved_sources), history_messages = await asyncio.gather(
@@ -158,7 +199,7 @@ async def invoke_agent(
     
     for iteration in range(10):
         logger.info(f"[request_id={request_id}] LLM Turn {iteration + 1}...")
-        response = await llm.ainvoke(messages)
+        response = await ainvoke_llm_with_failover(messages, model=model, request_id=request_id)
         messages.append(response)
         
         if not response.tool_calls:
@@ -306,8 +347,8 @@ async def stream_agent(
     # start the timer to measure the total time taken by the agent to generate the final answer
     start = time.perf_counter()
 
-    # get the LLM instance with tools bound to it
-    llm = get_bound_llm(model=model)
+    # Advance to next key in round-robin rotary fashion across user requests
+    get_next_openrouter_key()
 
     # Retrieve hybrid search RAG context and session history concurrently
     (system_prompt_content, retrieved_sources), history_messages = await asyncio.gather(
@@ -340,7 +381,21 @@ async def stream_agent(
         yield json.dumps({"type": "agent_reasoning", "iteration": iteration, "request_id": request_id})
         
         logger.info(f"[request_id={request_id}] LLM Turn {iteration + 1}...")
-        response = await llm.ainvoke(messages)
+        try:
+            response = await ainvoke_llm_with_failover(messages, model=model, request_id=request_id)
+        except Exception as exc:
+            logger.error(f"[request_id={request_id}] All OpenRouter API keys failed: {exc}")
+            yield json.dumps({
+                "type": "error",
+                "message": f"OpenRouter API rate limit / error: {exc}. Automatic failover exhausted.",
+                "request_id": request_id,
+            })
+            yield json.dumps({
+                "type": "done",
+                "answer": f"Unable to complete query due to OpenRouter provider rate limits: {exc}",
+                "request_id": request_id,
+            })
+            return
         messages.append(response)
         
         if not response.tool_calls:

@@ -37,6 +37,19 @@ def get_active_openrouter_key() -> str:
         return keys[_current_key_index % len(keys)]
 
 
+def get_next_openrouter_key() -> str:
+    """Advance to and return the next OpenRouter API key in round-robin rotary order."""
+    keys = get_openrouter_api_keys()
+    if not keys:
+        return ""
+    if len(keys) == 1:
+        return keys[0]
+    with _lock:
+        global _current_key_index
+        _current_key_index = (_current_key_index + 1) % len(keys)
+        return keys[_current_key_index]
+
+
 def rotate_openrouter_key(failed_key: str | None = None, reason: str = "") -> str:
     """Rotate to the next available OpenRouter key when the current one fails."""
     keys = get_openrouter_api_keys()

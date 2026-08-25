@@ -184,6 +184,8 @@ def _create_engine() -> AsyncEngine | None:
         future=True,
         echo=False,
         connect_args=connect_args,
+        pool_pre_ping=True,
+        pool_recycle=300,
     )
 
 engine = _create_engine()
