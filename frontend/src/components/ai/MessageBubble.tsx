@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { formatTime } from "@/lib/utils";
 import type { Message } from "@/types";
 import { MessageContentRenderer } from "./MessageContentRenderer";
@@ -47,7 +48,8 @@ export function MessageBubble({ msg }: { msg: Message }) {
                 marginBottom: "8px",
               }}
             >
-              ⚡ Retrieved Hybrid Search Sources ({msg.sources.length})
+              <Sparkles size={12} /> Retrieved Hybrid Search Sources (
+              {msg.sources.length})
             </span>
             {msg.sources.map((src, idx) => (
               <div
