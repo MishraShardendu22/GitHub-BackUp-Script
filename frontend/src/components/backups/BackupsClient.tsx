@@ -253,16 +253,24 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Run</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Duration</th>
-                  <th>Total</th>
-                  <th>Success</th>
-                  <th>Failed</th>
-                  <th>Skipped</th>
-                  <th>Fix Status</th>
-                  <th style={{ textAlign: "right", minWidth: "160px" }}>
+                  <th style={{ whiteSpace: "nowrap" }}>Run</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Status</th>
+                  <th style={{ minWidth: "160px", whiteSpace: "nowrap" }}>
+                    Date
+                  </th>
+                  <th style={{ whiteSpace: "nowrap" }}>Duration</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Total</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Success</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Failed</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Skipped</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Fix Status</th>
+                  <th
+                    style={{
+                      textAlign: "right",
+                      minWidth: "160px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Actions
                   </th>
                 </tr>
@@ -294,7 +302,8 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                         data-label="Date"
                         style={{
                           color: "var(--text-secondary)",
-                          fontSize: "14px",
+                          fontSize: "13.5px",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {formatDate(run.started_at)}

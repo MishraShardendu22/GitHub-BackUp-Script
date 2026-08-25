@@ -1,3 +1,4 @@
+import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/ui";
@@ -60,7 +61,10 @@ export default async function BackupDetailPage({
             <h1 className="page-title" style={{ marginTop: 8 }}>
               Run #{run.id}
             </h1>
-            <p className="page-subtitle" style={{ marginTop: 8 }}>
+            <p
+              className="page-subtitle"
+              style={{ marginTop: 8, whiteSpace: "nowrap" }}
+            >
               Started {formatDate(run.started_at)} ·{" "}
               {formatDuration(run.duration_ms)}
             </p>
@@ -80,6 +84,52 @@ export default async function BackupDetailPage({
             <StatusBadge status={run.status} />
           </div>
         </div>
+
+        {/* Run-level error banner */}
+        {run.error_message && (
+          <div
+            style={{
+              marginTop: 20,
+              padding: "14px 18px",
+              background: "rgba(239, 68, 68, 0.08)",
+              border: "1px solid rgba(239, 68, 68, 0.25)",
+              borderRadius: "var(--radius-md)",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+            }}
+          >
+            <AlertCircle
+              size={18}
+              style={{ color: "var(--danger)", flexShrink: 0, marginTop: 2 }}
+            />
+            <div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--danger)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                Run Execution Error
+              </div>
+              <div
+                style={{
+                  fontSize: 13.5,
+                  color: "var(--text)",
+                  marginTop: 4,
+                  wordBreak: "break-word",
+                  fontFamily: "var(--font-mono, monospace)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {run.error_message}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary metrics */}
         <div
@@ -127,23 +177,29 @@ export default async function BackupDetailPage({
             <table className="table table-wide">
               <thead>
                 <tr>
-                  <th>Repository</th>
-                  <th>Status</th>
-                  <th>Archive size</th>
-                  <th>Commit</th>
-                  <th>Error</th>
+                  <th style={{ minWidth: "260px" }}>Repository</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Status</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Archive size</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Commit</th>
+                  <th style={{ minWidth: "240px" }}>Error</th>
                 </tr>
               </thead>
               <tbody>
                 {results.map((result) => (
                   <tr key={result.id}>
-                    <td data-label="Repository" style={{ fontWeight: 500 }}>
+                    <td
+                      data-label="Repository"
+                      style={{ fontWeight: 500, wordBreak: "break-all" }}
+                    >
                       {result.repo_full_name}
                     </td>
-                    <td data-label="Status">
+                    <td data-label="Status" style={{ whiteSpace: "nowrap" }}>
                       <StatusBadge status={result.status} />
                     </td>
-                    <td data-label="Archive size">
+                    <td
+                      data-label="Archive size"
+                      style={{ whiteSpace: "nowrap" }}
+                    >
                       {result.archive_size_bytes > 0
                         ? formatBytes(result.archive_size_bytes)
                         : "—"}
@@ -154,6 +210,7 @@ export default async function BackupDetailPage({
                         fontSize: 14,
                         fontFamily: "monospace",
                         color: "var(--text-muted)",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {result.commit_hash
@@ -163,18 +220,32 @@ export default async function BackupDetailPage({
                     <td
                       data-label="Error"
                       style={{
-                        fontSize: 14,
-                        color: result.error_message
-                          ? "var(--danger)"
-                          : "var(--text-muted)",
-                        maxWidth: 280,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        fontSize: 13,
+                        minWidth: 200,
+                        maxWidth: 460,
                       }}
-                      title={result.error_message || ""}
                     >
-                      {result.error_message || "—"}
+                      {result.error_message ? (
+                        <div
+                          style={{
+                            color: "var(--danger)",
+                            fontFamily: "var(--font-mono, monospace)",
+                            fontSize: 12,
+                            background: "rgba(239, 68, 68, 0.08)",
+                            padding: "6px 10px",
+                            borderRadius: "var(--radius-sm)",
+                            border: "1px solid rgba(239, 68, 68, 0.2)",
+                            wordBreak: "break-word",
+                            lineHeight: 1.45,
+                            whiteSpace: "pre-wrap",
+                          }}
+                          title={result.error_message}
+                        >
+                          {result.error_message}
+                        </div>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)" }}>—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
