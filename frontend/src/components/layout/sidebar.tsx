@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BarChart3,
   BookOpen,
+  Bot,
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
@@ -24,6 +25,7 @@ import {
   Search,
   Terminal,
   Trash2,
+  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -107,16 +109,6 @@ const treeData: NavNode[] = [
     href: "/live",
     icon: Radio,
   },
-  {
-    label: "Search Playground",
-    href: "/search-playground",
-    icon: Search,
-  },
-  {
-    label: "Embeddings",
-    href: "/embeddings",
-    icon: Database,
-  },
 ];
 
 interface SidebarProps {
@@ -148,7 +140,7 @@ export default function Sidebar({
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({
     Backups: true,
     Analytics: true,
-    AIAssistant: true,
+    AgenticAssistance: true,
   });
 
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(
@@ -187,8 +179,14 @@ export default function Sidebar({
         newExpanded.Backups = true;
         changed = true;
       }
-      if (pathname.startsWith("/ai") && !newExpanded.AIAssistant) {
-        newExpanded.AIAssistant = true;
+      if (
+        (pathname.startsWith("/ai") ||
+          pathname === "/tools" ||
+          pathname === "/search-playground" ||
+          pathname === "/embeddings") &&
+        !newExpanded.AgenticAssistance
+      ) {
+        newExpanded.AgenticAssistance = true;
         changed = true;
       }
 
@@ -526,29 +524,29 @@ export default function Sidebar({
             );
           })}
 
-          {/* DYNAMIC AI ASSISTANT NODE (Consolidated Sidebar) */}
+          {/* DYNAMIC AGENTIC ASSISTANCE NODE (Consolidated Sidebar) */}
           {isCollapsed ? (
             <div className="sidebar-tooltip-wrapper">
               <Link
                 href="/ai"
-                className={`tree-node ${pathname.startsWith("/ai") ? "active" : ""}`}
+                className={`tree-node ${pathname.startsWith("/ai") || pathname === "/tools" || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
                 style={{ justifyContent: "center", padding: "10px 0" }}
                 onClick={onCloseMobile}
               >
-                <MessageSquare size={20} />
+                <Bot size={20} />
               </Link>
               <span className="sidebar-tooltip">
-                AI Assistant{" "}
+                Agentic Assistance{" "}
                 {sessions.length > 0 && `(${sessions.length} chats)`}
               </span>
             </div>
           ) : (
             <div className="tree-node-wrapper">
-              {/* Folder Row header (icon-less as requested) */}
+              {/* Folder Row header */}
               <button
                 type="button"
-                className={`tree-node ${pathname.startsWith("/ai") ? "active" : ""}`}
-                onClick={(e) => toggleFolder("AIAssistant", e)}
+                className={`tree-node ${pathname.startsWith("/ai") || pathname === "/tools" || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
+                onClick={(e) => toggleFolder("AgenticAssistance", e)}
                 style={{
                   width: "100%",
                   textAlign: "left",
@@ -562,18 +560,18 @@ export default function Sidebar({
                 }}
               >
                 <span className="tree-node-chevron">
-                  {expandedNodes.AIAssistant ? (
+                  {expandedNodes.AgenticAssistance ? (
                     <ChevronDown size={16} />
                   ) : (
                     <ChevronRight size={16} />
                   )}
                 </span>
                 <span className="tree-node-label" style={{ fontWeight: 600 }}>
-                  AI Assistant
+                  Agentic Assistance
                 </span>
               </button>
 
-              {expandedNodes.AIAssistant && (
+              {expandedNodes.AgenticAssistance && (
                 <div className="tree-children-container">
                   {/* Action 1: New Chat */}
                   <button
@@ -637,6 +635,75 @@ export default function Sidebar({
                     </span>
                   </button>
 
+                  {/* Link 3: Tools Playground */}
+                  <Link
+                    href="/tools"
+                    className={`tree-node ${pathname === "/tools" ? "active" : ""}`}
+                    onClick={onCloseMobile}
+                    style={{
+                      padding: "5px 8px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
+                      <Wrench size={15} />
+                    </span>
+                    <span
+                      className="tree-node-label"
+                      style={{ fontSize: "14px" }}
+                    >
+                      Tools Playground
+                    </span>
+                  </Link>
+
+                  {/* Link 4: Search Playground */}
+                  <Link
+                    href="/search-playground"
+                    className={`tree-node ${pathname === "/search-playground" ? "active" : ""}`}
+                    onClick={onCloseMobile}
+                    style={{
+                      padding: "5px 8px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
+                      <Search size={15} />
+                    </span>
+                    <span
+                      className="tree-node-label"
+                      style={{ fontSize: "14px" }}
+                    >
+                      Search Playground
+                    </span>
+                  </Link>
+
+                  {/* Link 5: Embeddings Playground */}
+                  <Link
+                    href="/embeddings"
+                    className={`tree-node ${pathname === "/embeddings" ? "active" : ""}`}
+                    onClick={onCloseMobile}
+                    style={{
+                      padding: "5px 8px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
+                      <Database size={15} />
+                    </span>
+                    <span
+                      className="tree-node-label"
+                      style={{ fontSize: "14px" }}
+                    >
+                      Embeddings
+                    </span>
+                  </Link>
+
                   {/* Chat History Header */}
                   <div
                     style={{
@@ -645,7 +712,7 @@ export default function Sidebar({
                       textTransform: "uppercase",
                       letterSpacing: "0.05em",
                       color: "var(--text-muted)",
-                      padding: "8px 8px 2px 12px",
+                      padding: "10px 8px 2px 12px",
                     }}
                   >
                     Chat History
