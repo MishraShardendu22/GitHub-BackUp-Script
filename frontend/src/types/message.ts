@@ -22,6 +22,7 @@ export interface Message {
   id: string;
   role: Role;
   content: string;
+  requestId?: string;
   streaming?: boolean;
   timestamp: Date;
   toolCalls?: MessageToolCall[];

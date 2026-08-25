@@ -306,32 +306,78 @@ class InvestigationStore:
 
     async def delete_session_message(self, session_id: str, message_id: str) -> bool:
         try:
-            m_id = int(message_id)
+            target_uuid = uuid.UUID(message_id) if isinstance(message_id, str) else message_id
         except (ValueError, TypeError):
             return True
 
         await self._check()
         s_id = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
         async with self.session_factory() as session:
-            await session.execute(
-                delete(ai_chat_messages)
-                .where(ai_chat_messages.c.id == m_id)
+            # Query message to get its shared turn request_id
+            msg_res = await session.execute(
+                select(ai_chat_messages.c.request_id)
+                .where(
+                    (ai_chat_messages.c.id == target_uuid) | (ai_chat_messages.c.request_id == target_uuid)
+                )
                 .where(ai_chat_messages.c.session_id == s_id)
             )
+            found_req_id = msg_res.scalar()
+
+            if found_req_id:
+                # Delete all messages sharing this request_id (both user and assistant message)
+                await session.execute(
+                    delete(ai_chat_messages)
+                    .where(ai_chat_messages.c.request_id == found_req_id)
+                    .where(ai_chat_messages.c.session_id == s_id)
+                )
+                # Clean up tool calls and investigation records associated with this request
+                await session.execute(
+                    delete(ai_tool_calls).where(ai_tool_calls.c.request_id == found_req_id)
+                )
+                await session.execute(
+                    delete(investigations).where(investigations.c.request_id == found_req_id)
+                )
+            else:
+                await session.execute(
+                    delete(ai_chat_messages)
+                    .where(ai_chat_messages.c.id == target_uuid)
+                    .where(ai_chat_messages.c.session_id == s_id)
+                )
+
             await session.commit()
             return True
 
     async def delete_message(self, message_id: str) -> bool:
         try:
-            m_id = int(message_id)
+            target_uuid = uuid.UUID(message_id) if isinstance(message_id, str) else message_id
         except (ValueError, TypeError):
             return True
 
         await self._check()
         async with self.session_factory() as session:
-            await session.execute(
-                delete(ai_chat_messages).where(ai_chat_messages.c.id == m_id)
+            msg_res = await session.execute(
+                select(ai_chat_messages.c.request_id)
+                .where(
+                    (ai_chat_messages.c.id == target_uuid) | (ai_chat_messages.c.request_id == target_uuid)
+                )
             )
+            found_req_id = msg_res.scalar()
+
+            if found_req_id:
+                await session.execute(
+                    delete(ai_chat_messages).where(ai_chat_messages.c.request_id == found_req_id)
+                )
+                await session.execute(
+                    delete(ai_tool_calls).where(ai_tool_calls.c.request_id == found_req_id)
+                )
+                await session.execute(
+                    delete(investigations).where(investigations.c.request_id == found_req_id)
+                )
+            else:
+                await session.execute(
+                    delete(ai_chat_messages).where(ai_chat_messages.c.id == target_uuid)
+                )
+
             await session.commit()
             return True
 

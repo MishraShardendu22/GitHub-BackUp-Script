@@ -23,6 +23,7 @@ export function useChat(token: string | null, sessionId: string | null) {
         id: String(msg.id),
         role: (msg.role as "user" | "assistant") || "assistant",
         content: String(msg.content ?? ""),
+        requestId: msg.request_id ? String(msg.request_id) : undefined,
         timestamp: new Date(msg.created_at || Date.now()),
         toolCalls: (msg.tool_calls as Message["toolCalls"]) || [],
       }));
@@ -67,8 +68,30 @@ export function useChat(token: string | null, sessionId: string | null) {
 
   const deleteMessage = useCallback(
     async (id: string) => {
-      // Optimistically remove message from state immediately
-      setMessages((prev) => prev.filter((m) => m.id !== id));
+      // Optimistically remove both user message and paired assistant message
+      setMessages((prev) => {
+        const targetIndex = prev.findIndex((m) => m.id === id);
+        if (targetIndex === -1) return prev;
+
+        const target = prev[targetIndex];
+        // If message has requestId, remove all messages with that requestId
+        if (target.requestId) {
+          return prev.filter((m) => m.requestId !== target.requestId);
+        }
+
+        // If target is user message, also remove the subsequent assistant message from the turn
+        if (target.role === "user") {
+          const nextMsg = prev[targetIndex + 1];
+          if (nextMsg && nextMsg.role === "assistant") {
+            return prev.filter(
+              (_, idx) => idx !== targetIndex && idx !== targetIndex + 1,
+            );
+          }
+        }
+
+        return prev.filter((m) => m.id !== id);
+      });
+
       if (token && sessionId) {
         try {
           await sessionService.deleteMessage(token, sessionId, id);

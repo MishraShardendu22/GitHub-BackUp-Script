@@ -144,37 +144,17 @@ export function MessageBubble({
 
   return (
     <div className="assistantWrap">
-      <div
-        className="msgHeader"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <Bot
-            size={13}
-            style={{
-              color: "var(--accent)",
-              display: "inline-block",
-              verticalAlign: "-2px",
-              marginRight: 4,
-            }}
-          />{" "}
-          Systems Lab Agent · {formatTime(msg.timestamp)}
-        </div>
-        {onDelete && !msg.streaming && (
-          <button
-            type="button"
-            className="message-delete-btn"
-            onClick={() => onDelete(msg.id)}
-            title="Delete message"
-            aria-label="Delete message"
-          >
-            <Trash2 size={11} />
-          </button>
-        )}
+      <div className="msgHeader">
+        <Bot
+          size={13}
+          style={{
+            color: "var(--accent)",
+            display: "inline-block",
+            verticalAlign: "-2px",
+            marginRight: 4,
+          }}
+        />{" "}
+        Systems Lab Agent · {formatTime(msg.timestamp)}
       </div>
       <div className="assistantBubble">
         {msg.sources && msg.sources.length > 0 && (

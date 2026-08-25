@@ -12,6 +12,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   created_at: string;
+  request_id?: string;
   tool_calls?: Record<string, unknown>[];
 }
 
