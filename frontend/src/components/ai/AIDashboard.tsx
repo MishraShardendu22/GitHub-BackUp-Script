@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -506,14 +507,16 @@ export function AIDashboard() {
                     height: "32px",
                     padding: "0 16px",
                     marginTop: 0,
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    gap: 6,
                     fontSize: "14px",
                   }}
                   disabled={sending || !input.trim()}
                 >
-                  {sending ? "Processing…" : "Execute Reasoning →"}
+                  <span>{sending ? "Processing…" : "Execute Reasoning"}</span>
+                  {!sending && <ArrowRight size={13} />}
                 </button>
                 <span
                   className="promptHint"

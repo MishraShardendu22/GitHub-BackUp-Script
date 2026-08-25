@@ -446,7 +446,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            View →
+                            View
                           </Link>
                         </div>
                       </td>

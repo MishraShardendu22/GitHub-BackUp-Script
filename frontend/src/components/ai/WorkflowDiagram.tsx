@@ -1,3 +1,5 @@
+import { ChevronRight } from "lucide-react";
+
 export function WorkflowDiagram({ activeStep }: { activeStep: string }) {
   const steps = [
     { key: "query", label: "Query received" },
@@ -46,17 +48,29 @@ export function WorkflowDiagram({ activeStep }: { activeStep: string }) {
                     ? "0 0 8px rgba(212, 168, 50, 0.3)"
                     : "none",
                   fontSize: "11px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
                 }}
               >
-                {active ? "● " : ""}
+                {active && (
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                    }}
+                  />
+                )}
                 {step.label}
               </span>
               {idx < steps.length - 1 && (
-                <span
-                  style={{ color: "rgba(255,255,255,0.15)", fontSize: "10px" }}
-                >
-                  →
-                </span>
+                <ChevronRight
+                  size={11}
+                  style={{ color: "var(--text-muted)", opacity: 0.4 }}
+                  aria-hidden="true"
+                />
               )}
             </div>
           );
