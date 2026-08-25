@@ -62,36 +62,57 @@ export function useChat(token: string | null, sessionId: string | null) {
     [],
   );
 
+  const [deletingMessageIds, setDeletingMessageIds] = useState<Set<string>>(
+    new Set(),
+  );
+
   const clearMessages = useCallback(() => {
     setMessages([]);
   }, []);
 
   const deleteMessage = useCallback(
     async (id: string) => {
-      // Optimistically remove both user message and paired assistant message
-      setMessages((prev) => {
-        const targetIndex = prev.findIndex((m) => m.id === id);
-        if (targetIndex === -1) return prev;
-
-        const target = prev[targetIndex];
-        // If message has requestId, remove all messages with that requestId
+      // 1. Identify which message IDs are being deleted (turn-based cascade)
+      const toDelete = new Set<string>();
+      const targetIndex = messages.findIndex((m) => m.id === id);
+      if (targetIndex !== -1) {
+        const target = messages[targetIndex];
         if (target.requestId) {
-          return prev.filter((m) => m.requestId !== target.requestId);
-        }
-
-        // If target is user message, also remove the subsequent assistant message from the turn
-        if (target.role === "user") {
-          const nextMsg = prev[targetIndex + 1];
-          if (nextMsg && nextMsg.role === "assistant") {
-            return prev.filter(
-              (_, idx) => idx !== targetIndex && idx !== targetIndex + 1,
-            );
+          for (const m of messages) {
+            if (m.requestId === target.requestId) toDelete.add(m.id);
           }
+        } else if (target.role === "user") {
+          toDelete.add(target.id);
+          const nextMsg = messages[targetIndex + 1];
+          if (nextMsg && nextMsg.role === "assistant") {
+            toDelete.add(nextMsg.id);
+          }
+        } else {
+          toDelete.add(target.id);
         }
+      } else {
+        toDelete.add(id);
+      }
 
-        return prev.filter((m) => m.id !== id);
+      // 2. Mark as deleting to trigger smooth CSS exit animation
+      setDeletingMessageIds((prev) => {
+        const next = new Set(prev);
+        for (const mid of toDelete) next.add(mid);
+        return next;
       });
 
+      // 3. Wait for the smooth CSS collapse animation (240ms)
+      await new Promise((resolve) => setTimeout(resolve, 240));
+
+      // 4. Remove from messages state
+      setMessages((prev) => prev.filter((m) => !toDelete.has(m.id)));
+      setDeletingMessageIds((prev) => {
+        const next = new Set(prev);
+        for (const mid of toDelete) next.delete(mid);
+        return next;
+      });
+
+      // 5. Synchronize with backend API
       if (token && sessionId) {
         try {
           await sessionService.deleteMessage(token, sessionId, id);
@@ -100,13 +121,14 @@ export function useChat(token: string | null, sessionId: string | null) {
         }
       }
     },
-    [token, sessionId],
+    [token, sessionId, messages],
   );
 
   return {
     messages,
     loading,
     error,
+    deletingMessageIds,
     addMessage,
     updateMessage,
     deleteMessage,

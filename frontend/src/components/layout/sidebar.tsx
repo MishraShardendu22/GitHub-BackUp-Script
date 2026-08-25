@@ -297,17 +297,23 @@ export default function Sidebar({
     }
   };
 
-  // Delete session handler
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Delete session handler with smooth UI collapse animation
   const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
+      setDeletingId(id);
+      await new Promise((resolve) => setTimeout(resolve, 220));
       await deleteSession(id);
       if (pathname === `/ai/${id}`) {
         router.push("/ai");
       }
     } catch (err) {
       console.error("Failed to delete session:", err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -670,11 +676,12 @@ export default function Sidebar({
                   ) : (
                     sessions.map((s) => {
                       const isSessionActive = pathname === `/ai/${s.id}`;
+                      const isSessionDeleting = deletingId === s.id;
 
                       return (
                         <div
                           key={s.id}
-                          className={`tree-node ${isSessionActive ? "active" : ""}`}
+                          className={`tree-node ${isSessionActive ? "active" : ""} ${isSessionDeleting ? "sidebar-session-deleting" : ""}`}
                           style={{
                             display: "flex",
                             alignItems: "center",

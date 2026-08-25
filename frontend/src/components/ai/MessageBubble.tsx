@@ -11,27 +11,24 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
   if (!sources || sources.length === 0) return null;
 
   return (
-    <div className="ai-tool-activity-card" style={{ marginBottom: "12px" }}>
+    <div className="ai-sources-card" style={{ marginBottom: "12px" }}>
       <button
         type="button"
-        className="ai-tool-activity-header w-full flex items-center justify-between text-left"
+        className="ai-sources-header"
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-label="Toggle retrieved hybrid search sources"
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Database size={13} style={{ color: "var(--accent)" }} />
-          <strong style={{ fontSize: "12px", color: "var(--text)" }}>
+          <strong style={{ fontSize: "12.5px", color: "var(--text)" }}>
             Retrieved Hybrid Search Sources
           </strong>
-          <span
-            className="badge badge-info"
-            style={{ fontSize: "10px", padding: "2px 6px" }}
-          >
+          <span className="ai-sources-count-badge">
             {sources.length} chunk{sources.length !== 1 ? "s" : ""}
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
             {expanded ? "Hide" : "Details"}
           </span>
@@ -39,13 +36,14 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
             size={12}
             style={{
               transform: expanded ? "rotate(180deg)" : "none",
-              transition: "transform 0.2s ease",
+              transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              color: "var(--accent)",
             }}
           />
         </div>
       </button>
       {expanded && (
-        <div className="ai-tool-activity-details">
+        <div className="ai-sources-content-grid">
           {sources.map((src, idx) => (
             <div
               key={
@@ -53,45 +51,30 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
                   ? String(src.id)
                   : `${src.source_type}:${src.source_id}:${idx}`
               }
-              style={{
-                fontSize: "12px",
-                color: "var(--text-secondary)",
-                marginBottom: idx === sources.length - 1 ? 0 : "8px",
-                borderBottom:
-                  idx === sources.length - 1
-                    ? "none"
-                    : "1px dashed var(--card-border)",
-                paddingBottom: "6px",
-              }}
+              className="ai-source-chunk-card"
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span className="badge badge-info" style={{ fontSize: "10px" }}>
-                  {src.source_type}
-                </span>
-                <span
-                  style={{ color: "var(--text-muted)", fontSize: "10.5px" }}
-                >
-                  Score:{" "}
-                  {typeof src.score === "number"
-                    ? src.score.toFixed(4)
-                    : src.score}
-                </span>
+              <div className="ai-source-chunk-header">
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className={`ai-source-type-pill ${src.source_type}`}>
+                    {src.source_type}
+                  </span>
+                  {src.source_id && (
+                    <span className="ai-source-id-label" title={src.source_id}>
+                      #{src.source_id}
+                    </span>
+                  )}
+                </div>
+                <div className="ai-source-score-pill">
+                  <span className="ai-source-score-label">Score</span>
+                  <span className="ai-source-score-val">
+                    {typeof src.score === "number"
+                      ? src.score.toFixed(4)
+                      : src.score}
+                  </span>
+                </div>
               </div>
-              <div
-                style={{
-                  marginTop: "4px",
-                  color: "var(--text)",
-                  fontSize: "12.5px",
-                  lineHeight: 1.45,
-                }}
-              >
-                {src.content}
+              <div className="ai-source-chunk-body">
+                <code>{src.content}</code>
               </div>
             </div>
           ))}
@@ -103,14 +86,16 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
 
 export function MessageBubble({
   msg,
+  isDeleting,
   onDelete,
 }: {
   msg: Message;
+  isDeleting?: boolean;
   onDelete?: (id: string) => void;
 }) {
   if (msg.role === "user") {
     return (
-      <div className="userBubbleWrap">
+      <div className={`userBubbleWrap ${isDeleting ? "deleting" : ""}`}>
         <div
           className="msgHeader"
           style={{
@@ -143,7 +128,7 @@ export function MessageBubble({
   const runningTool = msg.toolCalls?.find((t) => t.running);
 
   return (
-    <div className="assistantWrap">
+    <div className={`assistantWrap ${isDeleting ? "deleting" : ""}`}>
       <div className="msgHeader">
         <Bot
           size={13}

@@ -75,6 +75,7 @@ export function AIDashboard() {
   const {
     messages,
     loading: messagesLoading,
+    deletingMessageIds,
     addMessage,
     updateMessage,
     deleteMessage,
@@ -448,6 +449,7 @@ export function AIDashboard() {
                   <MessageBubble
                     key={msg.id}
                     msg={msg}
+                    isDeleting={deletingMessageIds.has(msg.id)}
                     onDelete={deleteMessage}
                   />
                 ))
