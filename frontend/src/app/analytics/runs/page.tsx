@@ -72,8 +72,8 @@ export default async function RunHistoryPage({
                     </th>
                     <th style={{ whiteSpace: "nowrap" }}>Duration</th>
                     <th style={{ whiteSpace: "nowrap" }}>Repos</th>
-                    <th style={{ whiteSpace: "nowrap" }}>✓ OK</th>
-                    <th style={{ whiteSpace: "nowrap" }}>✗ Failed</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Success</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Failed</th>
                     <th style={{ whiteSpace: "nowrap" }}>Skipped</th>
                     <th></th>
                   </tr>
@@ -114,11 +114,14 @@ export default async function RunHistoryPage({
                         {formatDuration(run.duration_ms)}
                       </td>
                       <td data-label="Repos">{run.total_repos}</td>
-                      <td data-label="✓ OK" style={{ color: "var(--success)" }}>
+                      <td
+                        data-label="Success"
+                        style={{ color: "var(--success)" }}
+                      >
                         {run.successful}
                       </td>
                       <td
-                        data-label="✗ Failed"
+                        data-label="Failed"
                         style={{
                           color: run.failed > 0 ? "var(--danger)" : "inherit",
                         }}

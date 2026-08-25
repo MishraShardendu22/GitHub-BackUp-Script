@@ -162,7 +162,7 @@ export function useStreamingAgent({
         }
         const msg = err instanceof Error ? err.message : "Something went wrong";
         onMessageUpdate(assistantMsg.id, {
-          content: `⚠ ${msg}`,
+          content: `Error: ${msg}`,
           streaming: false,
         });
       } finally {

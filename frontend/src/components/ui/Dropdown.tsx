@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export interface DropdownOption {
@@ -123,8 +123,9 @@ export function Dropdown({
                     type="button"
                     className="custom-model-search-clear"
                     onClick={() => setSearch("")}
+                    aria-label="Clear search"
                   >
-                    ✕
+                    <X size={11} />
                   </button>
                 )}
               </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -351,7 +352,11 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                                 fontWeight: 600,
                               }}
                             >
-                              <span>🟢</span> Fixed
+                              <CheckCircle2
+                                size={12}
+                                style={{ color: "#10b981" }}
+                              />{" "}
+                              Fixed
                             </button>
                           ) : (
                             <span
@@ -368,7 +373,11 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                                 fontWeight: 600,
                               }}
                             >
-                              <span>❌</span> Failed
+                              <XCircle
+                                size={12}
+                                style={{ color: "var(--danger)" }}
+                              />{" "}
+                              Failed
                             </span>
                           )
                         ) : (
@@ -681,9 +690,12 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       color: "var(--danger)",
                       fontSize: 14,
                       fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
                     }}
                   >
-                    ⚠️ {submitError}
+                    <AlertCircle size={15} /> {submitError}
                   </div>
                 )}
 
@@ -1187,9 +1199,12 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     color: "var(--danger)",
                     fontSize: 14,
                     fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  ⚠️ {submitError}
+                  <AlertCircle size={15} /> {submitError}
                 </div>
               )}
               {!hasToken && (
@@ -1198,10 +1213,20 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     color: "var(--danger)",
                     fontSize: 14,
                     fontWeight: 500,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 6,
                   }}
                 >
-                  ⚠️ You must be logged into the Systems Lab to submit a
-                  resolution. (Please login using the sidebar/assistant first).
+                  <AlertCircle
+                    size={15}
+                    style={{ flexShrink: 0, marginTop: 2 }}
+                  />{" "}
+                  <span>
+                    You must be logged into the Systems Lab to submit a
+                    resolution. (Please login using the sidebar/assistant
+                    first).
+                  </span>
                 </div>
               )}
 

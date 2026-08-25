@@ -27,9 +27,9 @@ export const AGENT_URL = env.AGENT_URL;
 export const WS_BASE_URL = env.WS_BASE_URL;
 
 export const LOADING_MESSAGES = [
-  "🔒 Connecting securely to database pool...",
-  "⚙️ Fetching backup execution details...",
-  "📊 Aggregating repository telemetry logs...",
-  "🧬 Analyzing system health signals...",
-  "🔋 Syncing historical report archives...",
+  "Connecting securely to database pool...",
+  "Fetching backup execution details...",
+  "Aggregating repository telemetry logs...",
+  "Analyzing system health signals...",
+  "Syncing historical report archives...",
 ] as const;

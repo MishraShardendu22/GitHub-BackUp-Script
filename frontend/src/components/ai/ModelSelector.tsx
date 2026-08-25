@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { OpenRouterModel } from "@/services/ai.service";
 
@@ -205,8 +206,9 @@ export function ModelSelector({
                   type="button"
                   className="custom-model-search-clear"
                   onClick={() => setSearch("")}
+                  aria-label="Clear search"
                 >
-                  ✕
+                  <X size={11} />
                 </button>
               )}
             </div>
