@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
 import { formatTime } from "@/lib/utils";
 import type { Message } from "@/types";
 import { MessageContentRenderer } from "./MessageContentRenderer";
@@ -21,8 +21,16 @@ export function MessageBubble({ msg }: { msg: Message }) {
   return (
     <div className="assistantWrap">
       <div className="msgHeader">
-        <span style={{ color: "var(--accent)" }}>◆</span> Systems Lab Agent ·{" "}
-        {formatTime(msg.timestamp)}
+        <Bot
+          size={13}
+          style={{
+            color: "var(--accent)",
+            display: "inline-block",
+            verticalAlign: "-2px",
+            marginRight: 4,
+          }}
+        />{" "}
+        Systems Lab Agent · {formatTime(msg.timestamp)}
       </div>
       <div className="assistantBubble">
         {msg.sources && msg.sources.length > 0 && (

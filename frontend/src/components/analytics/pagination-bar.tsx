@@ -1,6 +1,13 @@
 "use client";
 
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type React from "react";
 import { Dropdown } from "@/components/ui/Dropdown";
 
 const PAGE_SIZES = [10, 25, 50] as const;
@@ -72,30 +79,44 @@ export function PaginationBar({
         />
 
         <div style={{ display: "flex", gap: 3 }}>
-          <PBtn onClick={() => handlePage(1)} disabled={page <= 1} label="«" />
+          <PBtn
+            onClick={() => handlePage(1)}
+            disabled={page <= 1}
+            aria-label="First page"
+          >
+            <ChevronsLeft size={14} />
+          </PBtn>
           <PBtn
             onClick={() => handlePage(page - 1)}
             disabled={page <= 1}
-            label="‹"
-          />
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={14} />
+          </PBtn>
           {pages.map((p) => (
             <PBtn
               key={p}
               onClick={() => handlePage(p)}
-              label={String(p)}
               active={p === page}
-            />
+              aria-label={`Page ${p}`}
+            >
+              {p}
+            </PBtn>
           ))}
           <PBtn
             onClick={() => handlePage(page + 1)}
             disabled={page >= totalPages}
-            label="›"
-          />
+            aria-label="Next page"
+          >
+            <ChevronRight size={14} />
+          </PBtn>
           <PBtn
             onClick={() => handlePage(totalPages)}
             disabled={page >= totalPages}
-            label="»"
-          />
+            aria-label="Last page"
+          >
+            <ChevronsRight size={14} />
+          </PBtn>
         </div>
       </div>
     </div>
@@ -106,18 +127,21 @@ function PBtn({
   onClick,
   disabled = false,
   active = false,
-  label,
+  children,
+  "aria-label": ariaLabel,
 }: {
   onClick: () => void;
   disabled?: boolean;
   active?: boolean;
-  label: string;
+  children: React.ReactNode;
+  "aria-label"?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
       style={{
         border: active
@@ -130,15 +154,19 @@ function PBtn({
             ? "var(--accent)"
             : "var(--text-secondary)",
         borderRadius: 6,
-        padding: "4px 10px",
+        padding: "4px 8px",
         fontSize: 13,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.4 : 1,
         minWidth: 32,
+        height: 28,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
         transition: "background 0.12s, border-color 0.12s",
       }}
     >
-      {label}
+      {children}
     </button>
   );
 }
