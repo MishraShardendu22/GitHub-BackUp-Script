@@ -182,6 +182,7 @@ class TestAgentComprehensiveSuite(unittest.IsolatedAsyncioTestCase):
 
         turn_2_resp = MagicMock()
         turn_2_resp.tool_calls = []
+        turn_2_resp.content = "All metrics operational."
 
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(side_effect=[turn_1_resp, turn_2_resp])
@@ -228,6 +229,7 @@ class TestAgentComprehensiveSuite(unittest.IsolatedAsyncioTestCase):
         # Turn 2 responds after rejection
         turn_2_resp = MagicMock()
         turn_2_resp.tool_calls = []
+        turn_2_resp.content = "Email was aborted as requested."
 
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(side_effect=[turn_1_resp, turn_2_resp])

@@ -187,9 +187,11 @@ export function MessageBubble({ msg }: { msg: Message }) {
             <span>
               {runningTool
                 ? `Executing tool: ${runningTool.name}...`
-                : msg.iteration !== undefined
-                  ? `Agent reasoning (turn ${msg.iteration + 1} of 5)...`
-                  : "Agent is starting reasoning workflow..."}
+                : msg.toolCalls && msg.toolCalls.length > 0
+                  ? `Analyzing tool results (turn ${(msg.iteration ?? 0) + 1} of 5)...`
+                  : msg.iteration !== undefined
+                    ? `Agent reasoning (turn ${msg.iteration + 1} of 5)...`
+                    : "Agent is starting reasoning workflow..."}
             </span>
           </div>
         )}
