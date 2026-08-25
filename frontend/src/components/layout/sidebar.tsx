@@ -181,7 +181,7 @@ export default function Sidebar({
       }
       if (
         (pathname.startsWith("/ai") ||
-          pathname === "/tools" ||
+          pathname.startsWith("/tools") ||
           pathname === "/search-playground" ||
           pathname === "/embeddings") &&
         !newExpanded.AgenticAssistance
@@ -529,7 +529,7 @@ export default function Sidebar({
             <div className="sidebar-tooltip-wrapper">
               <Link
                 href="/ai"
-                className={`tree-node ${pathname.startsWith("/ai") || pathname === "/tools" || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
+                className={`tree-node ${pathname.startsWith("/ai") || pathname.startsWith("/tools") || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
                 style={{ justifyContent: "center", padding: "10px 0" }}
                 onClick={onCloseMobile}
               >
@@ -545,7 +545,7 @@ export default function Sidebar({
               {/* Folder Row header */}
               <button
                 type="button"
-                className={`tree-node ${pathname.startsWith("/ai") || pathname === "/tools" || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
+                className={`tree-node ${pathname.startsWith("/ai") || pathname.startsWith("/tools") || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
                 onClick={(e) => toggleFolder("AgenticAssistance", e)}
                 style={{
                   width: "100%",
@@ -658,7 +658,30 @@ export default function Sidebar({
                     </span>
                   </Link>
 
-                  {/* Link 4: Search Playground */}
+                  {/* Link 4: Tool Telemetry */}
+                  <Link
+                    href="/tools/stats"
+                    className={`tree-node ${pathname === "/tools/stats" ? "active" : ""}`}
+                    onClick={onCloseMobile}
+                    style={{
+                      padding: "5px 8px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
+                      <BarChart3 size={15} />
+                    </span>
+                    <span
+                      className="tree-node-label"
+                      style={{ fontSize: "14px" }}
+                    >
+                      Tool Telemetry
+                    </span>
+                  </Link>
+
+                  {/* Link 5: Search Playground */}
                   <Link
                     href="/search-playground"
                     className={`tree-node ${pathname === "/search-playground" ? "active" : ""}`}

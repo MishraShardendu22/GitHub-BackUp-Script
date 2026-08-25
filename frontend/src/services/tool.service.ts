@@ -15,21 +15,22 @@ export interface ToolExecutionResult {
   error: string | null;
 }
 
-export interface ToolCallStat {
-  invocations: number;
-  total_duration_ms: number;
-  avg_duration_ms: number;
+export interface ToolUsageStat {
+  name: string;
+  count: number;
+  avg_duration: number;
   success_count: number;
-  failure_count: number;
   success_rate: number;
 }
 
 export interface ObservatoryStats {
-  total_sessions: number;
-  total_messages: number;
-  total_investigations: number;
-  total_tool_calls: number;
-  tool_stats: Record<string, ToolCallStat>;
+  total_conversations: number;
+  total_agent_runs: number;
+  success_rate: number;
+  tool_usage: ToolUsageStat[];
+  memory_stats: {
+    total_messages: number;
+  };
 }
 
 export const toolService = {
