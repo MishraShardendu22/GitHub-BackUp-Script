@@ -101,7 +101,17 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ---
 
-## 9. Verification Checklist
+## 10. Jules Autonomous AI Engineering Review & Tech Lead Delegation Protocol
+
+* **First-Class Jules Integration**: Google Jules CLI (`jules`) is an authenticated, first-class asynchronous development tool.
+* **38-Dimension Principal Staff Review**: Every Pull Request is automatically audited by Jules across 38 architectural, performance, and correctness dimensions.
+* **Autonomous Remediation & Convergence**: AI engineers and Jules iterate autonomously through review-refine loops until achieving quality score $\ge 95/100$ and zero P0/P1 issues.
+* **Human Technical Lead Role**: The human developer acts as the Technical Lead and final decision maker. All mechanical, stylistic, performance, and maintainability concerns are automated before Tech Lead review, leaving only high-level product and architecture decisions.
+* See [`.agents/skills/jules-ai-engineering-workflow/SKILL.md`](.agents/skills/jules-ai-engineering-workflow/SKILL.md).
+
+---
+
+## 11. Verification Checklist
 
 Before finishing any task, you MUST run:
 ```bash
@@ -117,5 +127,6 @@ cd agentic-observatory && uv run --with pyright pyright
 # 4. Run Frontend lint and Turbopack build
 cd frontend && pnpm run lint && pnpm run build
 ```
+
 
 
