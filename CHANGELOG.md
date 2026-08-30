@@ -20,7 +20,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Codified the **Zero-Reminder Automatic Synchronization Rule**: all code, API, database, and workflow changes automatically trigger synchronization across relevant agent skills and markdown documentation before committing.
 - **Git Cleanup & Maintenance Test Suite** ([`tests/git_cleanup_test.sh`](tests/git_cleanup_test.sh)):
   - Comprehensive unit and integration test suite covering dry-run operations, branch deletion in isolated fixtures, quiet execution, and status reporting.
+- **Jules Autonomous AI Engineering Review & Improvement Loop** ([`scripts/jules-review-loop.sh`](scripts/jules-review-loop.sh), [`.github/workflows/jules-ai-review-loop.yml`](.github/workflows/jules-ai-review-loop.yml)):
+  - First-class integration of Google Jules CLI (`jules`) for automated multi-dimensional code reviews and remediation.
+  - Multi-dimensional review engine evaluating 38 architectural, performance, and correctness dimensions.
+  - Autonomous review-improve-converge loop repeating until quality score $\ge 95/100$ and zero P0/P1 issues.
+  - Automated generation of staff-grade, merge-ready Pull Request descriptions for human Technical Lead approval.
+- **Jules Developer Tooling & Makefile Integration**:
+  - Added `make jules-review PR=<N>`, `make jules-fix PR=<N>`, and `make jules-status` CLI targets.
+  - Synchronized new status labels (`status/jules-reviewing`, `status/jules-improving`, `status/jules-approved`, `status/ready-for-tech-lead`).
+- **Jules AI Engineering Workflow & Tooling Guide Skills** ([`.agents/skills/jules-ai-engineering-workflow/SKILL.md`](.agents/skills/jules-ai-engineering-workflow/SKILL.md), [`.agents/skills/cli-tooling-guide/SKILL.md`](.agents/skills/cli-tooling-guide/SKILL.md)):
+  - Standard operating procedures for AI engineering teams and Jules autonomous review iterations.
+- **Jules Loop Test Suite** ([`tests/jules_loop_test.sh`](tests/jules_loop_test.sh)):
+  - Comprehensive unit and integration test suite covering 38-dimension evaluations, acceptance checks, and YAML workflow syntax.
+- **Automated Pull Request & Issue Triage Workflows** ([`.github/workflows/pr-triage-and-labeler.yml`](.github/workflows/pr-triage-and-labeler.yml), [`.github/workflows/issue-triage.yml`](.github/workflows/issue-triage.yml)):
+  - Automatic PR and issue assignment to author/repository owner (`MishraShardendu22`).
+  - Semantic title prefix parsing to apply Conventional Commit type labels (`type/feat`, `type/fix`, `type/perf`, `type/refactor`, `type/docs`, `type/db`, `type/ci`, `type/test`, `type/ui`).
+  - Path-based subsystem area labeling (`area/frontend`, `area/backend`, `area/observatory`, `area/backup-worker`, `area/ci-cd`, `area/documentation`, `area/security`).
+  - Automated PR diff size classification (`size/XS`, `size/S`, `size/M`, `size/L`, `size/XL`).
+- **Standardized Visual PR & Modern Issue Forms** ([`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md), [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)):
+  - Visual PR template with executive summary, subsystem boundary checklist, and quality assurance matrix.
+  - Interactive GitHub Issue forms (`bug_report.yml`, `feature_request.yml`, `task.yml`, `config.yml`).
+- **Declarative Label Synchronization Engine** ([`scripts/github-labels-sync.sh`](scripts/github-labels-sync.sh)):
+  - Script declaring 26 standard, color-coded repository labels synchronized via GitHub API (`make labels-sync`).
+- **GitHub PR & Issue Visual Automation Skill** ([`.agents/skills/github-pr-issue-automation/SKILL.md`](.agents/skills/github-pr-issue-automation/SKILL.md)):
+  - Agent and human operating manual for creating professional, visually organized PRs with `--assignee` and `--label` flags.
+- **GitHub Automation Test Suite** ([`tests/github_automation_test.sh`](tests/github_automation_test.sh)):
+  - 11 unit and integration tests validating YAML workflow schemas, issue forms, and dry-run label synchronizer.
 
+- Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
+  - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
+  - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
+  - Relocated and encapsulated `backup-worker/_Repos/` working tree and `backup-worker/app.db` local state.
+  - Updated all Go package import paths to `github.com/MishraShardendu22/github-backup/backup-worker/...`.
 - Canonical Branch-First Development Workflow ([`BRANCHING.md`](BRANCHING.md)):
   - Established canonical hierarchical branch naming standard `<github-username>/<parent-branch>/<feature>`.
   - Deprecated Git worktrees across the project in favor of direct branch switching (`git switch -c`).
