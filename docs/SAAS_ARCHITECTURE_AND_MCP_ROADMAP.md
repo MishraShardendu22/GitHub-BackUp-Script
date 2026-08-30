@@ -246,13 +246,56 @@ To evolve the AI Agent from a reactive chat assistant into an **Autonomous Site 
   - Maintain an episodic knowledge graph of past incidents, rate-limit workarounds, and repository anomalies.
   - When a backup fails for a known reason (e.g. Git LFS quota exceeded), immediately suggest the historically validated remediation.
 
+### 6.2 Native GitHub Backup System MCP Server (`github-backup-mcp`)
+
+In addition to consuming external MCP servers, the **GitHub Backup System will expose its own first-class Model Context Protocol (MCP) server**. This allows ANY external AI agent, IDE, or desktop assistant (Cursor, Claude Desktop, Antigravity, VS Code, Codex, OpenAI Operator) to natively interact with this backup platform:
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│           EXTERNAL AI CLIENTS (Cursor, Claude Desktop, Antigravity)      │
+└────────────────────────────────────┬─────────────────────────────────────┘
+                                     │
+                        [MCP JSON-RPC / SSE Protocol]
+                                     │
+┌────────────────────────────────────▼─────────────────────────────────────┐
+│          NATIVE GITHUB BACKUP MCP SERVER (github-backup-mcp)             │
+│                                                                          │
+│  Tools Exposed:                                                          │
+│  • `get_system_health`: Query real-time status of backup runs & DB       │
+│  • `trigger_backup_run`: Start an immediate backup of specific repos     │
+│  • `search_observatory_knowledge`: Hybrid pgvector search across logs    │
+│  • `verify_archive_integrity`: Compute SHA-256 and test restore archive │
+│  • `extract_backup_file`: Surgically extract a file from `.tar.gz`       │
+│  • `list_repository_snapshots`: View historical commit snapshots        │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
-## 7. Production-Grade Multi-Tier Test Suites
+## 7. Selective High-Impact Additional Subsystems & Services
+
+To maximize enterprise value with a lean, highly focused footprint, the following 3 complementary subsystems are specified:
+
+### 7.1 Multi-Git Provider Ingestion Engine (GitLab, Bitbucket, Gitea)
+* **Purpose**: Extends the Go backup worker and UI connectors beyond GitHub to support GitLab.com / self-hosted GitLab, Bitbucket Cloud / Data Center, and Gitea / Forgejo under the same unified archive format and analytics pipeline.
+* **Implementation**: Pluggable `GitProvider` interface in Go with provider-specific API clients for rate-limiting, commit hash discovery, and release asset fetching.
+
+### 7.2 Cold Storage & Deep Archival Lifecycle Service (S3 Glacier / R2 Infrequent)
+* **Purpose**: Automatically compresses older `.tar.gz` snapshots (e.g. >90 days old) using zstandard (`zstd`) level 19 and transitions them to cost-efficient cold storage tiers (AWS S3 Glacier Flexible Retrieval or Glacier Deep Archive).
+* **Benefit**: Reduces long-term storage costs by up to 85% for multi-terabyte enterprise backup repositories.
+
+### 7.3 Real-Time Git Webhook Ingestion Service
+* **Purpose**: Receives incoming `push`, `tag_create`, and `release` webhook payloads from GitHub/GitLab organizations.
+* **Benefit**: Replaces periodic cron polling with event-driven immediate backups as soon as code is pushed to production branches.
+
+---
+
+
+## 8. Production-Grade Multi-Tier Test Suites
 
 To ensure commercial-grade software quality across all services:
 
-### 7.1 Testing Architecture
+### 8.1 Testing Architecture
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -278,7 +321,7 @@ To ensure commercial-grade software quality across all services:
 
 ---
 
-## 8. Implementation Roadmap & Milestones
+## 9. Implementation Roadmap & Milestones
 
 | Milestone | Key Deliverables | Expected Impact |
 |---|---|---|
@@ -286,5 +329,6 @@ To ensure commercial-grade software quality across all services:
 | **Phase 2 (SaaS Foundation)** | `connectors` DB schema, AES-256 Vault, UI Connector Hub for OpenRouter/Neon/GitHub | Zero `.env` files required by end users |
 | **Phase 3 (Storage Engine)** | `StorageProvider` Go interface, AWS S3, Cloudflare R2, Google Drive connectors | Pluggable multi-cloud backup destinations |
 | **Phase 4 (Distribution)** | One-line installer script, First-Run `/setup` Wizard, single-container image | 60-second setup for any user |
-| **Phase 5 (MCP SRE)** | Integration of GitHub, Postgres, Docker, and Storage MCP servers | Autonomous self-healing backup infrastructure |
-| **Phase 6 (Enterprise)** | Testcontainers suite, Playwright E2E, multi-tenant RBAC, Stripe billing | Commercial-grade enterprise SaaS |
+| **Phase 5 (MCP SRE & Native MCP)** | GitHub, Postgres, Docker MCPs + Native `github-backup-mcp` server | Autonomous self-healing infrastructure & external agent access |
+| **Phase 6 (Enterprise & Multi-Git)** | Testcontainers suite, Playwright E2E, GitLab/Bitbucket engine, Stripe billing | Commercial-grade enterprise SaaS |
+

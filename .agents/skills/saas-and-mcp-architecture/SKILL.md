@@ -51,3 +51,18 @@ When adding new MCP tools to the LangChain / FastAPI agent:
    - Destructive or external actions (`restart_service`, `restore_database_snapshot`, `trigger_incident_alert`, `apply_schema_migration`) MUST trigger the HITL confirmation protocol via SSE event.
 3. **Structured Response Synthesis**:
    - All MCP tool outputs must be synthesized concisely in structured Markdown without emojis or conversational filler.
+
+---
+
+## 4. Exposing the Native GitHub Backup MCP Server (`github-backup-mcp`)
+
+When maintaining or extending the native MCP server exposed to external IDEs/agents:
+
+* Implement tools under `github-backup-mcp`:
+  - `get_system_health`: Real-time status of services, DB, and latest runs.
+  - `trigger_backup_run`: Autonomous run triggers for specified repos.
+  - `search_observatory_knowledge`: Hybrid pgvector search across system logs.
+  - `verify_archive_integrity`: SHA-256 validation of `.tar.gz` archives.
+  - `extract_backup_file`: Surgical extraction from remote S3/R2 backups.
+* Expose over both standard stdio transport and HTTP/SSE transport for web-based agents.
+
