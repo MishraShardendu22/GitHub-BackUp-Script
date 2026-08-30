@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Discussions & Architecture Q&A"
+    url: "https://github.com/MishraShardendu22/github-backup-automation-system/discussions"
+    about: "Ask questions, share ideas, and engage with the community."
+  - name: "🔒 Security Vulnerability Reporting"
+    url: "https://github.com/MishraShardendu22/github-backup-automation-system/security/advisories/new"
+    about: "Privately report security vulnerabilities or sensitive data leaks."
