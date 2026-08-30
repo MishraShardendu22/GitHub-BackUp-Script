@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Automated Remote Branch Deletion on PR Merge** ([`.github/workflows/pr-branch-cleanup.yml`](.github/workflows/pr-branch-cleanup.yml)):
+  - Automatically deletes remote feature branches upon Pull Request merge into `main`.
+- **Local Merged Branch & Stale Reference Cleaner** ([`scripts/git-sync-and-cleanup.sh`](scripts/git-sync-and-cleanup.sh)):
+  - Safe, automated cleaner that fetches with `--prune`, synchronizes `main`, identifies `: gone]` branches, and deletes merged feature branches locally.
+  - Added `make git-sync-clean` and enhanced `make git-clean` Makefile targets.
+- **Weekly Automated Local Git Maintenance & GC** ([`scripts/git-maintenance.sh`](scripts/git-maintenance.sh)):
+  - Performs repository garbage collection, dangling blob pruning, and packfile repacking (`make git-gc`, `make git-maintain`).
+  - Built-in `--install-cron` / `make git-maintain-install` to schedule automatic weekly local maintenance runs.
+- **Autonomous Documentation & Skill Synchronization Engine** ([`.agents/skills/doc-synchronization/SKILL.md`](.agents/skills/doc-synchronization/SKILL.md)):
+  - Codified the **Zero-Reminder Automatic Synchronization Rule**: all code, API, database, and workflow changes automatically trigger synchronization across relevant agent skills and markdown documentation before committing.
+- **Git Cleanup & Maintenance Test Suite** ([`tests/git_cleanup_test.sh`](tests/git_cleanup_test.sh)):
+  - Comprehensive unit and integration test suite covering dry-run operations, branch deletion in isolated fixtures, quiet execution, and status reporting.
 - **Jules Autonomous AI Engineering Review & Improvement Loop** ([`scripts/jules-review-loop.sh`](scripts/jules-review-loop.sh), [`.github/workflows/jules-ai-review-loop.yml`](.github/workflows/jules-ai-review-loop.yml)):
   - First-class integration of Google Jules CLI (`jules`) for automated multi-dimensional code reviews and remediation.
   - Multi-dimensional review engine evaluating 38 architectural, performance, and correctness dimensions.
