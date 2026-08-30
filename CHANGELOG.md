@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Enterprise SaaS Architecture Blueprint & Autonomous MCP Ecosystem Roadmap ([`docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md`](docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md)):
+  - Comprehensive architectural specification for converting the system into a multi-tenant, **Bring-Your-Own-Everything (BYO-Infra)** and one-click self-hostable SaaS platform.
+  - **UI Connector Hub & Encrypted Vault**: Eliminates manual `.env` files via in-app UI connectors for multi-account OpenRouter key pools, Neon/Postgres databases, GitHub OAuth apps, and SSH keys backed by AES-256-GCM envelope encryption.
+  - **Pluggable Multi-Cloud Storage**: `StorageProvider` abstraction supporting AWS S3, Cloudflare R2, MinIO, Wasabi, Google Cloud Storage, Google Drive (OAuth), and Azure Blob Storage.
+  - **Autonomous Model Context Protocol (MCP) SRE**: Specification for integrating 7 high-impact MCP servers (GitHub MCP, Postgres MCP, Docker MCP, Storage & Archive MCP, Cloudflare/Render MCP, Incident Alerting MCP, and Episodic Memory MCP) to evolve the agent from reactive chat to an autonomous DevOps & SRE engine.
+  - **Commercial-Grade Test Suites**: Multi-tier testing blueprint including Testcontainers (PostgreSQL + pgvector), mock GitHub Enterprise, Playwright E2E browser tests, and AI Agent LLM Evals.
+- SaaS & MCP Architecture Agent Skill ([`.agents/skills/saas-and-mcp-architecture/`](.agents/skills/saas-and-mcp-architecture/SKILL.md)):
+  - Operational guidelines and implementation standards for future AI coding agents.
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
   - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
