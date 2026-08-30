@@ -32,7 +32,11 @@ backup:
 	@echo "Running Backup Worker CLI..."
 	@cd backup-worker && go run main.go
 
-test: test-go test-py
+test: test-go test-py test-scripts
+
+test-scripts:
+	@echo "Running Shell & Automation script test suite..."
+	@bash tests/github_automation_test.sh
 
 test-go:
 	@echo "Running Go test suite..."
@@ -88,16 +92,7 @@ restore-db:
 	@echo "Restoring PostgreSQL from backup..."
 	@./scripts/restore-db.sh $(BACKUP_FILE)
 
-git-clean:
-	@echo "Synchronizing main branch and cleaning up repository..."
-	@git switch main
-	@git pull origin main
-	@git fetch --prune origin
-	@echo "Deleting stale local feature branches..."
-	@git branch | grep -v "^\* main$$" | grep -v "^  main$$" | xargs -r git branch -D || true
-	@echo "Running Git garbage collection and reflog pruning..."
-	@git reflog expire --expire=now --all
-	@git gc --prune=now --aggressive
-	@echo "Repository clean. Current active branch: main"
+labels-sync:
+	@./scripts/github-labels-sync.sh
 
 
