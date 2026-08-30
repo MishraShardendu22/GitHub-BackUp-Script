@@ -188,4 +188,38 @@ export const searchService = {
     const data = await res.json();
     return data.data;
   },
+
+  async pruneStaleGenerations(token: string): Promise<unknown> {
+    const res = await fetch(`${AGENT_URL}/embeddings/prune`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
+      throw new Error(`Failed to prune stale generations: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.data;
+  },
+
+  async deleteGeneration(
+    token: string,
+    generationId: number,
+  ): Promise<unknown> {
+    const res = await fetch(
+      `${AGENT_URL}/embeddings/generations/${generationId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (!res.ok) {
+      if (res.status === 401)
+        window.dispatchEvent(new Event("auth:unauthorized"));
+      throw new Error(`Failed to delete generation: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.data;
+  },
 };

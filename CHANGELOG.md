@@ -24,6 +24,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added pre-push validation gate enforcing branch naming standards and preventing direct pushes to `main`.
 - Authenticated CLI Tooling & Automation Guide ([`.agents/skills/cli-tooling-guide/`](.agents/skills/cli-tooling-guide/SKILL.md)):
   - Documented authenticated tooling (`gh`, `vercel`, `neonctl`, `docker`), CLI command patterns, recovery runbooks, and agent best practices.
+- Automatic Stale Embedding Pruning & Generation Lifecycle Optimization:
+  - Added atomic purge of older generations (`DELETE FROM embedding_generations WHERE id != $1`) upon activation of a new generation, eliminating duplicate vector storage in PostgreSQL.
+  - Added automatic cleanup of abandoned/empty `BUILDING` generations during `start_generation`.
+  - Added dedicated database migration `000006_prune_stale_embedding_generations.up.sql` to purge orphaned non-active generations and cascade delete stale `embedding_chunks` and `embedding_jobs`.
+  - Added `delete_generation` backend handler and `DELETE /embeddings/generations/{generation_id}` API endpoint.
+  - Added frontend `deleteGeneration` and `pruneStaleGenerations` methods in `searchService`.
+- Strict Professional Tone & Zero-Fluff Constraints in Agent System Prompts ([`agentic-observatory/agent/prompts.py`](agentic-observatory/agent/prompts.py)):
+  - Enforced strict professional tone across AI agent responses: prohibition of emojis/decorative icons, elimination of conversational fluff and pleasantries (preamble/postamble), direct to-the-point technical synthesis.
+  - Mandated structured Markdown breakdown, exact telemetry identifiers (commit SHAs, repository names, timestamps, error codes), and strict grounding in retrieved tool context without speculation or hallucination.
+- Enterprise SaaS Architecture Blueprint & Autonomous MCP Ecosystem Roadmap ([`docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md`](docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md)):
+  - Comprehensive architectural specification for converting the system into a multi-tenant, **Bring-Your-Own-Everything (BYO-Infra)** and one-click self-hostable SaaS platform.
+  - **UI Connector Hub & Encrypted Vault**: Eliminates manual `.env` files via in-app UI connectors for multi-account OpenRouter key pools, Neon/Postgres databases, GitHub OAuth apps, and SSH keys backed by AES-256-GCM envelope encryption.
+  - **Pluggable Multi-Cloud Storage**: `StorageProvider` abstraction supporting AWS S3, Cloudflare R2, MinIO, Wasabi, Google Cloud Storage, Google Drive (OAuth), and Azure Blob Storage.
+  - **Autonomous Model Context Protocol (MCP) SRE**: Specification for integrating 7 high-impact MCP servers (GitHub MCP, Postgres MCP, Docker MCP, Storage & Archive MCP, Cloudflare/Render MCP, Incident Alerting MCP, and Episodic Memory MCP) to evolve the agent from reactive chat to an autonomous DevOps & SRE engine.
+  - **Commercial-Grade Test Suites**: Multi-tier testing blueprint including Testcontainers (PostgreSQL + pgvector), mock GitHub Enterprise, Playwright E2E browser tests, and AI Agent LLM Evals.
+- SaaS & MCP Architecture Agent Skill ([`.agents/skills/saas-and-mcp-architecture/`](.agents/skills/saas-and-mcp-architecture/SKILL.md)):
+  - Operational guidelines and implementation standards for future AI coding agents.
+- **Automated Remote Branch Deletion on PR Merge** ([`.github/workflows/pr-branch-cleanup.yml`](.github/workflows/pr-branch-cleanup.yml)):
+  - Automatically deletes remote feature branches upon Pull Request merge into `main`.
+- **Local Merged Branch & Stale Reference Cleaner** ([`scripts/git-sync-and-cleanup.sh`](scripts/git-sync-and-cleanup.sh)):
+  - Safe, automated cleaner that fetches with `--prune`, synchronizes `main`, identifies `: gone]` branches, and deletes merged feature branches locally.
+  - Added `make git-sync-clean` and enhanced `make git-clean` Makefile targets.
+- **Weekly Automated Local Git Maintenance & GC** ([`scripts/git-maintenance.sh`](scripts/git-maintenance.sh)):
+  - Performs repository garbage collection, dangling blob pruning, and packfile repacking (`make git-gc`, `make git-maintain`).
+  - Built-in `--install-cron` / `make git-maintain-install` to schedule automatic weekly local maintenance runs.
+- **Autonomous Documentation & Skill Synchronization Engine** ([`.agents/skills/doc-synchronization/SKILL.md`](.agents/skills/doc-synchronization/SKILL.md)):
+  - Codified the **Zero-Reminder Automatic Synchronization Rule**: all code, API, database, and workflow changes automatically trigger synchronization across relevant agent skills and markdown documentation before committing.
+- **Git Cleanup & Maintenance Test Suite** ([`tests/git_cleanup_test.sh`](tests/git_cleanup_test.sh)):
+  - Comprehensive unit and integration test suite covering dry-run operations, branch deletion in isolated fixtures, quiet execution, and status reporting.
+- **Jules Autonomous AI Engineering Review & Improvement Loop** ([`scripts/jules-review-loop.sh`](scripts/jules-review-loop.sh), [`.github/workflows/jules-ai-review-loop.yml`](.github/workflows/jules-ai-review-loop.yml)):
+  - First-class integration of Google Jules CLI (`jules`) for automated multi-dimensional code reviews and remediation.
+  - Multi-dimensional review engine evaluating 38 architectural, performance, and correctness dimensions.
+  - Autonomous review-improve-converge loop repeating until quality score $\ge 95/100$ and zero P0/P1 issues.
+  - Automated generation of staff-grade, merge-ready Pull Request descriptions for human Technical Lead approval.
+- **Jules Developer Tooling & Makefile Integration**:
+  - Added `make jules-review PR=<N>`, `make jules-fix PR=<N>`, and `make jules-status` CLI targets.
+  - Synchronized new status labels (`status/jules-reviewing`, `status/jules-improving`, `status/jules-approved`, `status/ready-for-tech-lead`).
+- **Jules AI Engineering Workflow & Tooling Guide Skills** ([`.agents/skills/jules-ai-engineering-workflow/SKILL.md`](.agents/skills/jules-ai-engineering-workflow/SKILL.md), [`.agents/skills/cli-tooling-guide/SKILL.md`](.agents/skills/cli-tooling-guide/SKILL.md)):
+  - Standard operating procedures for AI engineering teams and Jules autonomous review iterations.
+- **Jules Loop Test Suite** ([`tests/jules_loop_test.sh`](tests/jules_loop_test.sh)):
+  - Comprehensive unit and integration test suite covering 38-dimension evaluations, acceptance checks, and YAML workflow syntax.
+- **Automated Pull Request & Issue Triage Workflows** ([`.github/workflows/pr-triage-and-labeler.yml`](.github/workflows/pr-triage-and-labeler.yml), [`.github/workflows/issue-triage.yml`](.github/workflows/issue-triage.yml)):
+  - Automatic PR and issue assignment to author/repository owner (`MishraShardendu22`).
+  - Semantic title prefix parsing to apply Conventional Commit type labels (`type/feat`, `type/fix`, `type/perf`, `type/refactor`, `type/docs`, `type/db`, `type/ci`, `type/test`, `type/ui`).
+  - Path-based subsystem area labeling (`area/frontend`, `area/backend`, `area/observatory`, `area/backup-worker`, `area/ci-cd`, `area/documentation`, `area/security`).
+  - Automated PR diff size classification (`size/XS`, `size/S`, `size/M`, `size/L`, `size/XL`).
+- **Standardized Visual PR & Modern Issue Forms** ([`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md), [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)):
+  - Visual PR template with executive summary, subsystem boundary checklist, and quality assurance matrix.
+  - Interactive GitHub Issue forms (`bug_report.yml`, `feature_request.yml`, `task.yml`, `config.yml`).
+- **Declarative Label Synchronization Engine** ([`scripts/github-labels-sync.sh`](scripts/github-labels-sync.sh)):
+  - Script declaring 26 standard, color-coded repository labels synchronized via GitHub API (`make labels-sync`).
+- **GitHub PR & Issue Visual Automation Skill** ([`.agents/skills/github-pr-issue-automation/SKILL.md`](.agents/skills/github-pr-issue-automation/SKILL.md)):
+  - Agent and human operating manual for creating professional, visually organized PRs with `--assignee` and `--label` flags.
+- **GitHub Automation Test Suite** ([`tests/github_automation_test.sh`](tests/github_automation_test.sh)):
+  - 11 unit and integration tests validating YAML workflow schemas, issue forms, and dry-run label synchronizer.
+
+>>>>>>> main
+>>>>>>> main
+>>>>>>> main
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
   - Added root `make backup` developer target to execute the backup worker CLI seamlessly.

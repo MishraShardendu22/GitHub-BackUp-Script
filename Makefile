@@ -36,7 +36,14 @@ backup:
 	@echo "Running Backup Worker CLI..."
 	@cd backup-worker && go run main.go
 
-test: test-go test-py
+test: test-go test-py test-scripts
+
+test-scripts:
+	@echo "Running Shell & Automation script test suite..."
+	@bash tests/git_cleanup_test.sh
+	@bash tests/jules_loop_test.sh
+	@bash tests/github_automation_test.sh
+
 
 test-go:
 	@echo "Running Go test suite..."
@@ -104,16 +111,35 @@ restore-db:
 	@echo "Restoring PostgreSQL from backup..."
 	@./scripts/restore-db.sh $(BACKUP_FILE)
 
+git-sync-clean:
+	@./scripts/git-sync-and-cleanup.sh
+
 git-clean:
-	@echo "Synchronizing main branch and cleaning up repository..."
-	@git switch main
-	@git pull origin main
-	@git fetch --prune origin
-	@echo "Deleting stale local feature branches..."
-	@git branch | grep -v "^\* main$$" | grep -v "^  main$$" | xargs -r git branch -D || true
-	@echo "Running Git garbage collection and reflog pruning..."
-	@git reflog expire --expire=now --all
-	@git gc --prune=now --aggressive
-	@echo "Repository clean. Current active branch: main"
+	@./scripts/git-sync-and-cleanup.sh --force --gc
+
+git-gc:
+	@./scripts/git-maintenance.sh
+
+git-maintain:
+	@./scripts/git-maintenance.sh --aggressive
+
+git-maintain-install:
+	@./scripts/git-maintenance.sh --install-cron
+
+git-maintain-status:
+	@./scripts/git-maintenance.sh --status
+
+labels-sync:
+	@./scripts/github-labels-sync.sh
+
+jules-review:
+	@./scripts/jules-review-loop.sh --pr $(PR)
+
+jules-fix:
+	@./scripts/jules-review-loop.sh --pr $(PR)
+
+jules-status:
+	@jules remote list --session 2>/dev/null || ./scripts/jules-review-loop.sh --dry-run
+
 
 

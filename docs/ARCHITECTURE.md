@@ -173,9 +173,11 @@ PostgreSQL serves as the central data store across all services. The Go backend 
 
 ---
 
-## 6. Security & Deployment Constraints
+## 6. Security, Deployment Model & Future SaaS Architecture
 
-* **No Docker / Containers in Production**: Deployment strictly relies on **Vercel** serverless functions and **Render** native Go execution.
-* **Non-Destructive Database Migrations**: All migrations must be idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) and preserve historical data.
-* **Failover Resilience**: Multi-key rotation ensures continuous uptime against LLM provider rate limits.
+* **Containerized Deployment Architecture**: Go backend deploys as a Docker container on **Render**; Frontend and AI Observatory deploy on **Vercel**; Backup Worker CLI runs as an isolated container or native scheduled job.
+* **Non-Destructive Database Migrations**: All migrations must be idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) and preserve historical data on **Neon PostgreSQL**.
+* **Failover Resilience**: Multi-key OpenRouter rotation ensures continuous uptime against LLM provider rate limits.
+* **Enterprise SaaS Transformation & MCP Roadmap**: Full technical specification for UI Connector Hubs, AES-256 encrypted credential vaults, pluggable multi-cloud storage (S3/R2/GCS/Drive), self-hosted distribution, and Autonomous Model Context Protocol (MCP) servers is documented in [`docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md`](SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md).
+
 
