@@ -76,6 +76,11 @@ This document defines the complete engineering lifecycle for contributors and AI
   make pre-commit
   ```
 * Ensure all 8 validation phases succeed (formatting, static analysis, unit tests, agent tests, binary builds, and Next.js Turbopack compilation).
+* Verify Docker images build cleanly:
+  ```bash
+  make docker-build
+  ```
+
 
 ### Stage 4: Local Commit
 * Create an atomic Conventional Commit with mandatory sign-off (`-s`) and cryptographic signing (`-S`):

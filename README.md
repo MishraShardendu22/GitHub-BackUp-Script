@@ -2,10 +2,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go)](https://go.dev/)
-[![Python Version](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python)](https://python.org/)
+[![Python Version](https://img.shields.io/badge/Python-3.14%2B-3776AB?logo=python)](https://python.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://docker.com/)
 
 A distributed backup automation and AI-driven telemetry observatory. The system automates repository archiving, stores historical analytics in PostgreSQL, provides live WebSocket streaming, performs hybrid search using pgvector and full-text search, and hosts an AI Agentic Observatory for automated incident analysis and report generation.
+
+**All four services are Docker-first**: each ships as a Docker image and the entire stack runs locally with a single `docker compose up`.
 
 ---
 
@@ -13,6 +16,7 @@ A distributed backup automation and AI-driven telemetry observatory. The system 
 
 - **Production Dashboard**: [github.mishrashardendu22.is-a.dev](https://github.mishrashardendu22.is-a.dev)
 - **API Documentation**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
+- **Architecture Guide**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Branching Policy**: [BRANCHING.md](BRANCHING.md)
 - **Repository Workflow**: [WORKFLOW.md](WORKFLOW.md)
 - **Pre-Commit Gate**: [docs/PRECOMMIT_WORKFLOW.md](docs/PRECOMMIT_WORKFLOW.md)
@@ -22,104 +26,157 @@ A distributed backup automation and AI-driven telemetry observatory. The system 
 
 ## Architecture & Deployment Model
 
-The system is organized into modular services deployed across **Vercel** and **Render**:
+The system is organized into four Docker containers sharing a managed Neon PostgreSQL database:
 
 ```mermaid
 graph TD
-    Client[Web Browser / User] -->|HTTPS| Frontend[Next.js Dashboard - Vercel]
-    Client -->|HTTPS| PythonAgent[Python Observatory - Vercel]
-    Client -->|HTTPS / WSS| GoBackend[Go Fiber Backend - Render]
+    Client[Web Browser / User] -->|HTTPS| Frontend["Next.js Dashboard\n(frontend/Dockerfile)"]
+    Client -->|HTTPS| PythonAgent["Python Observatory\n(agentic-observatory/Dockerfile)"]
+    Client -->|HTTPS / WSS| GoBackend["Go Fiber Backend\n(backend/Dockerfile)"]
 
-    GoBackend -->|pgxpool / SQL| PG[(PostgreSQL + pgvector)]
+    GoBackend -->|pgxpool / SQL| PG[(PostgreSQL + pgvector\nNeon Managed)]
     PythonAgent -->|SQLAlchemy async| PG
     PythonAgent -->|X-Internal-Secret| GoBackend
     PythonAgent -->|HTTPS| OpenRouter[OpenRouter AI / Embeddings]
 
-    Worker[Go CLI Worker] -->|Archives| GitRepos[Central Git Repository]
+    Worker["Go CLI Worker\n(backup-worker/Dockerfile)"] -->|Archives| GitRepos[Central Git Repository]
     Worker -->|Log / Metrics| PG
 ```
 
 ### Components
 
-| Service | Technology | Hosting Platform | Description |
+| Service | Technology | Deployment | Description |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | Next.js 16, React 19, Tailwind CSS | **Vercel** | Interactive dashboard with real-time WebSocket feeds, analytics charts, and AI chat playground. |
-| **Observatory** | FastAPI, Python 3.12, SQLAlchemy, LangChain | **Vercel** | AI telemetry service with OpenRouter LLM integration, hybrid vector + full-text search, and automated reports. |
-| **Backend API** | Go 1.24, Fiber v2, pgxpool | **Render** | High-performance REST and WebSocket API with connection pooling, structured logging (`slog`), and versioned SQL migrations. |
-| **Worker Engine** | Go 1.24 CLI (`backup-worker/`) | **Local / Cron Worker** | Autonomous CLI backup engine with incremental SHA-HEAD verification, concurrency controls, and `.tar.gz` archiving. |
-| **Database** | PostgreSQL 16 + `pgvector` | **Cloud Managed DB** | Persistent relational storage for backup runs, execution logs, analytics snapshots, and embedding vectors. |
+| **Frontend** | Next.js 16, React 19, Tailwind CSS | Docker → **Vercel** | Interactive dashboard with real-time WebSocket feeds, analytics charts, and AI chat playground. |
+| **Observatory** | FastAPI, Python 3.14, SQLAlchemy, LangChain | Docker → **Render** | AI telemetry service with OpenRouter LLM integration, hybrid vector + full-text search, and automated reports. |
+| **Backend API** | Go 1.24, Fiber v2, pgxpool | Docker → **Render** | High-performance REST and WebSocket API with connection pooling, structured logging (`slog`), and versioned SQL migrations. |
+| **Worker Engine** | Go 1.24 CLI (`backup-worker/`) | Docker → **Local / Cron** | Autonomous CLI backup engine with incremental SHA-HEAD verification, concurrency controls, and `.tar.gz` archiving. |
+| **Database** | PostgreSQL 16 + `pgvector` | **Neon (Cloud Managed)** | Persistent relational storage for backup runs, execution logs, analytics snapshots, and embedding vectors. |
 
 ---
 
-## Local Development Workflow
+## 🐳 Docker Development Workflow (Recommended)
 
-Run individual services or the unified development environment using the provided `Makefile`:
+The primary development and deployment workflow uses Docker Compose.
+
+### Prerequisites
+
+- [Docker Desktop](https://docs.docker.com/get-docker/) or Docker Engine + Compose plugin
+- Copy and populate `.env` files for each service (see [Configuration Reference](#configuration-reference) below)
+
+### Quick Start
 
 ```bash
-# 1. Start all 3 web services concurrently (Go: 8080, Python: 8000, Frontend: 3000)
-make dev
+# 1. Clone the repository
+git clone <repo-url> && cd github-backup-automation-system
 
-# 2. Run the autonomous Backup Worker CLI
-make backup
+# 2. Populate environment files (see Configuration Reference below)
+cp backend/.env.example backend/.env         # fill in secrets
+cp agentic-observatory/.env.example agentic-observatory/.env
+cp frontend/.env.example frontend/.env.local
 
-# 3. Configure Git pre-commit validation hooks (.githooks/)
-make hooks-install
+# 3. Start all three web services
+make docker-up
+# or: docker compose up --build -d
 
-# 4. Run full pre-commit validation gate across all services
-make pre-commit
+# 4. Open the dashboard
+open http://localhost:3000
 
-# 5. Run linters and formatters across Go, Python, and TypeScript
-make lint
-make format
-make typecheck
+# 5. Tail logs
+make docker-logs
 
-# 6. Run all test suites across Go and Python
-make test
-
-# 7. Build Go binaries and Next.js frontend
-make build
+# 6. Stop all services
+make docker-down
 ```
 
-> **Pre-Commit Workflow**: Learn how the intelligent staged-file validation gate works in [`docs/PRECOMMIT_WORKFLOW.md`](docs/PRECOMMIT_WORKFLOW.md).
+### Run the Backup Worker
 
-### Default Port Mappings
-- **Frontend Dashboard**: `http://localhost:3000`
-- **Go REST API & Metrics**: `http://localhost:8080` (Metrics: `http://localhost:8080/metrics`)
-- **Python Observatory**: `http://localhost:8000` (Metrics: `http://localhost:8000/metrics`)
+```bash
+# Run one backup cycle (one-shot CLI, exits when done)
+make docker-backup
+# or: docker compose run --rm backup-worker
+```
+
+### Default Port Mappings (Docker)
+
+| Service | URL |
+|---|---|
+| **Frontend Dashboard** | `http://localhost:3000` |
+| **Go REST API & Metrics** | `http://localhost:8080` |
+| **Python Observatory** | `http://localhost:8000` |
+
+### Docker Make Targets
+
+| Target | Description |
+|---|---|
+| `make docker-up` | Build images and start all web services |
+| `make docker-down` | Stop and remove all containers |
+| `make docker-build` | Build (or rebuild) all Docker images |
+| `make docker-logs` | Tail live logs from all containers |
+| `make docker-backup` | Run the backup worker container (one-shot) |
+| `make docker-shell-backend` | Open a shell in the backend container |
+| `make docker-shell-observatory` | Open a shell in the observatory container |
+| `make docker-clean` | Remove all project containers, images, and volumes |
+
+---
+
+## Native Development Workflow (Alternative)
+
+If you prefer to run services natively (without Docker), all original `make` targets are preserved:
+
+```bash
+# Start Go (8080), Python (8000), and Frontend (3000) natively
+make dev
+
+# Run the autonomous Backup Worker CLI natively
+make backup
+
+# Run all test suites
+make test
+
+# Run full pre-commit validation gate
+make pre-commit
+```
+
+> **Prerequisites for native dev**: Go 1.24+, Python 3.14+ with `uv`, Node.js 20+ with `pnpm`, `air` for Go hot-reload.
 
 ---
 
 ## Deployment & Service Configuration
 
-### 1. Frontend (Vercel)
-- **Root Directory**: `frontend/`
-- **Build Command**: `pnpm run build`
-- **Output Directory**: Next.js default (`.next`)
+### 1. Go Backend (Render — Docker)
+- **Service Type**: Docker web service on Render
+- **Dockerfile**: `backend/Dockerfile` (build context: repo root)
 - **Environment Variables**:
-  - `NEXT_PUBLIC_API_URL`: Your Render Go backend public URL (e.g. `https://your-backend.onrender.com`)
-  - `NEXT_PUBLIC_AGENT_URL`: Your Vercel Python observatory public URL (e.g. `https://your-observatory.vercel.app`)
+  - `DATABASE_URL`: PostgreSQL connection string (`postgresql://...`)
+  - `INTERNAL_SECRET`: Shared secret for protected endpoints
+  - `SERVER_PORT`: Port (defaults to `8080`)
 
-### 2. Python Observatory (Vercel)
-- **Root Directory**: `agentic-observatory/`
+### 2. Python Observatory (Render — Docker)
+- **Service Type**: Docker web service on Render
+- **Dockerfile**: `agentic-observatory/Dockerfile`
 - **Environment Variables**:
-  - `GO_BACKEND_URL`: URL to your Go Backend on Render
+  - `GO_BACKEND_URL`: URL to your Go Backend
   - `DATABASE_URL`: PostgreSQL async connection string (`postgresql+asyncpg://...`)
-  - `INTERNAL_SECRET`: Shared secret matching Go Backend `INTERNAL_SECRET`
+  - `INTERNAL_SECRET`: Shared secret matching Go Backend
   - `OPENROUTER_API_KEY`: OpenRouter API key for LLM and embeddings
   - `JWT_SECRET`: Secret key for JWT session tokens
   - `CHAT_USERNAME` / `CHAT_PASSWORD`: Admin credentials for chat authentication
 
-### 3. Go Backend (Render)
-- **Environment**: Go Native Web Service
-- **Build Command**: `cd backend && go build -o app main.go`
-- **Start Command**: `./backend/app`
+### 3. Frontend (Vercel — Docker or Native)
+- **Vercel native**: Root directory `frontend/`, build command `pnpm run build`
+- **Docker**: `frontend/Dockerfile` (3-stage standalone build)
 - **Environment Variables**:
-  - `DATABASE_URL`: PostgreSQL connection string (`postgresql://...`)
-  - `INTERNAL_SECRET`: Shared secret for protected endpoints
+  - `NEXT_PUBLIC_API_URL`: Your Render Go backend public URL
+  - `NEXT_PUBLIC_AGENT_URL`: Your Render/Vercel Python observatory URL
 
-### 4. Autonomous Backup Worker (Local / Scheduled Cron)
-- **Root Directory**: `backup-worker/`
-- **Run Command**: `make backup` or `cd backup-worker && go run main.go`
+### 4. Autonomous Backup Worker (Local / Cron — Docker)
+- **Dockerfile**: `backup-worker/Dockerfile` (build context: repo root)
+- **Run**: `make docker-backup` or `docker compose run --rm backup-worker`
+- **Required Volume Mounts**:
+  - `./backup-worker/_Repos:/app/_Repos` — cloned repository storage
+  - `./backup-worker/app.db:/app/app.db` — SQLite incremental state
+  - `~/.ssh:/root/.ssh:ro` — SSH keys for GitHub operations
 - **Environment Variables**:
   - `GITHUB_TOKEN_PERSONAL`: Personal access token for public & user repo discovery
   - `GITHUB_TOKEN_PRIVATE`: Personal access token with `repo` scope for private repos

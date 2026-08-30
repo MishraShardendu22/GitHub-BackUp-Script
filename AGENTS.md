@@ -6,12 +6,25 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ## 1. Architecture & Deployment Boundaries
 
-* **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel**.
-* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel**.
-* **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render**.
-* **Backup Worker**: Go CLI -> Dedicated `backup-worker/` directory (Local / Scheduled Cron via `make backup`).
+The system is organized into four containerised services:
 
-> **CRITICAL RULE**: Do **NOT** introduce Docker, Docker Compose, Kubernetes, Helm, Nginx, Prometheus servers, Grafana containers, or container registries. All deployments use serverless Vercel and Render native runtimes.
+* **Frontend**: Next.js 16 (App Router, Turbopack) → Docker image, deployed on **Vercel** or any container host.
+* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search → Docker image, deployed on **Render** or **Vercel** Docker runtime.
+* **Go Backend**: Fiber v2 + pgxpool → Docker image, deployed on **Render** (Docker-native web service).
+* **Backup Worker**: Go CLI → Docker image (`backup-worker/Dockerfile`), run locally or as a scheduled cron via `make docker-backup`.
+* **Database**: Neon PostgreSQL (cloud managed, NOT containerised — preserves production backup history).
+
+> **Docker-First Architecture**: All services are built and run as Docker containers. The primary local development workflow is `make docker-up` (Docker Compose). Native development targets (`make dev`) are preserved for contributors who prefer them.
+
+### Dockerfiles & Orchestration
+
+| Service | Dockerfile | Build Context |
+|---|---|---|
+| Go Backend | `backend/Dockerfile` | Repo root |
+| Python Observatory | `agentic-observatory/Dockerfile` | `agentic-observatory/` |
+| Next.js Frontend | `frontend/Dockerfile` | `frontend/` |
+| Backup Worker | `backup-worker/Dockerfile` | Repo root |
+| Orchestration | `docker-compose.yml` | Repo root |
 
 ---
 
@@ -33,6 +46,7 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 * **Never Drop Tables**: This system has been running in production with months of backup history. **Never** run destructive schema drops (`DROP TABLE`, `TRUNCATE`).
 * **Migrations**: All migrations in `backend/db/migrations/` and `agentic-observatory/data/migrations/` MUST be idempotent using `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS`.
 * **Database Connection**: Always use `DATABASE_URL` (supports SSL with Neon PostgreSQL). In Python, `data/db.py` normalizes asyncpg URL formats automatically.
+* **No Local PostgreSQL Container**: The managed Neon PostgreSQL instance is the single source of truth. Never replace it with a local container — doing so would sever access to production backup history.
 
 ---
 
@@ -46,6 +60,7 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 * **Secrets vs Hardcoded Defaults**:
   * Keep `.env` and `.env.example` strictly for **secrets** and **dynamic deployment URLs**.
   * Keep operational constants (timeouts, buffer limits, retry counts, page sizes) hardcoded in the centralized config files.
+* **Docker Secrets**: The `docker-compose.yml` uses `env_file:` references. Secrets are never baked into Docker images.
 
 ---
 
@@ -116,6 +131,7 @@ cd agentic-observatory && uv run --with pyright pyright
 
 # 4. Run Frontend lint and Turbopack build
 cd frontend && pnpm run lint && pnpm run build
+
+# 5. Verify all Docker images build cleanly
+make docker-build
 ```
-
-

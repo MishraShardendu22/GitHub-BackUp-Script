@@ -1,0 +1,48 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Root .dockerignore — applies to builds using context: . (backend, backup-worker)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Git history
+.git
+.gitignore
+.githooks
+
+# CI/CD and GitHub metadata
+.github
+.agents
+agents
+
+# Frontend (not needed in Go builds)
+frontend/
+frontend/node_modules
+frontend/.next
+
+# Python Observatory (not needed in Go builds)
+agentic-observatory/.venv
+agentic-observatory/__pycache__
+agentic-observatory/.coverage
+agentic-observatory/reports
+
+# Backup worker state (mounted as volumes at runtime)
+backup-worker/_Repos
+backup-worker/app.db
+
+# Editor and IDE files
+.vscode
+*.swp
+*.swo
+
+# Secrets — never bake into images
+.env
+.env.*
+backend/.env
+backup-worker/.env
+agentic-observatory/.env
+
+# Documentation
+docs/
+*.md
+
+# Test output
+*.out
+coverage.txt

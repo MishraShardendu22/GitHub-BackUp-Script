@@ -2,12 +2,12 @@
 name: ci-cd-workflow
 description: >-
   Rules, architectures, and guidelines for maintaining GitHub Actions CI/CD workflows,
-  managing deployment boundaries on Vercel and Render, and ensuring zero-containerization compliance.
+  managing Docker image builds, and orchestrating deployment across Render and Vercel.
 ---
 
 # CI/CD & Deployment Architecture Skill
 
-This skill guides AI agents and contributors in maintaining GitHub Actions CI pipelines and adhering to the serverless and managed hosting architecture of the **GitHub Backup Automation System**.
+This skill guides AI agents and contributors in maintaining GitHub Actions CI pipelines and managing the Docker-first architecture of the **GitHub Backup Automation System**.
 
 ## 1. Branch-First Development
 
@@ -20,19 +20,22 @@ This skill guides AI agents and contributors in maintaining GitHub Actions CI pi
 
 ---
 
-## 2. Deployment Boundaries & Hosting Targets
+## 2. Docker-First Architecture
+
+All four services are containerised. Docker is the primary build, test, and deployment mechanism.
 
 ```text
 ┌───────────────────────────┐      ┌───────────────────────────┐
 │     Next.js Frontend      │      │    Python Observatory     │
-│   (Vercel App Router)     │      │   (Vercel FastAPI App)    │
+│   (frontend/Dockerfile)   │      │(agentic-observatory/      │
+│   Vercel / Container Host │      │ Dockerfile) → Render      │
 └─────────────┬─────────────┘      └─────────────┬─────────────┘
               │                                  │
               └───────────────┬──────────────────┘
                               │
               ┌───────────────▼──────────────────┐
-              │          Go Backend API          │
-              │       (Render Web Service)       │
+              │       Go Backend Dockerfile       │
+              │  (backend/Dockerfile) → Render    │
               └───────────────┬──────────────────┘
                               │
               ┌───────────────▼──────────────────┐
@@ -41,58 +44,63 @@ This skill guides AI agents and contributors in maintaining GitHub Actions CI pi
               └──────────────────────────────────┘
 ```
 
-> [!CAUTION]
-> **STRICT ARCHITECTURE BOUNDARY**:
-> Do **NOT** introduce Dockerfiles, `docker-compose.yml`, Kubernetes manifests, Helm charts, Nginx configs, Prometheus/Grafana containers, or container registries. All services are deployed directly onto Vercel and Render native runtimes.
+### Dockerfiles
+
+| Service | Dockerfile | Build Context |
+|---|---|---|
+| Go Backend | `backend/Dockerfile` | Repo root |
+| Python Observatory | `agentic-observatory/Dockerfile` | `agentic-observatory/` |
+| Next.js Frontend | `frontend/Dockerfile` | `frontend/` |
+| Backup Worker | `backup-worker/Dockerfile` | Repo root |
+
+### Local Orchestration
+
+All services are orchestrated via `docker-compose.yml` at the repository root:
+```bash
+make docker-up     # build + start all services
+make docker-down   # stop all containers
+make docker-build  # rebuild images only
+make docker-backup # run backup worker (one-shot)
+```
 
 ---
 
-## 2. GitHub Actions CI Matrix (`.github/workflows/ci.yml`)
+## 3. GitHub Actions CI Matrix (`.github/workflows/ci.yml`)
 
 The CI workflow triggers on every `push` and `pull_request` against `main`:
 
 ```yaml
 jobs:
-  backend-test:
-    name: Go Backend Test & Build
-    steps:
-      - uses: actions/setup-go@v5
-      - run: go test -v -race ./...
-      - run: go build -v ./...
-
-  observatory-test:
-    name: Python Observatory Test & Lint
-    steps:
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync
-      - run: uv run python test_*.py
-
-  frontend-test:
-    name: Frontend Lint & Build
-    steps:
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run lint
-      - run: pnpm run build
+  backend-test:       # go test -v -race ./... + go build
+  observatory-test:   # uv sync + uv run python test_*.py
+  frontend-test:      # pnpm install + pnpm lint + pnpm build
+  docker-build:       # docker build for all 4 Dockerfiles (GHA cache)
 ```
+
+The `docker-build` job uses Docker Buildx with GitHub Actions layer caching (`type=gha`) to keep image builds fast.
 
 ---
 
-## 3. Local CI Mirroring Runbook
+## 4. Local CI Mirroring Runbook
 
 To guarantee that your changes pass CI before committing:
 
 ```bash
-# 1. Run the pre-commit gate (exact mirror of CI checks)
+# 1. Run the pre-commit gate (mirrors native CI checks)
 make pre-commit
 
-# 2. Alternatively, run individual CI jobs locally:
+# 2. Verify all Docker images build
+make docker-build
+
+# 3. Run individual CI checks natively if needed:
 # Go Backend:
 go test -v -race ./... && go build -v ./...
 
 # Python Observatory:
-cd agentic-observatory && uv run python test_observability.py && uv run python test_openrouter_keys.py && uv run python test_agent_template.py && uv run python test_agent_suite.py
+cd agentic-observatory && uv run python test_observability.py \
+  && uv run python test_openrouter_keys.py \
+  && uv run python test_agent_template.py \
+  && uv run python test_agent_suite.py
 
 # Frontend:
 cd frontend && pnpm run lint && pnpm run build
@@ -100,8 +108,21 @@ cd frontend && pnpm run lint && pnpm run build
 
 ---
 
-## 4. Secrets vs Centralized Configuration
+## 5. Secrets vs Centralized Configuration
 
-* **Secrets**: Strictly defined in `.env` / Vercel & Render environment dashboards (`DATABASE_URL`, `INTERNAL_SECRET`, `OPENROUTER_API_KEY`, `JWT_SECRET`).
+* **Secrets**: Defined in `.env` files and injected via `env_file:` in Docker Compose or via platform environment dashboards on Render/Vercel.
 * **Operational Defaults**: Centralized in code (`backend/config/config.go`, `agentic-observatory/config/settings.py`, `frontend/src/config/env.ts`).
-* Never hardcode secrets in CI workflow YAML or commits.
+* **Never**: Bake secrets into Docker images or hardcode them in CI workflow YAML.
+
+---
+
+## 6. Adding a New Service or Dockerfile
+
+When adding a new containerised service:
+1. Create a `<service>/Dockerfile` with a multi-stage build.
+2. Add a `.dockerignore` in the service directory.
+3. Add the service to `docker-compose.yml`.
+4. Add a `docker build` step to the `docker-build` CI job.
+5. Add `make docker-shell-<service>` and `make docker-<service>` targets to `Makefile`.
+6. Update `docs/ARCHITECTURE.md` Container Architecture table.
+7. Update `.agents/skills/docker-workflow/SKILL.md`.

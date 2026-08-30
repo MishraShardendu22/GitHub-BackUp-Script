@@ -1,13 +1,13 @@
 ---
 name: github-backup-architecture
 description: >-
-  Comprehensive guide to the system architecture, service communication, database schema,
-  and deployment targets (Frontend on Vercel, Python Observatory on Vercel, Go Backend on Render).
+  Comprehensive guide to the Docker-first system architecture, container strategy, service communication,
+  database schema, and deployment targets (Frontend on Vercel, Python Observatory on Render, Go Backend on Render).
 ---
 
 # GitHub Backup Automation System — Architecture Guide
 
-This skill provides an overview of the system architecture, data models, communication protocols, and deployment environments.
+This skill provides an overview of the Docker-first system architecture, containerisation strategy, data models, communication protocols, and deployment environments.
 
 ## 1. Branch-First Development
 
@@ -24,15 +24,16 @@ This skill provides an overview of the system architecture, data models, communi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Next.js 16 Frontend                      │
-│                  (Deployed on Vercel)                       │
+│               Next.js 16 Frontend Container                 │
+│          (frontend/Dockerfile → Vercel / Docker)            │
 └───────────────┬─────────────────────────────┬───────────────┘
                 │ REST / SSE                  │ REST / WebSocket
                 ▼                             ▼
 ┌─────────────────────────────┐ ┌─────────────────────────────┐
-│     Python Observatory      │ │         Go Backend          │
-│    (Deployed on Vercel)     │ │    (Deployed on Render)     │
-│   FastAPI · LangChain AI    │ │  Fiber v2 · Live WS Stream  │
+│  Python Observatory         │ │      Go Backend Container   │
+│  Container                  │ │   (backend/Dockerfile)      │
+│  (agentic-observatory/      │ │   Fiber v2 · Live WS Stream │
+│   Dockerfile) → Render      │ │   → Render Docker Service   │
 └───────────────┬─────────────┘ └─────────────┬───────────────┘
                 │                             │
                 │     ┌─────────────────┐     │
@@ -43,7 +44,9 @@ This skill provides an overview of the system architecture, data models, communi
                 │              │ Sync         │
                 │     ┌────────┴────────┐     │
                 │     │ Backup Worker   │     │
-                │     │ (CLI / Cron)    │     │
+                │     │ Container       │     │
+                │     │(backup-worker/  │     │
+                │     │ Dockerfile)     │     │
                 │     └─────────────────┘     │
                 ▼                             ▼
 ┌─────────────────────────────┐ ┌─────────────────────────────┐
@@ -54,7 +57,32 @@ This skill provides an overview of the system architecture, data models, communi
 
 ---
 
-## 2. Service Responsibilities
+## 3. Container Strategy
+
+| Service | Dockerfile | Runtime Base | Strategy |
+|---|---|---|---|
+| **Go Backend** | `backend/Dockerfile` | `distroless/static-debian12` | CGO=0 static binary — zero OS attack surface |
+| **Python Observatory** | `agentic-observatory/Dockerfile` | `python:3.14-slim` | uv-managed .venv in builder stage; copied to slim runtime |
+| **Next.js Frontend** | `frontend/Dockerfile` | `node:20-alpine` | 3-stage: deps → standalone build → minimal runner |
+| **Backup Worker** | `backup-worker/Dockerfile` | `alpine:3.22` | CGO=1 (sqlite3); alpine runtime with git + openssh |
+
+### Local Development Orchestration
+
+```bash
+# Start all web services
+docker compose up
+
+# Run backup worker (one-shot)
+docker compose run --rm backup-worker
+
+# Shorthand via Makefile
+make docker-up
+make docker-backup
+```
+
+---
+
+## 4. Service Responsibilities
 
 ### Next.js Frontend (`frontend/`)
 * **Framework**: Next.js 16 App Router with Turbopack, Tailwind CSS, Biome linter.
@@ -87,10 +115,14 @@ This skill provides an overview of the system architecture, data models, communi
   * Caching remote HEAD commit hashes in `backup-worker/app.db`.
   * Recording telemetry, logs, and failure fixes to PostgreSQL.
 * **Config**: [`backup-worker/config/data.config.go`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/backup-worker/config/data.config.go).
+* **Docker volumes required at runtime**:
+  * `./backup-worker/_Repos:/app/_Repos`
+  * `./backup-worker/app.db:/app/app.db`
+  * `~/.ssh:/root/.ssh:ro`
 
 ---
 
-## 3. Database Schema
+## 5. Database Schema
 
 1. `backup_runs`: Stores each backup batch (ID, status, total repos, duration, timestamps, error_message).
 2. `backup_results`: Per-repository outcome (status, error_message, sizes, commit_hash).
@@ -101,4 +133,3 @@ This skill provides an overview of the system architecture, data models, communi
 7. `ai_chat_messages` & `ai_tool_calls`: Chat history and granular tool execution telemetry.
 8. `investigations`: Saved agent investigation traces, tool calls, and results.
 9. `embedding_generations`, `embedding_jobs`, `embedding_chunks`: Vector index and chunk storage with pgvector and deterministic blue-green lifecycle management.
-

@@ -1,9 +1,11 @@
-.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean
+.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean \
+        docker-up docker-down docker-build docker-logs docker-backup docker-shell-backend docker-shell-observatory docker-clean
 
 help:
 	@echo "======================================================================"
 	@echo "  GitHub Backup & Agentic Observatory System — Developer CLI"
 	@echo "======================================================================"
+	@echo "  ── Native Development ──────────────────────────────────────────────"
 	@echo "  make dev          - Start Go (8080), Python (8000), and Frontend (3000)"
 	@echo "  make backup       - Run the autonomous Backup Worker CLI"
 	@echo "  make test         - Run all test suites across Go and Python"
@@ -19,7 +21,17 @@ help:
 	@echo "  make git-clean    - Sync main branch, delete local feature branches, and run git gc"
 	@echo "  make backup-db    - Execute automated PostgreSQL backup"
 	@echo "  make restore-db   - Restore PostgreSQL from backup file"
+	@echo "  ── Docker Development ──────────────────────────────────────────────"
+	@echo "  make docker-up    - Build images and start all services via Docker Compose"
+	@echo "  make docker-down  - Stop and remove all containers"
+	@echo "  make docker-build - Build (or rebuild) all Docker images"
+	@echo "  make docker-logs  - Tail live logs from all containers"
+	@echo "  make docker-backup- Run the backup worker container (one-shot)"
+	@echo "  make docker-shell-backend    - Open a shell in the backend container"
+	@echo "  make docker-shell-observatory- Open a shell in the observatory container"
+	@echo "  make docker-clean - Remove all project containers, images, and volumes"
 	@echo "======================================================================"
+
 
 dev:
 	@echo "Starting Go Backend (8080), Python Agent (8000), and Frontend (3000)..."
@@ -100,4 +112,47 @@ git-clean:
 	@git gc --prune=now --aggressive
 	@echo "Repository clean. Current active branch: main"
 
+# ==============================================================================
+# Docker Development Targets
+# ==============================================================================
+# Primary workflow: `make docker-up` starts backend, observatory, and frontend.
+# The backup worker is run separately: `make docker-backup`
+# ==============================================================================
+
+docker-up:
+	@echo "Building images and starting all web services via Docker Compose..."
+	@docker compose up --build -d
+	@echo ""
+	@echo "Services running:"
+	@echo "  Go Backend     → http://localhost:8080"
+	@echo "  Observatory    → http://localhost:8000"
+	@echo "  Frontend       → http://localhost:3000"
+	@echo ""
+	@echo "Run 'make docker-logs' to tail logs. Run 'make docker-down' to stop."
+
+docker-down:
+	@echo "Stopping all Docker Compose services..."
+	@docker compose down
+
+docker-build:
+	@echo "Building all Docker images..."
+	@docker compose build
+
+docker-logs:
+	@docker compose logs -f
+
+docker-backup:
+	@echo "Running Backup Worker container (one-shot)..."
+	@docker compose run --rm backup-worker
+
+docker-shell-backend:
+	@docker compose exec backend sh
+
+docker-shell-observatory:
+	@docker compose exec observatory bash
+
+docker-clean:
+	@echo "Removing all project containers, images, and volumes..."
+	@docker compose down --rmi local --volumes --remove-orphans
+	@echo "Docker resources cleaned."
 

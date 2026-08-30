@@ -59,6 +59,8 @@ The pre-commit hook automatically executes the following suite of validations:
 | **Python** | 2. Test Suite | `cd agentic-observatory && uv run python test_*.py` | `make test-py` / `make test-agents` |
 | **Frontend** | 1. Lint & Format | `cd frontend && pnpm run lint` (`biome check`) | `make format` / `pnpm run format` |
 | **Frontend** | 2. Turbopack Build | `cd frontend && pnpm run build` | `cd frontend && pnpm run build` |
+| **Docker** | 1. Compose Build | `docker compose build --quiet` | `make docker-build` (if Docker daemon available) |
+
 
 ---
 

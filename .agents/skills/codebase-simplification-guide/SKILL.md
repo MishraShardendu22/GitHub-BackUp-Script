@@ -21,9 +21,12 @@ This skill provides guidelines on how to keep the repository clean, avoid over-e
 
 ## 2. Core Principles
 
-1. **No Unwanted Infrastructure**:
-   * Do not add Dockerfiles, docker-compose, Kubernetes manifests, Nginx configs, Prometheus/Grafana server setups, or Terraform scripts.
-   * Everything runs on native Vercel (Next.js, Python FastAPI) and Render (Go Fiber).
+1. **Docker is the Standard Deployment Unit**:
+   * Every service has a purpose-built multi-stage `Dockerfile`.
+   * Keep Dockerfiles minimal — favour `distroless` or `alpine` runtime stages.
+   * Do not introduce additional container orchestrators (Kubernetes, Helm) unless explicitly requested. `docker-compose.yml` is sufficient.
+   * Do not add Nginx, Prometheus servers, Grafana containers, or Terraform scripts.
+   * Everything is deployed as Docker images on Render and Vercel (or equivalent container hosts).
 
 2. **No Speculative Abstractions**:
    * Do not create interfaces or wrapper layers that have only a single implementation unless required for mocking in tests.
@@ -32,6 +35,7 @@ This skill provides guidelines on how to keep the repository clean, avoid over-e
 3. **Centralized Configuration**:
    * Never call `os.Getenv` or `process.env` in arbitrary component files.
    * All environment access must go through the dedicated central module (`backend/config`, `agentic-observatory/config`, `frontend/src/config/env.ts`).
+   * Docker images read all secrets from environment variables — never bake secrets into images.
 
 4. **Zero Dead Code**:
    * Remove unused functions, structs, imports, scripts, and commented-out code during every refactoring pass.
@@ -39,3 +43,4 @@ This skill provides guidelines on how to keep the repository clean, avoid over-e
 5. **Safe Database Practices**:
    * Never drop or truncate production tables.
    * Always write idempotent migrations (`CREATE TABLE IF NOT EXISTS`).
+   * Never replace the managed Neon PostgreSQL instance with a local container — doing so would sever access to months of production backup history.

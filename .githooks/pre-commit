@@ -89,6 +89,7 @@ CHECK_GO=0
 CHECK_PY=0
 CHECK_FE=0
 CHECK_ALL=0
+CHECK_DOCKER=0
 
 if [ -z "${STAGED_FILES}" ] || [ "${PRECOMMIT_ALL:-0}" = "1" ]; then
     # Direct execution or full validation requested
@@ -96,6 +97,7 @@ if [ -z "${STAGED_FILES}" ] || [ "${PRECOMMIT_ALL:-0}" = "1" ]; then
     CHECK_GO=1
     CHECK_PY=1
     CHECK_FE=1
+    CHECK_DOCKER=1
     MODE_DESC="Full Repository Validation (All Subsystems)"
 else
     # Inspect individual file paths
@@ -117,17 +119,23 @@ else
             CHECK_FE=1
         fi
 
+        # Docker files — Dockerfiles and Compose configurations
+        if [[ "$file" =~ Dockerfile ]] || [[ "$file" =~ docker-compose ]] || [[ "$file" =~ \.dockerignore$ ]]; then
+            CHECK_DOCKER=1
+        fi
+
         # Global infrastructure files (Makefile, CI workflows, hooks, scripts)
         if [[ "$file" =~ ^(\.github/|\.githooks/|scripts/|Makefile) ]]; then
             CHECK_ALL=1
             CHECK_GO=1
             CHECK_PY=1
             CHECK_FE=1
+            CHECK_DOCKER=1
         fi
     done <<< "${STAGED_FILES}"
 
     # Check if only non-code files changed (docs, markdown, text, assets)
-    if [ "$CHECK_GO" -eq 0 ] && [ "$CHECK_PY" -eq 0 ] && [ "$CHECK_FE" -eq 0 ] && [ "$CHECK_ALL" -eq 0 ]; then
+    if [ "$CHECK_GO" -eq 0 ] && [ "$CHECK_PY" -eq 0 ] && [ "$CHECK_FE" -eq 0 ] && [ "$CHECK_ALL" -eq 0 ] && [ "$CHECK_DOCKER" -eq 0 ]; then
         DOC_ONLY=1
         while IFS= read -r file; do
             [ -z "$file" ] && continue
@@ -149,6 +157,7 @@ else
         CHECK_GO=1
         CHECK_PY=1
         CHECK_FE=1
+        CHECK_DOCKER=1
     fi
 
     MODE_DESC="Targeted Validation (Staged Changes Detected)"
@@ -156,7 +165,8 @@ fi
 
 print_banner
 log_info "Mode: ${BOLD}${MODE_DESC}${RESET}"
-log_info "Selected checks: Go Backend/Worker: $([ $CHECK_GO -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}") | Python Observatory: $([ $CHECK_PY -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}") | Next.js Frontend: $([ $CHECK_FE -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}")"
+log_info "Selected checks: Go Backend/Worker: $([ $CHECK_GO -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}") | Python Observatory: $([ $CHECK_PY -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}") | Next.js Frontend: $([ $CHECK_FE -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}") | Docker Build: $([ $CHECK_DOCKER -eq 1 ] && echo -e "${GREEN}YES${RESET}" || echo -e "${DIM}NO${RESET}")"
+
 
 # ------------------------------------------------------------------------------
 # Helper: Run Step with Subshell Isolation, Timing & Error Handling
@@ -302,8 +312,27 @@ if [ "$CHECK_FE" -eq 1 ]; then
 fi
 
 # ==============================================================================
+# PHASE 4: Docker Build Verification
+# ==============================================================================
+# Only runs when Docker daemon is available and Dockerfile/Compose files are staged.
+# Gracefully skipped on machines without Docker installed.
+# ==============================================================================
+if [ "$CHECK_DOCKER" -eq 1 ]; then
+    if docker info &>/dev/null 2>&1; then
+        run_validation_step \
+            "Docker Compose Build (all images)" \
+            "docker compose build --quiet" \
+            "Run 'docker compose build' to diagnose Docker build failures, or 'make docker-build'."
+    else
+        log_warn "Docker daemon not available — skipping Docker build verification."
+        SKIPPED_STEPS+=("Docker Compose Build")
+    fi
+fi
+
+# ==============================================================================
 # Summary & Success
 # ==============================================================================
+
 END_TIME=$(date +%s)
 TOTAL_TIME=$((END_TIME - START_TIME))
 

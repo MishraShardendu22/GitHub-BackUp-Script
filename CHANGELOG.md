@@ -8,7 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
+- **Docker-First Architecture Migration** — Complete containerisation of all four services:
+  - `backend/Dockerfile`: Multi-stage Go build (`golang:1.25-alpine` → `distroless/static-debian12:nonroot`); CGO=0 static binary with zero OS attack surface.
+  - `agentic-observatory/Dockerfile`: Multi-stage Python 3.14 build (`python:3.14-slim`); uv-managed `.venv` in builder stage copied to minimal runtime.
+  - `frontend/Dockerfile`: Three-stage Next.js 16 standalone build (`node:20-alpine`); minimal runner with only the standalone bundle and static assets.
+  - `backup-worker/Dockerfile`: Multi-stage Go CLI build (`golang:1.25-alpine` with CGO + git/ssh → `alpine:3.22` runtime); volume mounts for `_Repos/`, `app.db`, and `~/.ssh`.
+  - `docker-compose.yml`: Full-stack local orchestration for backend (8080), observatory (8000), and frontend (3000). Backup worker gated behind `worker` profile.
+  - `.dockerignore` files (×5): Build context exclusions for each service directory.
+  - `make docker-up`, `docker-down`, `docker-build`, `docker-logs`, `docker-backup`, `docker-shell-backend`, `docker-shell-observatory`, `docker-clean` Makefile targets.
+  - `docker-build` GitHub Actions CI job: verifies all four Dockerfiles build cleanly on every PR using Docker Buildx with GitHub Actions layer caching.
+  - PHASE 4 in `.githooks/pre-commit`: Docker Compose build validation triggered when `Dockerfile*` or `docker-compose*.yml` files are staged; gracefully skipped if Docker daemon is unavailable.
+  - `frontend/next.config.ts`: `output: 'standalone'` for minimal Docker image via standalone Next.js output.
+  - `.env.example` (root): Consolidated environment variable reference for the entire Docker Compose stack.
+  - `.agents/skills/docker-workflow/SKILL.md`: New dedicated agent skill covering Dockerfile patterns, Docker Compose workflow, volume mount conventions, env var management, CI integration, and production deployment targets.
+- **Documentation updated** for Docker-first architecture:
+  - `AGENTS.md`: Removed no-Docker rule; rewrote Section 1 as Docker-first mandate; added `make docker-build` to Verification Checklist.
+  - `docs/ARCHITECTURE.md`: Replaced "No Docker / Containers in Production" constraint with Container Architecture section; updated topology diagram to show containerised services.
+  - `README.md`: Rewrote Local Development Workflow to lead with Docker Compose; updated Deployment section to describe Docker image builds per service.
+  - `WORKFLOW.md`: Added `make docker-build` to Stage 3 Validation.
+  - `.agents/skills/ci-cd-workflow/SKILL.md`: Removed anti-Docker prohibition; added Docker image build as standard CI/CD pipeline step.
+  - `.agents/skills/codebase-simplification-guide/SKILL.md`: Replaced "No Unwanted Infrastructure" Docker prohibition with Docker-first principle.
+  - `.agents/skills/github-backup-architecture/SKILL.md`: Updated topology and service descriptions to reflect containerised deployment.
+
+
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
   - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
   - Relocated and encapsulated `backup-worker/_Repos/` working tree and `backup-worker/app.db` local state.

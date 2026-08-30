@@ -6,23 +6,19 @@ This document outlines the distributed architecture, component boundaries, data 
 
 ## 1. High-Level Architecture Topology
 
+All four application services are packaged as Docker images. The managed Neon PostgreSQL database is the only non-containerised component.
+
 ```mermaid
 graph TD
     subgraph Client Layer
         Browser[Web Browser / User]
     end
 
-    subgraph Hosting: Vercel Serverless Edge
-        Frontend[Next.js 16 App Router UI]
-        Observatory[Python FastAPI AI Observatory]
-    end
-
-    subgraph Hosting: Render Native Runtime
-        Backend[Go Fiber v2 API Server]
-    end
-
-    subgraph Hosting: Local / Scheduled Cron
-        Worker[Go CLI Backup Worker Engine]
+    subgraph Docker Containers — Local / Cloud
+        Frontend["Next.js 16 App Router\n(frontend/Dockerfile)"]
+        Observatory["Python FastAPI AI Observatory\n(agentic-observatory/Dockerfile)"]
+        Backend["Go Fiber v2 API Server\n(backend/Dockerfile)"]
+        Worker["Go CLI Backup Worker\n(backup-worker/Dockerfile)"]
     end
 
     subgraph Cloud Storage & Intelligence
@@ -50,10 +46,34 @@ graph TD
 
 ---
 
-## 2. Core Service Components & Responsibilities
+## 2. Container Architecture
+
+Each service has a purpose-built multi-stage Dockerfile optimised for minimal image size and security.
+
+| Service | Dockerfile | Strategy | Base Image |
+|---|---|---|---|
+| **Go Backend** | `backend/Dockerfile` | 2-stage: `golang:1.25-alpine` builder → `distroless/static` runtime | `gcr.io/distroless/static-debian12` |
+| **Python Observatory** | `agentic-observatory/Dockerfile` | 2-stage: `python:3.14-slim` builder (uv sync) → slim runtime | `python:3.14-slim` |
+| **Next.js Frontend** | `frontend/Dockerfile` | 3-stage: deps → Next.js standalone build → `node:20-alpine` runner | `node:20-alpine` |
+| **Backup Worker** | `backup-worker/Dockerfile` | 2-stage: `golang:1.25-alpine` builder (CGO + sqlite3) → `alpine` runtime with git/ssh | `alpine:3.22` |
+
+### Docker Compose Orchestration
+
+`docker-compose.yml` at the repository root orchestrates all services for local development:
+
+```
+docker compose up        → starts backend, observatory, frontend
+docker compose run --rm backup-worker → one-shot backup execution
+```
+
+The backup worker is gated behind the `worker` profile and does not start automatically with `docker compose up`.
+
+---
+
+## 3. Core Service Components & Responsibilities
 
 ### Tier 1: Frontend Dashboard (Next.js 16 App Router)
-* **Hosting**: **Vercel** (Turbopack, Serverless Functions).
+* **Deployment**: Docker image (`frontend/Dockerfile`) → Vercel or any container host.
 * **Role**: Single-pane-of-glass operations console.
 * **Key Features**:
   * **Real-time Live Logs**: WebSocket streaming from Go backend (`/ws/live`).
@@ -62,7 +82,7 @@ graph TD
   * **Analytics & Metrics**: Visual charts for repository sizes, run durations, success rates, and commit trends.
 
 ### Tier 2: AI Agentic Observatory (FastAPI + LangChain)
-* **Hosting**: **Vercel** (Python Serverless Runtime).
+* **Deployment**: Docker image (`agentic-observatory/Dockerfile`) → Render or Vercel Docker runtime.
 * **Role**: Cognitive telemetry, vector embeddings, and autonomous incident investigation.
 * **Key Features**:
   * **Tool-Calling RAG Pipeline**: Multi-turn agent with dynamic tool invocation (`hybrid_search_knowledge_base`, `fetch_backup_metrics`, `list_backup_runs`, `send_report_email`).
@@ -72,7 +92,7 @@ graph TD
   * **Human-In-The-Loop (HITL)**: Sensitive actions yield confirmation tokens (`confirm_id`) requiring user approval before execution.
 
 ### Tier 3: High-Performance Backend API (Go 1.24 + Fiber v2)
-* **Hosting**: **Render** (Native Linux Web Service).
+* **Deployment**: Docker image (`backend/Dockerfile`) → Render (Docker-native web service).
 * **Role**: Central data ingest, monitoring REST API, and WebSocket distribution.
 * **Key Features**:
   * **Connection Pooling**: `pgxpool` with strict connection limits and timeouts.
@@ -81,7 +101,7 @@ graph TD
   * **WebSocket Hub**: Concurrent pub-sub hub for broadcasting live worker logs to connected dashboard clients.
 
 ### Tier 4: Autonomous Backup Worker (Go 1.24 CLI — `backup-worker/`)
-* **Hosting**: **Local Machine / Scheduled Cron Runner** (`make backup` / `backup-worker/main.go`).
+* **Deployment**: Docker image (`backup-worker/Dockerfile`) → run locally or as a scheduled cron (`make docker-backup`).
 * **Role**: Repository discovery, delta detection, and secure archiving.
 * **Key Features**:
   * **Incremental Sync**: Queries remote repository HEAD hashes via `git ls-remote` and compares with local SQLite state (`backup-worker/app.db`).
@@ -91,7 +111,7 @@ graph TD
 
 ---
 
-## 3. Vector Search & Tool-Calling RAG Pipeline
+## 4. Vector Search & Tool-Calling RAG Pipeline
 
 ```mermaid
 sequenceDiagram
@@ -131,7 +151,7 @@ sequenceDiagram
 
 ---
 
-## 4. Hybrid Search Architecture
+## 5. Hybrid Search Architecture
 
 The search engine implements a robust 3-stage retrieval pipeline:
 
@@ -149,7 +169,7 @@ The search engine implements a robust 3-stage retrieval pipeline:
 
 ---
 
-## 5. Database Schema & Migration Architecture
+## 6. Database Schema & Migration Architecture
 
 PostgreSQL serves as the central data store across all services. The Go backend and Python Observatory run idempotent versioned migrations:
 
@@ -169,13 +189,13 @@ PostgreSQL serves as the central data store across all services. The Go backend 
 * **`000002_embeddings_and_search`**: Extensions `vector` & `pg_trgm`, tables `embedding_generations`, `embedding_chunks`, `embedding_jobs`, `embedding_indexing_checkpoints`.
 * **`000003_normalize_schema_and_metadata`**: Normalized `ai_session_metadata` table, unique index on analytics `run_id`, empty string cleanup to SQL `NULL`.
 * **`000004_cleanup_stale_embeddings_and_errors`**: Obsolete generation pruning and failed job cleanup.
-* **`000005_deterministic_embedding_lifecycle`**: Dedicated `ai_session_metadata`, `backup_run_errors`, `backup_result_errors`, `backup_fix_commits`, `embedding_chunk_metadata`, `embedding_job_errors`, `investigation_errors`, `ai_tool_call_args`, and `ai_tool_call_errors` tables, primary key deduplication on `analytics_snapshots`, partial indexes for fast failure/error lookups (`idx_backup_results_status_failed`, `idx_backup_runs_status_failed`, `idx_investigations_status_failed`, `idx_ai_tool_calls_success_false`), commit hash indexes (`idx_backup_results_commit`, `idx_backup_fix_commits_hash`), and transactional blue-green promotion.
+* **`000005_deterministic_embedding_lifecycle`**: Dedicated error tables, primary key deduplication, partial indexes for fast failure/error lookups, commit hash indexes, and transactional blue-green promotion.
 
 ---
 
-## 6. Security & Deployment Constraints
+## 7. Security & Deployment Conventions
 
-* **No Docker / Containers in Production**: Deployment strictly relies on **Vercel** serverless functions and **Render** native Go execution.
 * **Non-Destructive Database Migrations**: All migrations must be idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`) and preserve historical data.
+* **Secrets never baked into images**: All Docker images read configuration exclusively from environment variables (via `env_file:` in Docker Compose or platform environment dashboards on Render/Vercel).
 * **Failover Resilience**: Multi-key rotation ensures continuous uptime against LLM provider rate limits.
-
+* **Minimal Attack Surface**: Backend uses `distroless/static` (no shell); Frontend uses non-root `nextjs` user; Observatory runs as default Python user.

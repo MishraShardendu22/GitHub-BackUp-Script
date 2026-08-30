@@ -1,0 +1,7 @@
+# backup-worker/.dockerignore
+_Repos/
+app.db
+.env
+.env.*
+*.md
+README*

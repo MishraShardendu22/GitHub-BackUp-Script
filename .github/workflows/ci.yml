@@ -96,3 +96,49 @@ jobs:
 
       - name: Run Next.js Build
         run: pnpm run build
+
+  docker-build:
+    name: Docker Image Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Backend Dockerfile builds
+        run: |
+          docker build \
+            -f backend/Dockerfile \
+            -t github-backup-backend:ci \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            .
+
+      - name: Verify Observatory Dockerfile builds
+        run: |
+          docker build \
+            -f agentic-observatory/Dockerfile \
+            -t github-backup-observatory:ci \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            agentic-observatory/
+
+      - name: Verify Frontend Dockerfile builds
+        run: |
+          docker build \
+            -f frontend/Dockerfile \
+            -t github-backup-frontend:ci \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            frontend/
+
+      - name: Verify Backup Worker Dockerfile builds
+        run: |
+          docker build \
+            -f backup-worker/Dockerfile \
+            -t github-backup-worker:ci \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            .

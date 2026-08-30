@@ -1,0 +1,12 @@
+# agentic-observatory/.dockerignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+.coverage
+reports/
+.env
+.env.*
+.vscode
+*.md
+test_*.py

@@ -1,0 +1,117 @@
+# ==============================================================================
+# GitHub Backup Automation System — Docker Compose
+# ==============================================================================
+# Orchestrates all four services for local development:
+#
+#   make docker-up    — start all web services (backend, observatory, frontend)
+#   make docker-down  — stop all containers
+#   make docker-build — build all images
+#   make docker-backup — run the backup worker once
+#
+# Services:
+#   backend      — Go Fiber v2 REST + WebSocket API  (port 8080)
+#   observatory  — Python FastAPI AI Observatory     (port 8000)
+#   frontend     — Next.js 16 Dashboard              (port 3000)
+#   backup-worker — Go CLI backup engine (profile: worker — opt-in only)
+#
+# Database:
+#   PostgreSQL runs on Neon (cloud managed) — not containerised.
+#   Set DATABASE_URL in each service's .env file.
+#
+# Usage:
+#   docker compose up              # start web services
+#   docker compose run --rm backup-worker  # run worker once
+# ==============================================================================
+
+services:
+  # ─── Go Fiber v2 Backend API ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: github-backup-backend:local
+    container_name: gbm-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - backend/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ─── Python FastAPI Agentic Observatory ──────────────────────────────────────
+  observatory:
+    build:
+      context: agentic-observatory
+      dockerfile: Dockerfile
+    image: github-backup-observatory:local
+    container_name: gbm-observatory
+    ports:
+      - "8000:8000"
+    env_file:
+      - agentic-observatory/.env
+    environment:
+      # Override GO_BACKEND_URL to use Docker internal network hostname
+      GO_BACKEND_URL: http://backend:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+
+  # ─── Next.js 16 Frontend Dashboard ───────────────────────────────────────────
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    image: github-backup-frontend:local
+    container_name: gbm-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # These point to the HOST-exposed ports so the browser (running on the
+      # host) can reach them. The frontend container itself has no direct
+      # service-to-service calls — all API calls are made from the browser.
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AGENT_URL: http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+      observatory:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Go CLI Backup Worker ─────────────────────────────────────────────────────
+  # The backup worker is a one-shot CLI that runs and exits.
+  # It is gated behind the "worker" profile so it does NOT start with
+  # `docker compose up`. Run it explicitly with:
+  #   docker compose run --rm backup-worker
+  # or:
+  #   make docker-backup
+  backup-worker:
+    build:
+      context: .
+      dockerfile: backup-worker/Dockerfile
+    image: github-backup-worker:local
+    container_name: gbm-backup-worker
+    env_file:
+      - backup-worker/.env
+    volumes:
+      # Persist cloned repositories across runs
+      - ./backup-worker/_Repos:/app/_Repos
+      # Persist SQLite state DB (incremental hash tracking)
+      - ./backup-worker/app.db:/app/app.db
+      # SSH keys for GitHub clone/push operations (read-only)
+      - ~/.ssh:/root/.ssh:ro
+    profiles:
+      - worker
