@@ -1,4 +1,4 @@
-.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean
+.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean install-hooks db-branch-list db-branch-staging db-branch-dev
 
 help:
 	@echo "======================================================================"
@@ -14,12 +14,16 @@ help:
 	@echo "  make typecheck    - Run Pyright (Python) and tsc (TypeScript) type checks"
 	@echo "  make format       - Auto-format Go and Frontend source code"
 	@echo "  make build        - Compile Go binaries and Next.js build"
-	@echo "  make hooks-install- Configure Git pre-commit hooks (.githooks)"
+	@echo "  make install-hooks- Configure Git pre-commit and pre-push hooks"
 	@echo "  make pre-commit   - Run full pre-commit validation pipeline"
 	@echo "  make git-clean    - Sync main branch, delete local feature branches, and run git gc"
+	@echo "  make db-branch-list    - List Neon PostgreSQL database branches"
+	@echo "  make db-branch-staging - Create or sync Neon staging database branch"
+	@echo "  make db-branch-dev     - Create or sync Neon development database branch"
 	@echo "  make backup-db    - Execute automated PostgreSQL backup"
 	@echo "  make restore-db   - Restore PostgreSQL from backup file"
 	@echo "======================================================================"
+
 
 dev:
 	@echo "Starting Go Backend (8080), Python Agent (8000), and Frontend (3000)..."
@@ -82,10 +86,22 @@ build:
 hooks-install:
 	@./scripts/install-hooks.sh
 
+install-hooks: hooks-install
+
 init-hooks: hooks-install
+
+db-branch-list:
+	@./scripts/neon-branch-manager.sh list
+
+db-branch-staging:
+	@./scripts/neon-branch-manager.sh sync-staging
+
+db-branch-dev:
+	@./scripts/neon-branch-manager.sh sync-dev
 
 pre-commit:
 	@PRECOMMIT_ALL=1 ./.githooks/pre-commit
+
 
 backup-db:
 	@echo "Executing PostgreSQL backup..."

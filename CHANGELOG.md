@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Production-Grade Automated CI/CD & Deployment Pipeline ([`.github/workflows/`](.github/workflows/)):
+  - `.github/workflows/ci.yml`: Parallel multi-runtime quality gates (Go 1.24 race tests & vet, Python 3.12 Pyright & agent tests, Node 22 Biome lint & Turbopack build, Docker Buildx cache validation).
+  - `.github/workflows/deploy.yml`: Automated continuous deployment pipeline that validates, builds, and pushes multi-tier container images to Docker Hub (`:latest`, `:sha-<sha>`, `:<version>`), auto-triggers Render container deployment via webhook/blueprint, and promotes Vercel production edge releases on `main` merge.
+- Neon Database Multi-Environment Branching Automation ([`scripts/neon-branch-manager.sh`](scripts/neon-branch-manager.sh)):
+  - Dedicated CLI script and Makefile targets (`db-branch-list`, `db-branch-staging`, `db-branch-dev`) for automated Neon database branching.
+  - Keeps production database untouched while enabling isolated staging and development branches.
+  - Added `.env.example`, `.env.staging.example`, and `.env.production.example` configuration templates.
+- Render Container Infrastructure Blueprint ([`render.yaml`](render.yaml)):
+  - Declares zero-touch Docker web service configuration on Render with automated health check `/health`, auto-deploy, and environment synchronization.
+- Vercel Serverless Configurations ([`frontend/vercel.json`](frontend/vercel.json), [`agentic-observatory/vercel.json`](agentic-observatory/vercel.json), [`agentic-observatory/api/index.py`](agentic-observatory/api/index.py)):
+  - Configured Next.js frontend and Python FastAPI observatory for production Vercel serverless deployments with SSE non-buffering headers (`X-Accel-Buffering: no`).
+- Intelligent Git Pre-Push & Secret Leak Gate ([`.githooks/pre-push`](.githooks/pre-push), [`.githooks/pre-commit`](.githooks/pre-commit)):
+  - Added secret and credential scanning preventing accidental leaks of API tokens or `.env` files.
+  - Added pre-push validation gate enforcing branch naming standards and preventing direct pushes to `main`.
+- Authenticated CLI Tooling & Automation Guide ([`.agents/skills/cli-tooling-guide/`](.agents/skills/cli-tooling-guide/SKILL.md)):
+  - Documented authenticated tooling (`gh`, `vercel`, `neonctl`, `docker`), CLI command patterns, recovery runbooks, and agent best practices.
 - Automatic Stale Embedding Pruning & Generation Lifecycle Optimization:
   - Added atomic purge of older generations (`DELETE FROM embedding_generations WHERE id != $1`) upon activation of a new generation, eliminating duplicate vector storage in PostgreSQL.
   - Added automatic cleanup of abandoned/empty `BUILDING` generations during `start_generation`.
@@ -64,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GitHub Automation Test Suite** ([`tests/github_automation_test.sh`](tests/github_automation_test.sh)):
   - 11 unit and integration tests validating YAML workflow schemas, issue forms, and dry-run label synchronizer.
 
+>>>>>>> main
 >>>>>>> main
 >>>>>>> main
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):

@@ -1,0 +1,25 @@
+# ==============================================================================
+# GitHub Backup Automation System — Render Infrastructure Blueprint
+# ==============================================================================
+# Declares infrastructure for Render Web Service deploying the Go Backend.
+# ==============================================================================
+
+services:
+  - type: web
+    name: github-backup-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: standard
+    region: oregon
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        sync: false
+      - key: INTERNAL_SECRET
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true

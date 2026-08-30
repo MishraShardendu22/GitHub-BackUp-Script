@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# GitHub Backup Automation System — Intelligent Pre-Push Gate
+# ==============================================================================
+# 1. Enforces canonical branch naming: <username>/<parent>/<feature>
+# 2. Blocks direct pushes to main / dev without a PR.
+# 3. Runs full pre-commit validation suite before network push.
+# ==============================================================================
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "${REPO_ROOT}"
+
+if [ -t 1 ]; then
+    BOLD="\033[1m"
+    RED="\033[1;31m"
+    GREEN="\033[1;32m"
+    YELLOW="\033[1;33m"
+    CYAN="\033[1;36m"
+    RESET="\033[0m"
+else
+    BOLD=""
+    RED=""
+    GREEN=""
+    YELLOW=""
+    CYAN=""
+    RESET=""
+fi
+
+if [ "${SKIP_HOOKS:-0}" = "1" ] || [ "${PREPUSH_BYPASS:-0}" = "1" ]; then
+    echo -e "${YELLOW}▲ [WARN] Pre-push hook bypassed via SKIP_HOOKS=1 or PREPUSH_BYPASS=1.${RESET}"
+    exit 0
+fi
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+echo -e "${CYAN}======================================================================${RESET}"
+echo -e "${BOLD}  GitHub Backup Automation System — Pre-Push Validation Gate${RESET}"
+echo -e "${CYAN}======================================================================${RESET}"
+echo -e "Inspecting current branch: ${BOLD}${CURRENT_BRANCH}${RESET}"
+
+# 1. Block direct push to main if not automated release
+if [ "${CURRENT_BRANCH}" = "main" ] && [ "${ALLOW_MAIN_PUSH:-0}" != "1" ]; then
+    echo -e "${RED}✖ [BLOCKED] Direct pushes to 'main' branch are prohibited.${RESET}"
+    echo -e "Please create a feature branch, commit your changes, and open a Pull Request."
+    echo -e "Example: git switch -c MishraShardendu22/main/<feature-name>"
+    exit 1
+fi
+
+# 2. Validate branch naming convention (allow main or <user>/<parent>/<feature>)
+if [ "${CURRENT_BRANCH}" != "main" ]; then
+    if ! [[ "${CURRENT_BRANCH}" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$ ]]; then
+        echo -e "${YELLOW}▲ [WARN] Branch name '${CURRENT_BRANCH}' does not strictly match canonical format: <username>/<parent>/<feature>${RESET}"
+    fi
+fi
+
+# 3. Run full pre-commit verification gate
+echo -e "\nRunning comprehensive pre-push verification gate..."
+PRECOMMIT_ALL=1 "${REPO_ROOT}/.githooks/pre-commit"
+
+echo -e "\n${GREEN}✔ Pre-Push Gate Passed! Proceeding with remote push.${RESET}"
+exit 0

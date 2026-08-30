@@ -20,34 +20,52 @@ A distributed backup automation and AI-driven telemetry observatory. The system 
 
 ---
 
-## Architecture & Deployment Model
+## Architecture & Zero-Touch Deployment Model
 
-The system is organized into modular services deployed across **Vercel** and **Render**:
+The system uses an automated **Docker-first CI/CD and deployment pipeline**:
+- **Continuous Integration**: GitHub Actions runs parallel quality gates (formatting, linting, tests, static typing, security scans, Docker buildx caching).
+- **Container Registry**: Automatically builds and publishes multi-tier Docker images to **Docker Hub** (`:latest`, `:sha-<sha>`, `:<version>`).
+- **Continuous Deployment**:
+  - **Go Backend**: Deployed as a Docker container on **Render** (via Render Blueprint / webhook deploy hooks).
+  - **Frontend & Observatory**: Deployed on **Vercel** Edge and Serverless runtimes.
+- **Database Branching**: **Neon PostgreSQL** with instant branch isolation (`production`, `staging`, `development`).
 
 ```mermaid
 graph TD
-    Client[Web Browser / User] -->|HTTPS| Frontend[Next.js Dashboard - Vercel]
-    Client -->|HTTPS| PythonAgent[Python Observatory - Vercel]
-    Client -->|HTTPS / WSS| GoBackend[Go Fiber Backend - Render]
+    Developer[Developer / Agent] -->|Git Push / Merge| GitHub[GitHub Main Repository]
+    GitHub -->|Trigger Workflow| CI[GitHub Actions CI/CD]
 
-    GoBackend -->|pgxpool / SQL| PG[(PostgreSQL + pgvector)]
-    PythonAgent -->|SQLAlchemy async| PG
-    PythonAgent -->|X-Internal-Secret| GoBackend
-    PythonAgent -->|HTTPS| OpenRouter[OpenRouter AI / Embeddings]
+    subgraph CI Quality & Build Pipeline
+        CI -->|Run Parallel Gates| Tests[Go Race Tests, Pyright, Biome, Turbopack]
+        CI -->|Build Multi-Arch Images| DockerHub[Docker Hub Container Registry]
+    end
 
-    Worker[Go CLI Worker] -->|Archives| GitRepos[Central Git Repository]
-    Worker -->|Log / Metrics| PG
+    subgraph Zero-Touch Continuous Deployments
+        DockerHub -->|Deploy Hook| Render[Render - Go Backend Container]
+        CI -->|Promote Release| VercelFE[Vercel - Next.js Frontend]
+        CI -->|Promote Release| VercelObs[Vercel - Python AI Observatory]
+    end
+
+    subgraph Database Multi-Environment Isolation
+        NeonProd[(Neon Database - production)]
+        NeonStaging[(Neon Database - staging)]
+        NeonDev[(Neon Database - development)]
+    end
+
+    Render -->|pgxpool| NeonProd
+    VercelObs -->|asyncpg| NeonProd
 ```
 
-### Components
+### Services & Deployment Infrastructure
 
-| Service | Technology | Hosting Platform | Description |
+| Subsystem | Technology Stack | Deployment Target | Container Registry / Live URL |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | Next.js 16, React 19, Tailwind CSS | **Vercel** | Interactive dashboard with real-time WebSocket feeds, analytics charts, and AI chat playground. |
-| **Observatory** | FastAPI, Python 3.12, SQLAlchemy, LangChain | **Vercel** | AI telemetry service with OpenRouter LLM integration, hybrid vector + full-text search, and automated reports. |
-| **Backend API** | Go 1.24, Fiber v2, pgxpool | **Render** | High-performance REST and WebSocket API with connection pooling, structured logging (`slog`), and versioned SQL migrations. |
-| **Worker Engine** | Go 1.24 CLI (`backup-worker/`) | **Local / Cron Worker** | Autonomous CLI backup engine with incremental SHA-HEAD verification, concurrency controls, and `.tar.gz` archiving. |
-| **Database** | PostgreSQL 16 + `pgvector` | **Cloud Managed DB** | Persistent relational storage for backup runs, execution logs, analytics snapshots, and embedding vectors. |
+| **Go Backend API** | Go 1.24, Fiber v2, pgxpool | **Render (Docker Web Service)** | `mishrashardendu22/github-backup-backend:latest` |
+| **Backup Worker** | Go 1.24 CLI, Git, SSH | **Local / Cron Container** | `mishrashardendu22/github-backup-worker:latest` |
+| **Next.js Frontend** | Next.js 16 (Turbopack), React 19, Tailwind v4 | **Vercel Production** | [`github.mishrashardendu22.is-a.dev`](https://github.mishrashardendu22.is-a.dev) |
+| **AI Observatory** | FastAPI, Python 3.12, LangChain, OpenRouter | **Vercel / Container** | `mishrashardendu22/github-backup-observatory:latest` |
+| **PostgreSQL DB** | PostgreSQL 16 + `pgvector` | **Neon Cloud Managed** | Instant branching (`production`, `staging`, `development`) |
+
 
 ---
 
