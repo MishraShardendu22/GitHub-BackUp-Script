@@ -175,6 +175,15 @@ run_review_analysis() {
         score=$((score - 30))
     fi
 
+    # 2b. CRITICAL: Check for Docker/container infrastructure violations (AGENTS.md Rule 1)
+    # This repo uses zero-containerization serverless deployment (Vercel + Render native runtimes)
+    local new_docker_files
+    new_docker_files=$(git diff origin/main..HEAD --name-only 2>/dev/null | grep -E "(^|/)Dockerfile$|(^|/)docker-compose(\.[a-z]+)?\.yml$|\.dockerignore$" || true)
+    if [ -n "${new_docker_files}" ]; then
+        blockers+=("🚨 [P0 Architecture] Docker/container files detected — violates AGENTS.md Rule 1. This project uses zero-containerization serverless deployment (Vercel + Render). Dockerfiles, docker-compose, and .dockerignore must NOT be introduced. Files: ${new_docker_files}")
+        score=$((score - 30))
+    fi
+
     # 3. Check for unhandled os.Getenv in Go code
     if git diff origin/main..HEAD -- '*.go' ':!backend/config/' ':!backup-worker/config/' ':!tests/' 2>/dev/null | grep -E "^\\+[^+].*os\\.Getenv\\(" >/dev/null 2>&1; then
         improvements+=("⚡ [P1 Maintainability] Direct os.Getenv() found outside centralized config extractor (backend/config/config.go).")
@@ -204,14 +213,25 @@ run_review_analysis() {
     printf "%b  Jules Code Review Evaluation Report: Score %d/100                   %b\n" "${BOLD}" "${score}" "${RESET}"
     printf "%b======================================================================%b\n\n" "${BOLD}" "${RESET}"
 
+    # Build dynamic status for architecture check
+    local arch_status arch_color
+    if echo "${blockers[*]}" 2>/dev/null | grep -q "P0 Architecture"; then
+        arch_status="✖ Docker/Container Files Detected (P0 BLOCKER)"
+        arch_color="${RED}"
+    else
+        arch_status="✔ Zero-Container Serverless Compliant"
+        arch_color="${GREEN}"
+    fi
+
     printf "  • Correctness & Logic      : %b✔ Verified%b\n" "${GREEN}" "${RESET}"
-    printf "  • Architecture Boundaries  : %b✔ Zero-Container Serverless Compliant%b\n" "${GREEN}" "${RESET}"
+    printf "  • Architecture Boundaries  : %b%s%b\n" "${arch_color}" "${arch_status}" "${RESET}"
     printf "  • Concurrency & Pools      : %b✔ Safe (pgxpool / asyncpg)%b\n" "${GREEN}" "${RESET}"
     printf "  • Security & Encryption    : %b✔ Zero Secrets Detected%b\n" "${GREEN}" "${RESET}"
     printf "  • Database Migrations      : %b✔ Idempotent & Non-Destructive%b\n" "${GREEN}" "${RESET}"
     printf "  • Testing & Coverage       : %b✔ 100%% Test Suite Passed%b\n" "${GREEN}" "${RESET}"
     printf "  • AI Agent Observability   : %b✔ Multi-Key OpenRouter Failover Active%b\n" "${GREEN}" "${RESET}"
     printf "  • Documentation & Skills   : %b✔ Synchronized%b\n\n" "${GREEN}" "${RESET}"
+
 
     if [ ${#blockers[@]} -gt 0 ]; then
         printf "%bBlocking Issues (P0):%b\n" "${RED}${BOLD}" "${RESET}"
@@ -320,6 +340,12 @@ if run_review_analysis "${PR_NUMBER}"; then
     printf "\n%b✔ Jules Review Loop completed: PR is 100%% ready for Tech Lead approval.%b\n\n" "${GREEN}${BOLD}" "${RESET}"
     exit 0
 else
+    if [ "${DRY_RUN}" = false ] && [ -n "${PR_NUMBER}" ] && command -v gh >/dev/null 2>&1; then
+        gh pr edit "${PR_NUMBER}" --add-label "status/blocked" \
+            --remove-label "status/jules-approved" \
+            --remove-label "status/ready-for-tech-lead" 2>/dev/null || true
+        log_warn "Applied label: status/blocked (P0 blockers prevent approval)"
+    fi
     if [ "${EVAL_ONLY}" = true ]; then
         log_info "Evaluation-only mode: stopping without automated remediation."
         exit 1

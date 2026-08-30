@@ -65,6 +65,16 @@ for path in sys.argv[1:]:
 
 assert_success "jules-ai-review-loop workflow has valid YAML syntax" validate_yaml .github/workflows/jules-ai-review-loop.yml
 
+# Test 5: Docker/container file detection check exists in review script
+assert_output_contains "review script contains Docker P0 check" "P0 Architecture" bash -c "grep -o 'P0 Architecture' scripts/jules-review-loop.sh"
+assert_output_contains "review script checks for docker-compose" "docker-compose" bash -c "grep -o 'docker-compose' scripts/jules-review-loop.sh"
+assert_output_contains "review script checks for Dockerfile pattern" "Dockerfile" bash -c "grep -o 'Dockerfile' scripts/jules-review-loop.sh"
+assert_output_contains "review script applies status/blocked on failure" "status/blocked" bash -c "grep -o 'status/blocked' scripts/jules-review-loop.sh"
+assert_output_contains "review script removes stale approved labels on block" "remove-label" bash -c "grep -o 'remove-label' scripts/jules-review-loop.sh"
+
+# Test 6: Architecture boundary display uses dynamic color logic
+assert_output_contains "review script uses dynamic architecture display" "arch_status" bash -c "grep -o 'arch_status' scripts/jules-review-loop.sh"
+
 printf "\n======================================================================\n"
 if [ "${FAIL_COUNT}" -eq 0 ]; then
     printf "\033[32m✔ All %d tests passed successfully!\033[0m\n" "${PASS_COUNT}"
