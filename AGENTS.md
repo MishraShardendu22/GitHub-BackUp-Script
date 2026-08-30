@@ -80,9 +80,11 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
   * *Rules*: Lowercase, hyphen-separated (kebab-case), concise, no timestamps, no random suffixes.
 * **Local Commits & Mandatory Signing**: Agents are permitted and encouraged to create local Git commits once all code quality and pre-commit checks pass. All commits MUST include the `-s` (sign-off) and `-S` (GPG signature) flags: `git commit -s -S -m "<type>(<scope>): <message>"`.
 * **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.
-* **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create`.
+* **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create` with `--assignee "@me"`, `--label "type/<type>,area/<subsystem>,status/ready-for-review"`, and a structured, visually professional body per `.github/PULL_REQUEST_TEMPLATE.md`.
 * **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or temporary feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
 * **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes or opening a PR.
+* **PR & Issue Automation**: GitHub Actions workflows `.github/workflows/pr-triage-and-labeler.yml` and `.github/workflows/issue-triage.yml` automatically manage assignees, type/area/size labels, and triage cards. See [`.agents/skills/github-pr-issue-automation/SKILL.md`](.agents/skills/github-pr-issue-automation/SKILL.md).
+
 
 ---
 
