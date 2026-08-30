@@ -59,24 +59,36 @@ When requested by the user to create a PR:
    ```bash
    git push -u origin <branch-name>
    ```
-3. Create the PR targeting `main`:
+3. Create the PR targeting `main` with auto-assignment and conventional labels:
    ```bash
    gh pr create \
      --base main \
      --head <branch-name> \
      --title "<type>(<scope>): <concise title>" \
+     --assignee "@me" \
+     --label "type/<type>,area/<subsystem>,status/ready-for-review" \
      --body "$(cat << 'EOF'
-   ## Summary of Changes
-   * <Bullet points describing what was implemented or fixed>
+   ## 🎯 Pull Request Overview
+   * <Concise executive summary of changes>
 
-   ## Testing & Verification
+   ### 🏗️ Subsystem Impact & Boundaries
+   | Subsystem | Impacted? | Description of Changes |
+   | :--- | :---: | :--- |
+   | **Go Backend (Fiber API & WebSockets)** | [x] | <details> |
+   | **Python Observatory (FastAPI & Agent)** | [ ] | N/A |
+   | **Next.js Frontend (Turbopack)** | [ ] | N/A |
+   | **Backup Worker CLI (SQLite)** | [ ] | N/A |
+
+   ### 🧪 Testing & Verification
    * [x] `make pre-commit` executed and passed all validations
    * [x] Unit, integration, and AI agent test suites passed (`make test`)
    * [x] Static type checking passed (Pyright & TypeScript)
    * [x] Production builds succeeded (Go binaries & Next.js Turbopack)
 
-   ## Documentation
-   * [x] Relevant documentation updated in `docs/`, `README.md`, and `CHANGELOG.md`
+   ### 🛡️ Security & Documentation
+   * [x] Verified zero credentials/secrets committed
+   * [x] Relevant agent skills (`.agents/skills/`) and docs updated
+   * [x] Release notes added to `CHANGELOG.md`
    EOF
    )"
    ```
@@ -87,4 +99,6 @@ When requested by the user to create a PR:
 
 Once the PR is opened:
 * Output the generated PR URL (e.g. `https://github.com/MishraShardendu22/github-backup-automation-system/pull/123`).
-* Summarize the base branch (`main`), head branch, and included commit range.
+* Summarize the base branch (`main`), head branch, assignees, labels, and included commit range.
+* See [`.agents/skills/github-pr-issue-automation/SKILL.md`](.agents/skills/github-pr-issue-automation/SKILL.md) for full visual formatting guidelines.
+
