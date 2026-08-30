@@ -233,7 +233,7 @@ func CountChunksForGeneration(ctx context.Context, generationID int) (int, error
 }
 
 // PromoteGenerationToActive transactionally transitions a generation to ACTIVE,
-// demoting any currently ACTIVE generation to RETIRED, and setting appropriate timestamps.
+// and deletes all other generations to ensure old embeddings/jobs are not stored.
 func PromoteGenerationToActive(ctx context.Context, generationID int) error {
 	tx, err := Pool.Begin(ctx)
 	if err != nil {
@@ -242,17 +242,6 @@ func PromoteGenerationToActive(ctx context.Context, generationID int) error {
 	defer tx.Rollback(ctx) // nolint:errcheck
 
 	now := time.Now().UTC()
-
-	// Demote current active generation if any
-	_, err = tx.Exec(ctx,
-		`UPDATE embedding_generations
-		 SET status = 'RETIRED', retired_at = $1
-		 WHERE status = 'ACTIVE' AND id != $2`,
-		now, generationID,
-	)
-	if err != nil {
-		return fmt.Errorf("demote active generation: %w", err)
-	}
 
 	// Promote new generation to active
 	tag, err := tx.Exec(ctx,
@@ -268,6 +257,15 @@ func PromoteGenerationToActive(ctx context.Context, generationID int) error {
 		return fmt.Errorf("generation %d not found", generationID)
 	}
 
+	// Delete all other generations (chunks and jobs cascade delete)
+	_, err = tx.Exec(ctx,
+		`DELETE FROM embedding_generations WHERE id != $1`,
+		generationID,
+	)
+	if err != nil {
+		return fmt.Errorf("purge old generations: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit promotion tx: %w", err)
 	}
@@ -275,16 +273,31 @@ func PromoteGenerationToActive(ctx context.Context, generationID int) error {
 	return nil
 }
 
-// PruneStaleGenerations deletes all RETIRED and FAILED generations.
+// PruneStaleGenerations deletes all non-active generations.
 // Chunks and jobs are automatically removed via ON DELETE CASCADE.
 func PruneStaleGenerations(ctx context.Context) (int64, error) {
 	tag, err := Pool.Exec(ctx,
-		`DELETE FROM embedding_generations WHERE status IN ('RETIRED', 'FAILED')`,
+		`DELETE FROM embedding_generations WHERE status != 'ACTIVE'`,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("prune stale generations: %w", err)
 	}
 	return tag.RowsAffected(), nil
+}
+
+// DeleteGeneration deletes a specific embedding generation by ID.
+func DeleteGeneration(ctx context.Context, id int) error {
+	tag, err := Pool.Exec(ctx,
+		`DELETE FROM embedding_generations WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("delete generation %d: %w", id, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("generation %d not found", id)
+	}
+	return nil
 }
 
 // PruneStaleEmbeddingJobs deletes failed jobs older than the specified duration.

@@ -705,20 +705,12 @@ async def _fail_job(job_id: int, message: str) -> None:
 # ---------------------------------------------------------------------------
 
 async def activate_generation(generation_id: int) -> bool:
-    """Transition a generation to ACTIVE, demoting the previous active generation to RETIRED,
-    and prune older retired/failed generations safely."""
+    """Transition a generation to ACTIVE, and purge all other older generations
+    (cascading deletion of unneeded embedding_chunks, metadata, and jobs)."""
     if async_session is None:
         return False
     async with async_session() as session:
-        # 1. Demote any existing ACTIVE generation to RETIRED
-        await session.execute(
-            text(
-                "UPDATE embedding_generations SET status = 'RETIRED', retired_at = NOW() "
-                "WHERE status = 'ACTIVE' AND id != :id"
-            ),
-            {"id": generation_id},
-        )
-        # 2. Activate the specified generation
+        # 1. Activate the specified generation
         await session.execute(
             text(
                 "UPDATE embedding_generations SET status = 'ACTIVE', activated_at = NOW(), "
@@ -727,11 +719,11 @@ async def activate_generation(generation_id: int) -> bool:
             ),
             {"id": generation_id},
         )
-        # 3. Transactionally delete older retired/failed generations (cascades deletion of old embedding_chunks & jobs)
+        # 2. Transactionally delete ALL other generations (cascades deletion of old embedding_chunks & jobs)
         await session.execute(
             text(
                 "DELETE FROM embedding_generations "
-                "WHERE id != :id AND status IN ('RETIRED', 'FAILED')"
+                "WHERE id != :id"
             ),
             {"id": generation_id},
         )
@@ -740,13 +732,13 @@ async def activate_generation(generation_id: int) -> bool:
 
 
 async def prune_stale_generations() -> dict[str, int]:
-    """Delete all non-active retired/failed generations and stale failed jobs to save database storage."""
+    """Delete all non-active generations and stale failed jobs to save database storage."""
     if async_session is None:
         return {"deleted_generations": 0, "deleted_jobs": 0}
     async with async_session() as session:
-        # 1. Delete all retired / failed generations (chunks and jobs cascade delete)
+        # 1. Delete all non-active generations (chunks and jobs cascade delete)
         gen_del = await session.execute(
-            text("DELETE FROM embedding_generations WHERE status IN ('RETIRED', 'FAILED')")
+            text("DELETE FROM embedding_generations WHERE status != 'ACTIVE'")
         )
         del_gens = int(getattr(gen_del, "rowcount", 0) or 0)
 
@@ -759,11 +751,37 @@ async def prune_stale_generations() -> dict[str, int]:
     return {"deleted_generations": del_gens, "deleted_jobs": del_jobs}
 
 
+async def delete_generation(generation_id: int) -> bool:
+    """Delete a specific embedding generation by ID, cascading chunk and job deletion."""
+    if async_session is None:
+        return False
+    async with async_session() as session:
+        res = await session.execute(
+            text("DELETE FROM embedding_generations WHERE id = :id"),
+            {"id": generation_id},
+        )
+        await session.commit()
+        return bool(getattr(res, "rowcount", 0))
+
+
 async def start_generation(model_id: str) -> dict:
-    """Start a new embedding generation: create it, scan sources, enqueue jobs."""
+    """Start a new embedding generation: create it, scan sources, enqueue jobs.
+    Prunes previous stale/empty building generations to prevent clutter."""
     model = await get_embedding_model(model_id)
     if not model:
         raise ValueError(f"Unknown embedding model: {model_id}")
+
+    if async_session is not None:
+        async with async_session() as session:
+            # Clean up any abandoned/empty building generations
+            await session.execute(
+                text(
+                    "DELETE FROM embedding_generations "
+                    "WHERE status != 'ACTIVE' AND (model_id != :model_id OR total_items = 0)"
+                ),
+                {"model_id": model_id},
+            )
+            await session.commit()
 
     gen_id = await get_or_create_generation(model_id, model.dimensions)
     stats = await scan_and_enqueue(gen_id)
@@ -775,6 +793,7 @@ async def start_generation(model_id: str) -> dict:
         "status": "BUILDING",
         **stats,
     }
+
 
 
 async def get_generation_status(generation_id: int | None = None) -> dict | None:

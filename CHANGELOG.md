@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Automatic Stale Embedding Pruning & Generation Lifecycle Optimization:
+  - Added atomic purge of older generations (`DELETE FROM embedding_generations WHERE id != $1`) upon activation of a new generation, eliminating duplicate vector storage in PostgreSQL.
+  - Added automatic cleanup of abandoned/empty `BUILDING` generations during `start_generation`.
+  - Added dedicated database migration `000006_prune_stale_embedding_generations.up.sql` to purge orphaned non-active generations and cascade delete stale `embedding_chunks` and `embedding_jobs`.
+  - Added `delete_generation` backend handler and `DELETE /embeddings/generations/{generation_id}` API endpoint.
+  - Added frontend `deleteGeneration` and `pruneStaleGenerations` methods in `searchService`.
 - Strict Professional Tone & Zero-Fluff Constraints in Agent System Prompts ([`agentic-observatory/agent/prompts.py`](agentic-observatory/agent/prompts.py)):
   - Enforced strict professional tone across AI agent responses: prohibition of emojis/decorative icons, elimination of conversational fluff and pleasantries (preamble/postamble), direct to-the-point technical synthesis.
   - Mandated structured Markdown breakdown, exact telemetry identifiers (commit SHAs, repository names, timestamps, error codes), and strict grounding in retrieved tool context without speculation or hallucination.
@@ -58,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GitHub Automation Test Suite** ([`tests/github_automation_test.sh`](tests/github_automation_test.sh)):
   - 11 unit and integration tests validating YAML workflow schemas, issue forms, and dry-run label synchronizer.
 
+>>>>>>> main
 >>>>>>> main
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).

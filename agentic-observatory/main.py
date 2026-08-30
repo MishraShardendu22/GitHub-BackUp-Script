@@ -992,6 +992,20 @@ async def activate_embedding_generation(
     )
 
 
+@app.delete("/embeddings/generations/{generation_id}")
+async def delete_embedding_generation(
+    generation_id: int,
+    current_user: str = Depends(get_current_user),
+):
+    success = await embedding_service.delete_generation(generation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Generation not found or failed to delete")
+    return success_response(
+        data={"generation_id": generation_id, "deleted": True},
+        message=f"Generation {generation_id} and its associated embeddings deleted",
+    )
+
+
 @app.post("/embeddings/prune")
 async def prune_stale_embeddings(
     current_user: str = Depends(get_current_user),
@@ -1001,6 +1015,7 @@ async def prune_stale_embeddings(
         data=result,
         message="Stale embedding generations and failed jobs pruned",
     )
+
 
 
 

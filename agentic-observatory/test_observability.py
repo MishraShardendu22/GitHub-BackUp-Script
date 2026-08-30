@@ -131,6 +131,34 @@ class TestObservabilityAndHardening(unittest.IsolatedAsyncioTestCase):
         long_chunks = chunk_text(long_text, max_length=100, overlap=20)
         self.assertGreater(len(long_chunks), 1)
 
+    async def test_generation_deletion_and_pruning_signatures(self):
+        from unittest.mock import AsyncMock, patch, MagicMock
+        import data.embeddings as emb
+
+        mock_res = MagicMock()
+        mock_res.rowcount = 1
+        mock_session = AsyncMock()
+        mock_session.execute = AsyncMock(return_value=mock_res)
+        mock_session.commit = AsyncMock()
+
+        class MockSessionContext:
+            async def __aenter__(self):
+                return mock_session
+            async def __aexit__(self, *args):
+                pass
+
+        with patch.object(emb, "async_session", return_value=MockSessionContext()):
+            res_del = await emb.delete_generation(123)
+            self.assertTrue(res_del)
+
+            res_prune = await emb.prune_stale_generations()
+            self.assertEqual(res_prune["deleted_generations"], 1)
+
+            res_act = await emb.activate_generation(123)
+            self.assertTrue(res_act)
+
+
 
 if __name__ == "__main__":
     unittest.main()
+
