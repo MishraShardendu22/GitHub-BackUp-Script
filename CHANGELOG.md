@@ -8,11 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
-  - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
-  - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
-  - Relocated and encapsulated `backup-worker/_Repos/` working tree and `backup-worker/app.db` local state.
-  - Updated all Go package import paths to `github.com/MishraShardendu22/github-backup/backup-worker/...`.
+- **Automated Remote Branch Deletion on PR Merge** ([`.github/workflows/pr-branch-cleanup.yml`](.github/workflows/pr-branch-cleanup.yml)):
+  - Automatically deletes remote feature branches upon Pull Request merge into `main`.
+- **Local Merged Branch & Stale Reference Cleaner** ([`scripts/git-sync-and-cleanup.sh`](scripts/git-sync-and-cleanup.sh)):
+  - Safe, automated cleaner that fetches with `--prune`, synchronizes `main`, identifies `: gone]` branches, and deletes merged feature branches locally.
+  - Added `make git-sync-clean` and enhanced `make git-clean` Makefile targets.
+- **Weekly Automated Local Git Maintenance & GC** ([`scripts/git-maintenance.sh`](scripts/git-maintenance.sh)):
+  - Performs repository garbage collection, dangling blob pruning, and packfile repacking (`make git-gc`, `make git-maintain`).
+  - Built-in `--install-cron` / `make git-maintain-install` to schedule automatic weekly local maintenance runs.
+- **Autonomous Documentation & Skill Synchronization Engine** ([`.agents/skills/doc-synchronization/SKILL.md`](.agents/skills/doc-synchronization/SKILL.md)):
+  - Codified the **Zero-Reminder Automatic Synchronization Rule**: all code, API, database, and workflow changes automatically trigger synchronization across relevant agent skills and markdown documentation before committing.
+- **Git Cleanup & Maintenance Test Suite** ([`tests/git_cleanup_test.sh`](tests/git_cleanup_test.sh)):
+  - Comprehensive unit and integration test suite covering dry-run operations, branch deletion in isolated fixtures, quiet execution, and status reporting.
+
 - Canonical Branch-First Development Workflow ([`BRANCHING.md`](BRANCHING.md)):
   - Established canonical hierarchical branch naming standard `<github-username>/<parent-branch>/<feature>`.
   - Deprecated Git worktrees across the project in favor of direct branch switching (`git switch -c`).

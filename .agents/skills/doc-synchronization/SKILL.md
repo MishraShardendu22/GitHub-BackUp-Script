@@ -1,73 +1,64 @@
 ---
 name: doc-synchronization
 description: >-
-  Rules and procedures for continuously keeping repository documentation, API references, architecture guides,
-  changelogs, and agent skills synchronized with code changes, and adding new docs when required.
+  High-priority rules and automated procedures for continuously keeping repository documentation, API references,
+  architecture guides, changelogs, and agent skills synchronized with code changes autonomously without requiring human reminders.
 ---
 
-# Documentation Synchronization & Maintenance Skill
+# Autonomous Documentation & Skill Synchronization Engine
 
-This skill ensures that whenever any changes are introduced to the codebase, all corresponding architectural documents, API references, READMEs, changelogs, and AI agent skills are automatically inspected, updated, and expanded.
+This skill establishes the **Zero-Reminder Automatic Synchronization Rule**: whenever ANY code, API, database schema, workflow, or architecture change is introduced or modified in the repository, all corresponding architectural documents, API references, READMEs, changelogs, and AI agent skills (`.agents/skills/`) MUST be automatically inspected, updated, and expanded by the agent **without requiring any prompting or reminders from the human user**.
 
-## 1. Branch-First Development
+---
+
+## 1. High-Priority Rule: Zero-Reminder Automatic Synchronization
 
 > [!IMPORTANT]
-> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
-> ```bash
-> git switch -c MishraShardendu22/main/<feature-name>
-> ```
-> Never develop docs or code directly on `main`.
+> **AUTONOMOUS DOCUMENTATION & SKILL UPDATES (No Human Prompting Needed)**:
+> * AI agents are strictly required to treat **Agent Skills (`.agents/skills/`)** and **Documentation (`docs/`, `README.md`, `CHANGELOG.md`)** as first-class codebase artifacts.
+> * Every feature addition (`feat`), improvement (`perf`/`refactor`), bug fix (`fix`), database migration (`db`), or DevOps pipeline (`ci`) MUST automatically trigger a synchronization pass across relevant skills and markdown specifications before finalizing commits.
+> * The human developer should **NEVER** have to ask: *"please update the docs"* or *"please update the agent skills"*. This is a mandatory, automated built-in reflex.
 
 ---
 
-## 2. When to Trigger Documentation Updates
+## 2. Subsystem-to-Skill & Documentation Synchronization Matrix
 
-Any of the following changes MUST trigger documentation synchronization:
+Whenever modifying files in any subsystem, the agent MUST automatically update the corresponding documentation and skill files:
 
-1. **Database & Schema Changes**:
-   * New SQL migrations, table creations, column modifications, or index additions.
-   * Updates to PostgreSQL schema constraints, lifecycle policies, or data models.
-2. **API & Endpoint Changes**:
-   * New REST routes, query parameters, request/response body schemas in Go Backend (`backend/handlers/`) or Python Observatory (`agentic-observatory/main.py`).
-   * WebSocket message formats or SSE event schemas.
-3. **Agent & AI Observability Changes**:
-   * New LangChain tools added under `agentic-observatory/data/tools/`.
-   * Changes to multi-key OpenRouter failover, embedding pipelines, or HITL protocols.
-4. **Configuration & Environment Variable Changes**:
-   * New environment variables or default settings added to `backend/config/`, `agentic-observatory/config/`, or `frontend/src/config/`.
-5. **Frontend Features & UI Capabilities**:
-   * New dashboard pages, analytics visualizers, or AI playground controls.
-
----
-
-## 2. Source-to-Documentation Mapping Matrix
-
-| Changed Subsystem | Primary Source Files | Target Documentation Files to Update |
+| Subsystem Modified | Source Locations | Required Documentation & Skill Updates |
 | :--- | :--- | :--- |
-| **Git Workflow & Branching** | `.githooks/`, `BRANCHING.md`, `WORKFLOW.md` | • [`BRANCHING.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/BRANCHING.md)<br>• [`WORKFLOW.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/WORKFLOW.md)<br>• [`docs/PRECOMMIT_WORKFLOW.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/PRECOMMIT_WORKFLOW.md)<br>• [`AGENTS.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/AGENTS.md)<br>• [`.agents/skills/git-branch-management/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/git-branch-management/SKILL.md)<br>• [`.agents/skills/git-commit-workflow/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/git-commit-workflow/SKILL.md)<br>• [`.agents/skills/pull-request-management/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/pull-request-management/SKILL.md) |
-| **Database & Migrations** | `backend/db/migrations/`, `backend/db/schema.sql`, `agentic-observatory/data/migrations/` | • [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md) (Migration Table)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md)<br>• [`.agents/skills/github-backup-architecture/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/github-backup-architecture/SKILL.md) |
-| **Backend & REST APIs** | `backend/handlers/`, `backend/routes/`, `backend/models/` | • [`docs/API_REFERENCE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/API_REFERENCE.md)<br>• [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`backend/README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/backend/README.md) |
-| **AI Observatory & RAG** | `agentic-observatory/agent/`, `agentic-observatory/data/`, `agentic-observatory/data/tools/` | • [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`agentic-observatory/README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/agentic-observatory/README.md)<br>• [`.agents/skills/agent-observatory-workflow/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/agent-observatory-workflow/SKILL.md) |
+| **Git Workflow & Branching** | `.githooks/`, `scripts/git-*.sh`, `.github/workflows/` | • [`.agents/skills/git-commit-workflow/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/git-commit-workflow/SKILL.md)<br>• [`.agents/skills/git-branch-management/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/git-branch-management/SKILL.md)<br>• [`.agents/skills/git-post-merge-cleanup/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/git-post-merge-cleanup/SKILL.md)<br>• [`AGENTS.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/AGENTS.md)<br>• [`docs/PRECOMMIT_WORKFLOW.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/PRECOMMIT_WORKFLOW.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **Database & Migrations** | `backend/db/migrations/`, `agentic-observatory/data/migrations/`, `scripts/neon-*.sh` | • [`.agents/skills/repository-maintenance/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/repository-maintenance/SKILL.md)<br>• [`.agents/skills/github-backup-architecture/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/github-backup-architecture/SKILL.md)<br>• [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md) (Migration Table)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **AI Observatory & RAG** | `agentic-observatory/agent/`, `agentic-observatory/data/tools/`, `agentic-observatory/utils/` | • [`.agents/skills/agent-observatory-workflow/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/agent-observatory-workflow/SKILL.md)<br>• [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`agentic-observatory/README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/agentic-observatory/README.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **SaaS Connectors & BYO Storage** | `backend/connectors/`, `backup-worker/storage/`, `agentic-observatory/connectors/` | • [`.agents/skills/saas-and-mcp-architecture/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/saas-and-mcp-architecture/SKILL.md)<br>• [`docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md)<br>• [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **Model Context Protocol (MCP)** | Native MCP Server, MCP tool handlers | • [`.agents/skills/saas-and-mcp-architecture/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/saas-and-mcp-architecture/SKILL.md)<br>• [`docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **Go Backend & REST APIs** | `backend/handlers/`, `backend/routes/`, `backend/models/` | • [`docs/API_REFERENCE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/API_REFERENCE.md)<br>• [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`backend/README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/backend/README.md) |
 | **CLI & Worker Engine** | `backup-worker/main.go`, `backup-worker/service/`, `backup-worker/config/` | • [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md)<br>• [`docs/ARCHITECTURE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/ARCHITECTURE.md)<br>• [`backup-worker/README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/backup-worker/README.md) |
-| **Frontend Dashboard** | `frontend/src/app/`, `frontend/src/services/` | • [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **Frontend & UI Dashboard** | `frontend/src/app/`, `frontend/src/components/`, `frontend/src/services/` | • [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
+| **CI/CD & Deployment** | `.github/workflows/`, `*Dockerfile`, `render.yaml`, `*vercel.json` | • [`.agents/skills/ci-cd-workflow/SKILL.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.agents/skills/ci-cd-workflow/SKILL.md)<br>• [`docs/DEPLOYMENT_GUIDE.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/docs/DEPLOYMENT_GUIDE.md)<br>• [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md)<br>• [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md) |
 
 ---
 
-## 3. Creating New Documentation & Skills
+## 3. Autonomous Skill Creation & Evolution Rule
 
-* **New Documentation Files (`docs/`)**:
-  * Create a new markdown file in `docs/` (e.g. `docs/DISASTER_RECOVERY.md`, `docs/TELEMETRY_GUIDE.md`) whenever a feature introduces a distinct operational domain that exceeds the scope of `ARCHITECTURE.md` or `API_REFERENCE.md`.
-  * Link the new document from [`README.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/README.md) under **Live Resources** or **Architecture & Deployment Model**.
-* **New Agent Skills (`.agents/skills/`)**:
-  * Create a new folder under `.agents/skills/<skill-name>/` containing `SKILL.md` whenever introducing a repeatable engineering workflow, architectural protocol, or deployment pattern that future AI agents need to follow.
+* **When to Create a New Agent Skill (`.agents/skills/<name>/SKILL.md`)**:
+  * Whenever introducing a new architectural pattern, operational domain, or subsystem that future AI agents must interact with or maintain (e.g. `saas-and-mcp-architecture`, `git-post-merge-cleanup`, `cli-tooling-guide`).
+  * Format: Include YAML frontmatter (`name`, `description`) and comprehensive operational guidelines, rules, and example commands.
+* **When to Update Existing Skills**:
+  * Whenever modifying runtime behaviors, adding flags to scripts, updating CLI commands, or changing deployment configurations.
+  * Keep skills concise, actionable, and strictly synchronized with the live implementation.
 
 ---
 
-## 4. Pre-Completion Documentation Checklist
+## 4. Pre-Commit Autonomous Synchronization Checklist
 
-Before finalizing any task or pushing commits, execute this 4-step checklist:
+Before executing `git commit` or finalizing any milestone, execute this 4-step checklist:
 
-1. **Review Diff**: Run `git diff --stat` to identify all modified code, config, and schema files.
-2. **Update Docs**: Check the Source-to-Documentation matrix and edit relevant `.md` files.
-3. **Log in Changelog**: Add concise, human-readable bullet points under `## [Unreleased]` in [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md).
-4. **Validate Skills**: Ensure all `.agents/skills/*/SKILL.md` files match the latest implementations.
+1. **Inspect Staged/Modified Files**:
+   ```bash
+   git status --short
+   ```
+2. **Cross-Reference Subsystem Matrix**: Identify all target docs and agent skills impacted by the modified files.
+3. **Apply Documentation & Skill Edits**: Update markdown files and skills with exact details.
+4. **Log in Changelog**: Add concise bullet points under `## [Unreleased]` in [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md).
+

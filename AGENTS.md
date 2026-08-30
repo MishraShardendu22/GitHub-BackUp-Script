@@ -88,24 +88,26 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ## 8. Post-Merge Repository & Branch Cleanup Protocol
 
-* **Strict Human-Triggered Cleanup Only**: Agents MUST NOT run local branch deletions or aggressive Git garbage collection automatically. Cleanup must be executed **ONLY** upon explicit human instruction (e.g. *"clean up local branches"*, *"sync main and do git gc"*, *"I merged the PR, please clean up"*).
-* **Cleanup Execution Sequence**:
-  1. Verify working directory is clean (`git status`).
-  2. Switch to `main` branch (`git switch main`).
-  3. Pull latest changes merged on GitHub (`git pull origin main`).
-  4. Prune stale remote tracking references (`git fetch --prune origin`).
-  5. Delete local merged feature branches (`git branch -d <branch>` / `git branch -D <branch>`) so that only `main` remains.
-  6. Expire unreachable reflogs (`git reflog expire --expire=now --all`).
-  7. Run deep repository garbage collection (`git gc --prune=now --aggressive` or `make git-clean`).
+* **Automated Remote Branch Deletion**: GitHub Actions workflow `.github/workflows/pr-branch-cleanup.yml` automatically deletes remote feature branches upon PR merge into `main`.
+* **Local Merged Branch Cleaner**: Use `scripts/git-sync-and-cleanup.sh` or `make git-sync-clean` / `make git-clean` to safely prune gone references and delete local merged branches.
+* **Weekly Automated Git Maintenance & GC**: Use `scripts/git-maintenance.sh` (`--aggressive`, `--install-cron`, `--status`) or `make git-gc` / `make git-maintain` to optimize local packfiles and expire dangling reflogs.
 * See [`.agents/skills/git-post-merge-cleanup/SKILL.md`](.agents/skills/git-post-merge-cleanup/SKILL.md).
 
 ---
 
-## 9. Verification Checklist
+## 9. Autonomous Skill & Documentation Synchronization
+
+* **Zero-Reminder Rule**: Whenever ANY new feature, endpoint, service, database migration, or architecture change is added or modified, the agent MUST **automatically and autonomously** update all relevant agent skills (`.agents/skills/`), architectural guides (`docs/`), `README.md`, and `CHANGELOG.md` before finalizing commits.
+* **No Human Prompting Needed**: Documentation and skill synchronization is a mandatory pre-commit reflex.
+* See [`.agents/skills/doc-synchronization/SKILL.md`](.agents/skills/doc-synchronization/SKILL.md).
+
+---
+
+## 10. Verification Checklist
 
 Before finishing any task, you MUST run:
 ```bash
-# 1. Run all unit, integration, and AI agent test suites
+# 1. Run all unit, integration, script, and AI agent test suites
 make test
 
 # 2. Run dedicated AI Agent & Tool-Calling RAG Test Suite
@@ -117,5 +119,6 @@ cd agentic-observatory && uv run --with pyright pyright
 # 4. Run Frontend lint and Turbopack build
 cd frontend && pnpm run lint && pnpm run build
 ```
+
 
 
