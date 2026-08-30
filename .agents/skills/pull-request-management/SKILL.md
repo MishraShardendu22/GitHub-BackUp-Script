@@ -18,6 +18,13 @@ This skill guides AI agents and contributors on how to create, format, and manag
 > * All work MUST be done on a dedicated local branch (`<github-username>/<parent-branch>/<feature>`). Never develop directly on `main`.
 
 > [!IMPORTANT]
+> **STRICT SINGLE OPEN PR RULE (CONSOLIDATION MANDATE)**:
+> * To prevent branch fragmentation, merge conflicts, and stale rebase overhead, there must be at most **ONE active open Pull Request** at any time.
+> * **Check First**: Before creating a branch or opening a PR, agents MUST run `gh pr list --state open`.
+> * **Consolidate if an open PR exists**: If an open PR already exists targeting `main`, DO NOT create a new PR or branch. Switch to the active PR's branch (`git checkout <branch>`), pull latest, apply all new changes and commits to that branch, push, and optionally update the existing PR's title/labels/body (`gh pr edit <N>`).
+> * **New PR Only When Fleet Is Clean**: Only create a new branch and open a new PR when `gh pr list --state open` returns zero open PRs.
+
+> [!IMPORTANT]
 > **EXPLICIT USER REQUEST REQUIRED**:
 > * AI agents MUST **NEVER** create Pull Requests automatically or as a default background action.
 > * Agents are only authorized to push branches and open Pull Requests when **specifically and explicitly instructed by the user** (e.g. *"create a PR to main"*).
