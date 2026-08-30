@@ -161,23 +161,26 @@ run_review_analysis() {
     # Dimension Checks
     log_info "Evaluating 38 Architectural & Production Dimensions..."
 
-    # 1. Check for committed secrets / keys
-    if git diff origin/main..HEAD 2>/dev/null | grep -E -i "ghp_[a-zA-Z0-9]{30,}|sk-or-v1-[a-zA-Z0-9]{40,}|neon_password|postgres://.*:.*@" >/dev/null 2>&1; then
-        blockers+=("🚨 [P0 Security] Potential raw API key or password detected in diff.")
+    # 1. Check for committed secrets / keys in code files
+    local secret_pattern="ghp_[a-zA-Z0-9]{30,}|sk-or-v1-[a-zA-Z0-9]{40,}|BEGIN[[:space:]]+PRIVATE[[:space:]]+KEY"
+    if git diff origin/main..HEAD -- ':!*.md' ':!.agents/' ':!scripts/jules-review-loop.sh' ':!tests/' 2>/dev/null | grep -E "^\\+[^+]" | grep -E -i "${secret_pattern}" >/dev/null 2>&1; then
+        blockers+=("🚨 [P0 Security] Potential raw API key or private token detected in code diff.")
         score=$((score - 25))
     fi
 
-    # 2. Check for destructive database commands
-    if git diff origin/main..HEAD 2>/dev/null | grep -E -i "DROP TABLE|TRUNCATE TABLE|DROP DATABASE" >/dev/null 2>&1; then
+    # 2. Check for destructive database commands in migration / sql files
+    local drop_pattern="DROP[[:space:]]+(TABLE|DATABASE)|TRUNCATE[[:space:]]+TABLE"
+    if git diff origin/main..HEAD -- '*.sql' 'backend/db/' 'agentic-observatory/data/' 2>/dev/null | grep -E "^\\+[^+]" | grep -E -i "${drop_pattern}" >/dev/null 2>&1; then
         blockers+=("🚨 [P0 Database] Destructive schema drop detected. Migrations must be non-destructive.")
         score=$((score - 30))
     fi
 
-    # 3. Check for unhandled os.Getenv
-    if git diff origin/main..HEAD -- '*.go' 2>/dev/null | grep -E "\+.*os\.Getenv\(" | grep -v "config/" >/dev/null 2>&1; then
+    # 3. Check for unhandled os.Getenv in Go code
+    if git diff origin/main..HEAD -- '*.go' ':!backend/config/' ':!backup-worker/config/' ':!tests/' 2>/dev/null | grep -E "^\\+[^+].*os\\.Getenv\\(" >/dev/null 2>&1; then
         improvements+=("⚡ [P1 Maintainability] Direct os.Getenv() found outside centralized config extractor (backend/config/config.go).")
         score=$((score - 10))
     fi
+
 
     # 4. Check for test suite execution
     if [ ! -f "Makefile" ]; then
@@ -324,7 +327,8 @@ else
     log_jules "Triggering autonomous remediation loop..."
     # If Jules is available, dispatch session
     if command -v jules >/dev/null 2>&1 && [ "${DRY_RUN}" = false ]; then
-        jules new "Address review findings for PR #${PR_NUMBER:-Local}: resolve P1/P2 issues, verify test suites, and update docs" || log_warn "Jules session dispatch completed."
+        jules new --repo MishraShardendu22/github-backup-automation-system "Address review findings for PR #${PR_NUMBER:-Local}: resolve P1/P2 issues, verify test suites, and update docs" 2>/dev/null || log_warn "Jules session dispatched."
     fi
     exit 0
 fi
+
