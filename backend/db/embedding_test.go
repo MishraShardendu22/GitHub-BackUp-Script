@@ -769,7 +769,7 @@ func TestChunkNullEmbedding(t *testing.T) {
 	}
 }
 
-// TestPromoteGenerationToActive verifies atomic promotion to ACTIVE and demotion of old active.
+// TestPromoteGenerationToActive verifies atomic promotion to ACTIVE and purging of old active generations.
 func TestPromoteGenerationToActive(t *testing.T) {
 	ctx := testSetup(t)
 
@@ -801,14 +801,54 @@ func TestPromoteGenerationToActive(t *testing.T) {
 		t.Fatalf("expected active generation %d, got %v", gen2, active2)
 	}
 
-	// Gen 1 should now be RETIRED
+	// Gen 1 should now be purged/deleted
 	g1, err := GetGenerationByID(ctx, gen1)
-	if err != nil || g1 == nil || g1.Status != models.GenerationStatusRetired {
-		t.Fatalf("expected gen 1 status RETIRED, got %v", g1)
+	if err != nil {
+		t.Fatalf("GetGenerationByID 1: %v", err)
+	}
+	if g1 != nil {
+		t.Fatalf("expected gen 1 to be purged after gen 2 promotion, got %v", g1)
 	}
 }
 
-// TestPruneStaleGenerations verifies that RETIRED/FAILED generations are pruned and cascade-delete chunks.
+// TestDeleteGeneration verifies explicit deletion of a generation and its cascading chunks.
+func TestDeleteGeneration(t *testing.T) {
+	ctx := testSetup(t)
+
+	gen, err := CreateGeneration(ctx, "model-to-delete", 1536)
+	if err != nil {
+		t.Fatalf("CreateGeneration: %v", err)
+	}
+
+	chunk := &models.EmbeddingChunk{
+		GenerationID: gen,
+		SourceType:   models.SourceTypeChatMessage,
+		SourceID:     "msg-del",
+		ChunkIndex:   0,
+		Content:      "delete chunk",
+		ContentHash:  contentHash("delete chunk"),
+		Embedding:    []float32{0.1, 0.2, 0.3},
+		Metadata:     map[string]interface{}{},
+	}
+	_, err = InsertChunk(ctx, chunk)
+	if err != nil {
+		t.Fatalf("InsertChunk: %v", err)
+	}
+
+	if err := DeleteGeneration(ctx, gen); err != nil {
+		t.Fatalf("DeleteGeneration: %v", err)
+	}
+
+	g, err := GetGenerationByID(ctx, gen)
+	if err != nil {
+		t.Fatalf("GetGenerationByID: %v", err)
+	}
+	if g != nil {
+		t.Fatalf("expected generation %d to be deleted, got %v", gen, g)
+	}
+}
+
+// TestPruneStaleGenerations verifies that non-active generations are pruned and cascade-delete chunks.
 func TestPruneStaleGenerations(t *testing.T) {
 	ctx := testSetup(t)
 

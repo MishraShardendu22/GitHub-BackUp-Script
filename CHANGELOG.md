@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Automatic Stale Embedding Pruning & Generation Lifecycle Optimization:
+  - Added atomic purge of older generations (`DELETE FROM embedding_generations WHERE id != $1`) upon activation of a new generation, eliminating duplicate vector storage in PostgreSQL.
+  - Added automatic cleanup of abandoned/empty `BUILDING` generations during `start_generation`.
+  - Added dedicated database migration `000006_prune_stale_embedding_generations.up.sql` to purge orphaned non-active generations and cascade delete stale `embedding_chunks` and `embedding_jobs`.
+  - Added `delete_generation` backend handler and `DELETE /embeddings/generations/{generation_id}` API endpoint.
+  - Added frontend `deleteGeneration` and `pruneStaleGenerations` methods in `searchService`.
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
   - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
