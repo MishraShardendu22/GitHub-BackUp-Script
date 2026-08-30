@@ -1,8 +1,8 @@
 ---
 name: git-commit-workflow
 description: >-
-  Rules, message formats, and strict permission boundaries for creating local Git commits.
-  Enforces the rule that AI agents commit locally but never push to remotes.
+  High-priority rules, message formats, and strict permission boundaries for creating frequent local Git commits.
+  Enforces that AI agents create granular, explanatory commits at each important milestone and commit locally.
 ---
 
 # Git Commit Workflow & Permission Boundary
@@ -11,7 +11,17 @@ This skill defines the commit standards, message format, validation requirements
 
 ---
 
-## 1. Mandatory Local Branch First
+## 1. High-Priority Rule: Frequent, Atomic & Explanatory Commits
+
+> [!IMPORTANT]
+> **COMMIT FREQUENTLY AT EACH LOGICAL STEP (More Commits = More Explanatory Work)**:
+> * AI agents MUST prioritize creating granular, atomic Git commits at **each important milestone** or distinct phase of work rather than bundling everything into one monolithic commit at the end.
+> * Each commit should encapsulate a single logical responsibility (e.g. creating Dockerfiles, configuring CI pipelines, database scripting, documentation updates).
+> * Granular commits make code reviews clear, bisecting simple, rollbacks safe, and capture explanatory architectural progress in the repository history.
+
+---
+
+## 2. Mandatory Local Branch First
  
 > [!IMPORTANT]
 > **ALWAYS CREATE A LOCAL BRANCH FIRST**:
@@ -24,15 +34,16 @@ This skill defines the commit standards, message format, validation requirements
 
 ---
 
-## 2. The Strict Push Permission Boundary
+## 3. The Strict Push Permission Boundary
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
 │                      AGENT DOMAIN                       │
 │                                                         │
-│  1. Modify files                                        │
+│  1. Modify files for current logical phase              │
 │  2. Run linters, type checks, and test suites           │
-│  3. Create LOCAL Git commit (git commit)                │
+│  3. Create LOCAL signed Git commit (git commit -s -S)   │
+│  4. Repeat steps 1-3 for each milestone                 │
 └────────────────────────────┬────────────────────────────┘
                              │
                   [HUMAN REVIEW BOUNDARY]
@@ -40,24 +51,25 @@ This skill defines the commit standards, message format, validation requirements
 ┌────────────────────────────▼────────────────────────────┐
 │                      HUMAN DOMAIN                       │
 │                                                         │
-│  4. Human inspects git diff and git log                 │
-│  5. Human decides whether to push or request changes    │
-│  6. Human executes git push origin <branch>             │
+│  5. Human inspects git diff and git log                 │
+│  6. Human decides whether to push or request changes    │
+│  7. Human executes git push origin <branch>             │
 └─────────────────────────────────────────────────────────┘
 ```
 
 > [!CAUTION]
 > **PUSH & PULL REQUEST PERMISSION BOUNDARY**:
-> * Agents are **permitted** to create local Git commits (`git commit`).
-> * Agents must **never** run `git push` or create Pull Requests automatically.
+> * Agents are **permitted and encouraged** to create local Git commits (`git commit -s -S`).
+> * Agents must **never** run `git push` or create Pull Requests automatically without explicit user instruction.
 > * Pushing to remote and opening a Pull Request is permitted **ONLY when explicitly requested by the human user** (e.g. *"create a PR to main"*).
 > * All Pull Requests must target **`main`** only (never `dev`).
 
 ---
 
-## 2. Pre-Commit Validation Checklist
+## 4. Pre-Commit Validation Checklist
 
 Before staging files or creating a local commit, the agent/developer MUST ensure all validations pass:
+
 
 ```bash
 # 1. Run the unified pre-commit validation gate

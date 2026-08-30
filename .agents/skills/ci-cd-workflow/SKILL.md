@@ -2,54 +2,48 @@
 name: ci-cd-workflow
 description: >-
   Rules, architectures, and guidelines for maintaining GitHub Actions CI/CD workflows,
-  managing deployment boundaries on Vercel and Render, and ensuring zero-containerization compliance.
+  Docker Hub image publishing, Render & Vercel automated deployments, and Neon database branching.
 ---
 
 # CI/CD & Deployment Architecture Skill
 
-This skill guides AI agents and contributors in maintaining GitHub Actions CI pipelines and adhering to the serverless and managed hosting architecture of the **GitHub Backup Automation System**.
+This skill guides AI agents and contributors in maintaining GitHub Actions CI/CD pipelines, Docker Hub container publishing, and automated zero-touch deployments across Vercel and Render for the **GitHub Backup Automation System**.
 
-## 1. Branch-First Development
+## 1. Branch-First Development & Commit Cadence
 
 > [!IMPORTANT]
-> **CREATE A LOCAL BRANCH FIRST**: Always start by creating a local branch from `main`:
+> **CREATE A LOCAL BRANCH FIRST & COMMIT FREQUENTLY**:
+> Always start by creating a local branch from `main`:
 > ```bash
 > git switch -c MishraShardendu22/main/<feature-name>
 > ```
-> Never make changes directly on `main`.
+> Commit at each logical milestone (`more commits = more explanatory work`). Never commit directly on `main`.
 
 ---
 
-## 2. Deployment Boundaries & Hosting Targets
+## 2. Deployment Boundaries & Automated Pipeline
 
 ```text
 ┌───────────────────────────┐      ┌───────────────────────────┐
 │     Next.js Frontend      │      │    Python Observatory     │
-│   (Vercel App Router)     │      │   (Vercel FastAPI App)    │
+│  (Vercel Production Edge) │      │   (Vercel Serverless /)   │
 └─────────────┬─────────────┘      └─────────────┬─────────────┘
               │                                  │
               └───────────────┬──────────────────┘
                               │
               ┌───────────────▼──────────────────┐
               │          Go Backend API          │
-              │       (Render Web Service)       │
+              │    (Render Container Service)    │
+              │  (Auto-Deployed from Docker Hub) │
               └───────────────┬──────────────────┘
                               │
               ┌───────────────▼──────────────────┐
               │     PostgreSQL 16 + pgvector     │
-              │          (Neon Managed)          │
+              │    (Neon Database Branching)     │
+              │  [production, staging, dev]      │
               └──────────────────────────────────┘
 ```
 
-> [!CAUTION]
-> **STRICT ARCHITECTURE BOUNDARY**:
-> Do **NOT** introduce Dockerfiles, `docker-compose.yml`, Kubernetes manifests, Helm charts, Nginx configs, Prometheus/Grafana containers, or container registries. All services are deployed directly onto Vercel and Render native runtimes.
-
----
-
-## 2. GitHub Actions CI Matrix (`.github/workflows/ci.yml`)
-
-The CI workflow triggers on every `push` and `pull_request` against `main`:
 
 ```yaml
 jobs:

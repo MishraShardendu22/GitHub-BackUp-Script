@@ -4,14 +4,16 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ---
 
-## 1. Architecture & Deployment Boundaries
+## 1. Architecture, Containerization & Deployment Boundaries
 
-* **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel**.
-* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel**.
-* **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render**.
-* **Backup Worker**: Go CLI -> Dedicated `backup-worker/` directory (Local / Scheduled Cron via `make backup`).
+* **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel** (`frontend/Dockerfile` for local/container dev).
+* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel** (`agentic-observatory/Dockerfile` for local/container dev).
+* **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render** as a Docker Container from Docker Hub / GitHub CI.
+* **Backup Worker**: Go CLI -> Dedicated `backup-worker/` container (`backup-worker/Dockerfile` / local cron).
+* **Container Registry**: **Docker Hub** publishes versioned tags (`:sha-<sha>`, `:<semver>`) and `:latest`.
+* **Database**: Cloud-managed **Neon PostgreSQL** with branch isolation (`production`, `staging`, `development`).
+* **Authenticated Tooling**: `gh`, `vercel`, `neonctl`, `docker` are configured and authenticated. Prefer CLI interfaces.
 
-> **CRITICAL RULE**: Do **NOT** introduce Docker, Docker Compose, Kubernetes, Helm, Nginx, Prometheus servers, Grafana containers, or container registries. All deployments use serverless Vercel and Render native runtimes.
 
 ---
 
