@@ -1,0 +1,96 @@
+# ==============================================================================
+# GitHub Actions — Issue Auto-Triage, Labeling & Assignee Automation
+# ==============================================================================
+name: "Issue Auto-Triage"
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage-issue:
+    name: "Issue Auto-Assign & Triage"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Triage Issue"
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = issue.number;
+
+            core.info(`Triaging Issue #${issueNumber}: ${issue.title}`);
+
+            // 1. Auto-Assign to issue creator or repository owner
+            if (!issue.assignees || issue.assignees.length === 0) {
+              const assignee = issue.user.login || owner;
+              try {
+                await github.rest.issues.addAssignees({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  assignees: [assignee]
+                });
+                core.info(`Assigned Issue #${issueNumber} to @${assignee}`);
+              } catch (err) {
+                core.warning(`Could not assign issue: ${err.message}`);
+              }
+            }
+
+            const labelsToAdd = new Set();
+            const title = issue.title.toLowerCase();
+
+            // 2. Classify by title hints
+            if (title.includes('bug') || title.includes('fix') || title.includes('error') || title.includes('panic') || title.includes('crash')) {
+              labelsToAdd.add('type/fix');
+            } else if (title.includes('feat') || title.includes('add') || title.includes('support') || title.includes('connector')) {
+              labelsToAdd.add('type/feat');
+            } else if (title.includes('doc') || title.includes('readme') || title.includes('guide')) {
+              labelsToAdd.add('type/docs');
+              labelsToAdd.add('area/documentation');
+            } else if (title.includes('perf') || title.includes('speed') || title.includes('optimize')) {
+              labelsToAdd.add('type/perf');
+            }
+
+            // 3. Subsystem classification
+            if (title.includes('frontend') || title.includes('ui') || title.includes('next.js')) {
+              labelsToAdd.add('area/frontend');
+            }
+            if (title.includes('backend') || title.includes('fiber') || title.includes('api')) {
+              labelsToAdd.add('area/backend');
+            }
+            if (title.includes('agent') || title.includes('rag') || title.includes('observatory') || title.includes('openrouter')) {
+              labelsToAdd.add('area/observatory');
+            }
+            if (title.includes('worker') || title.includes('backup') || title.includes('sqlite')) {
+              labelsToAdd.add('area/backup-worker');
+            }
+            if (title.includes('database') || title.includes('migration') || title.includes('postgres') || title.includes('pgvector')) {
+              labelsToAdd.add('area/database');
+            }
+            if (title.includes('ci') || title.includes('docker') || title.includes('action') || title.includes('deploy')) {
+              labelsToAdd.add('area/ci-cd');
+            }
+
+            // Apply labels if any detected
+            if (labelsToAdd.size > 0) {
+              const labelArray = Array.from(labelsToAdd);
+              core.info(`Applying labels to Issue #${issueNumber}: ${labelArray.join(', ')}`);
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels: labelArray
+                });
+              } catch (err) {
+                core.warning(`Could not apply labels: ${err.message}`);
+              }
+            }

@@ -1,0 +1,44 @@
+name: "📋 Engineering Task & Maintenance"
+description: "Track an engineering task, optimization, refactoring, or maintenance item"
+title: "task(<subsystem>): [Concise task description]"
+labels: ["type/refactor"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to track engineering refactoring, performance optimizations, or maintenance tasks.
+
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: "Subsystem"
+      description: "Select which component this task addresses"
+      options:
+        - "Backend (Go Fiber REST API / WebSocket Hub)"
+        - "Python Observatory (FastAPI / LangChain Agent / pgvector)"
+        - "Frontend (Next.js 16 App Router / Tailwind CSS)"
+        - "Backup Worker CLI (Go SQLite Engine)"
+        - "Database & Migrations"
+        - "CI/CD & DevOps Automation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: task_description
+    attributes:
+      label: "Task Details"
+      description: "Detailed description of what needs to be refactored, optimized, or maintained."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: "Checklist of criteria that must be satisfied for completion."
+      value: |
+        - [ ] All unit and integration tests pass (`make test`)
+        - [ ] Static type check and linter pass (`make lint && make typecheck`)
+        - [ ] Documentation and Agent Skills updated (`.agents/skills/`)
+    validations:
+      required: true

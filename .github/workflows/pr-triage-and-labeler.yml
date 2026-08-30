@@ -1,0 +1,138 @@
+# ==============================================================================
+# GitHub Actions — Pull Request Auto-Triage, Labeler & Assignee Automation
+# ==============================================================================
+name: "PR Auto-Triage & Labeler"
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  triage-pr:
+    name: "PR Triage & Conventional Labeling"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Auto-Assign & Label PR"
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = pr.number;
+
+            core.info(`Triaging Pull Request #${prNumber}: ${pr.title}`);
+
+            // 1. Auto-Assignee: Assign to author or repo owner if unassigned
+            if (!pr.assignees || pr.assignees.length === 0) {
+              const assignee = pr.user.login || owner;
+              try {
+                await github.rest.issues.addAssignees({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  assignees: [assignee]
+                });
+                core.info(`Assigned PR #${prNumber} to @${assignee}`);
+              } catch (err) {
+                core.warning(`Could not assign PR: ${err.message}`);
+              }
+            }
+
+            const labelsToAdd = new Set();
+
+            // 2. Conventional Title / Type Labeler
+            const title = pr.title.trim();
+            const typeMatch = title.match(/^([a-zA-Z0-9_-]+)(\([^)]+\))?!?:/);
+            if (typeMatch) {
+              const prefix = typeMatch[1].toLowerCase();
+              const typeMap = {
+                'feat': 'type/feat',
+                'fix': 'type/fix',
+                'perf': 'type/perf',
+                'refactor': 'type/refactor',
+                'docs': 'type/docs',
+                'db': 'type/db',
+                'ci': 'type/ci',
+                'deploy': 'type/ci',
+                'test': 'type/test',
+                'ui': 'type/ui',
+                'style': 'type/ui'
+              };
+              if (typeMap[prefix]) {
+                labelsToAdd.add(typeMap[prefix]);
+              }
+            }
+
+            // 3. PR Size Labeler based on additions and deletions
+            const totalLinesChanged = (pr.additions || 0) + (pr.deletions || 0);
+            let sizeLabel = 'size/XS';
+            if (totalLinesChanged >= 1000) {
+              sizeLabel = 'size/XL';
+            } else if (totalLinesChanged >= 500) {
+              sizeLabel = 'size/L';
+            } else if (totalLinesChanged >= 250) {
+              sizeLabel = 'size/M';
+            } else if (totalLinesChanged >= 50) {
+              sizeLabel = 'size/S';
+            }
+            labelsToAdd.add(sizeLabel);
+
+            // 4. Path-Based Subsystem Area Labeler
+            try {
+              const filesResponse = await github.rest.pulls.listFiles({
+                owner,
+                repo,
+                pull_number: prNumber,
+                per_page: 100
+              });
+              
+              const files = filesResponse.data.map(f => f.filename);
+              for (const file of files) {
+                if (file.startsWith('frontend/')) {
+                  labelsToAdd.add('area/frontend');
+                } else if (file.startsWith('backend/')) {
+                  labelsToAdd.add('area/backend');
+                } else if (file.startsWith('agentic-observatory/')) {
+                  labelsToAdd.add('area/observatory');
+                } else if (file.startsWith('backup-worker/')) {
+                  labelsToAdd.add('area/backup-worker');
+                } else if (file.startsWith('.github/') || file.startsWith('scripts/') || file === 'Makefile') {
+                  labelsToAdd.add('area/ci-cd');
+                } else if (file.startsWith('docs/') || file.startsWith('.agents/skills/') || file.endsWith('.md')) {
+                  labelsToAdd.add('area/documentation');
+                }
+              }
+            } catch (err) {
+              core.warning(`Could not fetch PR files: ${err.message}`);
+            }
+
+            // Default ready for review status
+            if (!pr.draft) {
+              labelsToAdd.add('status/ready-for-review');
+            } else {
+              labelsToAdd.add('status/in-progress');
+            }
+
+            // 5. Apply All Resolved Labels
+            if (labelsToAdd.size > 0) {
+              const labelArray = Array.from(labelsToAdd);
+              core.info(`Applying labels to PR #${prNumber}: ${labelArray.join(', ')}`);
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  labels: labelArray
+                });
+                core.info(`Labels successfully applied.`);
+              } catch (err) {
+                core.warning(`Could not apply labels: ${err.message}`);
+              }
+            }
