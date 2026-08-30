@@ -4,14 +4,16 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 
 ---
 
-## 1. Architecture & Deployment Boundaries
+## 1. Architecture, Containerization & Deployment Boundaries
 
-* **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel**.
-* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel**.
-* **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render**.
-* **Backup Worker**: Go CLI -> Dedicated `backup-worker/` directory (Local / Scheduled Cron via `make backup`).
+* **Frontend**: Next.js 16 (App Router, Turbopack) -> Deployed on **Vercel** (`frontend/Dockerfile` for local/container dev).
+* **Python Observatory**: FastAPI + LangChain Tool-Calling RAG Agent + pgvector Hybrid Search -> Deployed on **Vercel** (`agentic-observatory/Dockerfile` for local/container dev).
+* **Go Backend**: Fiber v2 + pgxpool -> Deployed on **Render** as a Docker Container from Docker Hub / GitHub CI.
+* **Backup Worker**: Go CLI -> Dedicated `backup-worker/` container (`backup-worker/Dockerfile` / local cron).
+* **Container Registry**: **Docker Hub** publishes versioned tags (`:sha-<sha>`, `:<semver>`) and `:latest`.
+* **Database**: Cloud-managed **Neon PostgreSQL** with branch isolation (`production`, `staging`, `development`).
+* **Authenticated Tooling**: `gh`, `vercel`, `neonctl`, `docker` are configured and authenticated. Prefer CLI interfaces.
 
-> **CRITICAL RULE**: Do **NOT** introduce Docker, Docker Compose, Kubernetes, Helm, Nginx, Prometheus servers, Grafana containers, or container registries. All deployments use serverless Vercel and Render native runtimes.
 
 ---
 
@@ -79,10 +81,21 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
   * `<feature>`: Concise kebab-case description of the feature or fix (e.g. `database-auto-sync`, `precommit-workflow`, `branch-first-migration`).
   * *Rules*: Lowercase, hyphen-separated (kebab-case), concise, no timestamps, no random suffixes.
 * **Local Commits & Mandatory Signing**: Agents are permitted and encouraged to create local Git commits once all code quality and pre-commit checks pass. All commits MUST include the `-s` (sign-off) and `-S` (GPG signature) flags: `git commit -s -S -m "<type>(<scope>): <message>"`.
+* **Commit Design Taxonomy (Categorized Commits Only)**: AI agents and human contributors MUST classify commits strictly under the designated commit categories (see `.agents/skills/git-commit-workflow/SKILL.md`):
+  * `feat(<scope>)`: Feature addition (new capability, endpoint, service).
+  * `perf(<scope>)`: Performance optimization (caching, query/vector latency reduction).
+  * `refactor(<scope>)`: Structural improvement without functional behavior change.
+  * `fix(<scope>)`: Bug fix and error resolution (runtime fix, edge cases).
+  * `ui(<scope>)` / `style(<scope>)`: UI and visual design (Tailwind, components, themes, layouts).
+  * `ci(<scope>)` / `feat(deploy)`: CI/CD, Docker containerization, and DevOps workflows.
+  * `db(<scope>)`: Database schemas, idempotent migrations, and pgvector definitions.
+  * `test(<scope>)`: Unit tests, mock servers, and AI agent evaluation test suites.
+  * `docs(<scope>)`: Documentation, architecture blueprints, agent skills, and changelogs.
 * **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.
 * **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create`.
 * **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or temporary feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
 * **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes or opening a PR.
+
 
 ---
 
