@@ -1,8 +1,8 @@
-name: CI Pipeline
+name: Continuous Integration & Quality Gate
 
 on:
   push:
-    branches: [ main ]
+    branches-ignore: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -11,8 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ----------------------------------------------------------------------------
+  # 1. Backend & Worker Validation (Go 1.24)
+  # ----------------------------------------------------------------------------
   backend-test:
-    name: Go Backend Test & Build
+    name: Go Backend & Worker (Vet, Test, Build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,17 +24,26 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
           cache: true
 
-      - name: Run Go Tests
+
+      - name: Run Go Vet
+        run: go vet ./...
+
+      - name: Run Go Unit Tests with Race Detector
         run: go test -v -race ./...
 
-      - name: Build Go Binaries
-        run: go build -v ./...
+      - name: Compile Backend & Worker Binaries
+        run: |
+          go build -v -o /tmp/server ./backend/main.go
+          go build -v -o /tmp/worker ./backup-worker/main.go
 
+  # ----------------------------------------------------------------------------
+  # 2. Python Observatory & AI Agent Validation (Python 3.12 + uv)
+  # ----------------------------------------------------------------------------
   observatory-test:
-    name: Python Observatory Test & Lint
+    name: Python Observatory (Pyright & AI Agent Suite)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -54,20 +66,26 @@ jobs:
       - name: Install Dependencies
         run: uv sync
 
-      - name: Run Observatory Unit Tests
+      - name: Run Pyright Static Type Check
+        run: uv run --with pyright pyright
+
+      - name: Run AI Agent & Observatory Test Suite
         env:
-          GO_BACKEND_URL: http://localhost:8080
-          OPENROUTER_API_KEY: ci-test-key
-          INTERNAL_SECRET: ci-internal-secret
-          JWT_SECRET: ci-jwt-secret
+          GO_BACKEND_URL: ${{ vars.GO_BACKEND_URL || 'http://localhost:8080' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || 'ci-mock-pool-key-a,ci-mock-pool-key-b' }}
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET || 'ci-mock-internal-secret-min-32-chars' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-mock-jwt-secret-min-32-chars-key' }}
         run: |
           uv run python test_observability.py
           uv run python test_openrouter_keys.py
           uv run python test_agent_template.py
           uv run python test_agent_suite.py
 
+  # ----------------------------------------------------------------------------
+  # 3. Next.js Frontend Validation (Node 22 + pnpm + Biome)
+  # ----------------------------------------------------------------------------
   frontend-test:
-    name: Frontend Lint & Build
+    name: Frontend (Biome Lint & Next.js Build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -84,15 +102,68 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
           cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Biome Linter
+      - name: Run Biome Linter & Formatter Check
         run: pnpm run lint
 
-      - name: Run Next.js Build
+      - name: Run Next.js Turbopack Production Build
         run: pnpm run build
+
+  # ----------------------------------------------------------------------------
+  # 4. Docker Build & Cache Verification (Docker Buildx)
+  # ----------------------------------------------------------------------------
+  docker-build-verification:
+    name: Docker Image Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Go Backend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          tags: github-backup-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Backup Worker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backup-worker/Dockerfile
+          push: false
+          tags: github-backup-worker:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Python Observatory Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: agentic-observatory/Dockerfile
+          push: false
+          tags: github-backup-observatory:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Next.js Frontend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          tags: github-backup-frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

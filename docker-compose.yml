@@ -1,0 +1,101 @@
+services:
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL with pgvector (Local Development Database)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: github-backup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-github_backup}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 2. Go Backend API (Fiber v2 REST & WebSocket)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: github-backup-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}
+      PORT: "8080"
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-internal-secret-min-32-chars-long}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-min-32-chars-long}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # 3. Python AI Observatory (FastAPI + LangChain Tool-Calling RAG)
+  # ----------------------------------------------------------------------------
+  agentic-observatory:
+    build:
+      context: .
+      dockerfile: agentic-observatory/Dockerfile
+    container_name: github-backup-observatory
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}
+      GO_BACKEND_URL: http://backend:8080
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-internal-secret-min-32-chars-long}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-min-32-chars-long}
+      PORT: "8000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # 4. Next.js Frontend Dashboard (Turbopack + Tailwind v4)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: github-backup-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AI_AGENT_URL: http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # 5. Backup Worker CLI (Autonomous Engine)
+  # ----------------------------------------------------------------------------
+  backup-worker:
+    build:
+      context: .
+      dockerfile: backup-worker/Dockerfile
+    container_name: github-backup-worker
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      BACKUP_DIR: /tmp/github-backups
+    volumes:
+      - backups_data:/tmp/github-backups
+    profiles:
+      - tools
+
+volumes:
+  pgdata:
+  backups_data:
