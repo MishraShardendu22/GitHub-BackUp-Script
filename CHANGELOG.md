@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Strict Professional Tone & Zero-Fluff Constraints in Agent System Prompts ([`agentic-observatory/agent/prompts.py`](agentic-observatory/agent/prompts.py)):
+  - Enforced strict professional tone across AI agent responses: prohibition of emojis/decorative icons, elimination of conversational fluff and pleasantries (preamble/postamble), direct to-the-point technical synthesis.
+  - Mandated structured Markdown breakdown, exact telemetry identifiers (commit SHAs, repository names, timestamps, error codes), and strict grounding in retrieved tool context without speculation or hallucination.
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
   - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
