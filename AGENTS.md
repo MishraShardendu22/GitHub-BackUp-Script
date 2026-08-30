@@ -92,7 +92,11 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
   * `test(<scope>)`: Unit tests, mock servers, and AI agent evaluation test suites.
   * `docs(<scope>)`: Documentation, architecture blueprints, agent skills, and changelogs.
 * **No Automatic Remote Push**: Agents MUST NOT execute `git push` or create remote branches automatically.
-* **Explicit User Request for PR Creation**: When the human user explicitly instructs the agent to create a Pull Request (e.g. *"create a PR to main"*), the agent is authorized to push the branch to origin and open a PR using `gh pr create` with `--assignee "@me"`, `--label "type/<type>,area/<subsystem>,status/ready-for-review"`, and a structured, visually professional body per `.github/PULL_REQUEST_TEMPLATE.md`.
+* **Strict Single Open PR Rule (PR Consolidation)**: To prevent branch fragmentation, stale rebase overhead, and merge conflicts:
+  * **Check First**: Before creating a new branch or opening a new PR, agents MUST run `gh pr list --state open`.
+  * **Consolidate on Existing Open PR**: If an open PR already exists targeting `main`, agents MUST NOT open a new PR or branch. Instead, switch to that open PR's branch (`git checkout <branch>`), implement new features/fixes/refactors directly on that same branch, create categorized signed commits, and push to that open PR branch.
+  * **Update PR Metadata**: After adding changes to an existing PR, update the PR title, labels, and body if needed (`gh pr edit <N>`).
+  * **New PR Only When Fleet Is Clean**: Agents may only create a new feature branch and open a new PR when `gh pr list --state open` returns zero open PRs.
 * **All Pull Requests Target `main` Only**: Every PR opened in this repository MUST target the **`main`** branch (never `dev` or temporary feature branches). See [`BRANCHING.md`](BRANCHING.md) and [`WORKFLOW.md`](WORKFLOW.md).
 * **Pre-Commit Enforcement**: Always run `make pre-commit` before finalizing any changes or opening a PR.
 * **PR & Issue Automation**: GitHub Actions workflows `.github/workflows/pr-triage-and-labeler.yml` and `.github/workflows/issue-triage.yml` automatically manage assignees, type/area/size labels, and triage cards. See [`.agents/skills/github-pr-issue-automation/SKILL.md`](.agents/skills/github-pr-issue-automation/SKILL.md).

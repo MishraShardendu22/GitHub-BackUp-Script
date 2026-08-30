@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+- Strict Single Open PR Rule & Branch Consolidation Standard ([`AGENTS.md`](AGENTS.md), [`.agents/skills/pull-request-management/SKILL.md`](.agents/skills/pull-request-management/SKILL.md)):
+  - Mandated that agents verify `gh pr list --state open` before creating branches or opening PRs.
+  - Required that when an open PR already exists targeting `main`, all subsequent development and commits must be consolidated onto that existing PR's branch, preventing branch fragmentation and merge conflicts.
 - Production-Grade Automated CI/CD & Deployment Pipeline ([`.github/workflows/`](.github/workflows/)):
   - `.github/workflows/ci.yml`: Parallel multi-runtime quality gates (Go 1.24 race tests & vet, Python 3.12 Pyright & agent tests, Node 22 Biome lint & Turbopack build, Docker Buildx cache validation).
   - `.github/workflows/deploy.yml`: Automated continuous deployment pipeline that validates, builds, and pushes multi-tier container images to Docker Hub (`:latest`, `:sha-<sha>`, `:<version>`), auto-triggers Render container deployment via webhook/blueprint, and promotes Vercel production edge releases on `main` merge.

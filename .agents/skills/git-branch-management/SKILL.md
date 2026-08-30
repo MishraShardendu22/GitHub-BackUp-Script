@@ -87,11 +87,13 @@ gh pr create --base main --head MishraShardendu22/main/my-feature --title "feat(
 
 ---
 
-## 4. Managing Multiple PRs & Merge Conflicts
+## 4. Single Open PR Mandate & Preventing Merge Conflicts
 
-When multiple feature branches or PRs are in flight:
-* **Consolidated PRs**: Combine interdependent changes into a single PR rather than multiple overlapping PRs to avoid merge conflicts.
-* **Rebasing**: If another PR merges into `main`, rebase your branch on `origin/main` (`git fetch origin && git rebase origin/main`), re-verify with `make pre-commit`, and update your PR.
+To ensure continuous delivery without merge conflict deadlock:
+* **Mandatory Pre-Branch Check**: Always run `gh pr list --state open` before creating a new branch.
+* **Consolidate into Existing Open PR**: If an open PR already exists targeting `main`, DO NOT create a new branch or open a secondary PR. Check out the existing PR's branch (`git checkout <open-branch>`), implement all requested changes there, and push to that same branch.
+* **Open New PR Only on Clean State**: Create a new feature branch and open a new PR ONLY when zero open PRs exist.
+* **Rebasing**: If `main` is updated while a PR is open, rebase your branch on `origin/main` (`git fetch origin && git rebase origin/main`), re-verify with `make pre-commit`, and push with `--force-with-lease`.
 
 ---
 
