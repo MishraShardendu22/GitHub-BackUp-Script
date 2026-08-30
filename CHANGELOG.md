@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Jules Autonomous AI Engineering Review & Improvement Loop** ([`scripts/jules-review-loop.sh`](scripts/jules-review-loop.sh), [`.github/workflows/jules-ai-review-loop.yml`](.github/workflows/jules-ai-review-loop.yml)):
+  - First-class integration of Google Jules CLI (`jules`) for automated multi-dimensional code reviews and remediation.
+  - Multi-dimensional review engine evaluating 38 architectural, performance, and correctness dimensions.
+  - Autonomous review-improve-converge loop repeating until quality score $\ge 95/100$ and zero P0/P1 issues.
+  - Automated generation of staff-grade, merge-ready Pull Request descriptions for human Technical Lead approval.
+- **Jules Developer Tooling & Makefile Integration**:
+  - Added `make jules-review PR=<N>`, `make jules-fix PR=<N>`, and `make jules-status` CLI targets.
+  - Synchronized new status labels (`status/jules-reviewing`, `status/jules-improving`, `status/jules-approved`, `status/ready-for-tech-lead`).
+- **Jules AI Engineering Workflow & Tooling Guide Skills** ([`.agents/skills/jules-ai-engineering-workflow/SKILL.md`](.agents/skills/jules-ai-engineering-workflow/SKILL.md), [`.agents/skills/cli-tooling-guide/SKILL.md`](.agents/skills/cli-tooling-guide/SKILL.md)):
+  - Standard operating procedures for AI engineering teams and Jules autonomous review iterations.
+- **Jules Loop Test Suite** ([`tests/jules_loop_test.sh`](tests/jules_loop_test.sh)):
+  - Comprehensive unit and integration test suite covering 38-dimension evaluations, acceptance checks, and YAML workflow syntax.
 - **Automated Pull Request & Issue Triage Workflows** ([`.github/workflows/pr-triage-and-labeler.yml`](.github/workflows/pr-triage-and-labeler.yml), [`.github/workflows/issue-triage.yml`](.github/workflows/issue-triage.yml)):
   - Automatic PR and issue assignment to author/repository owner (`MishraShardendu22`).
   - Semantic title prefix parsing to apply Conventional Commit type labels (`type/feat`, `type/fix`, `type/perf`, `type/refactor`, `type/docs`, `type/db`, `type/ci`, `type/test`, `type/ui`).

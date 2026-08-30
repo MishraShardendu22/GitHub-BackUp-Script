@@ -36,6 +36,7 @@ test: test-go test-py test-scripts
 
 test-scripts:
 	@echo "Running Shell & Automation script test suite..."
+	@bash tests/jules_loop_test.sh
 	@bash tests/github_automation_test.sh
 
 test-go:
@@ -94,5 +95,14 @@ restore-db:
 
 labels-sync:
 	@./scripts/github-labels-sync.sh
+
+jules-review:
+	@./scripts/jules-review-loop.sh --pr $(PR)
+
+jules-fix:
+	@./scripts/jules-review-loop.sh --pr $(PR)
+
+jules-status:
+	@jules remote list --session 2>/dev/null || ./scripts/jules-review-loop.sh --dry-run
 
 

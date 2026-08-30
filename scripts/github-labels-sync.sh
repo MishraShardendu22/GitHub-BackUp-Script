@@ -101,7 +101,12 @@ LABELS=(
     "status/in-progress|fbca04|Work in progress; not yet ready for review"
     "status/hitl-required|b60205|Human-In-The-Loop confirmation required"
     "status/blocked|b60205|Blocked by external dependency or upstream issue"
+    "status/jules-reviewing|fbca04|Jules AI engineer actively performing multi-dimensional review"
+    "status/jules-improving|1d76db|Jules AI engineer executing automated code remediation"
+    "status/jules-approved|0e8a16|PR passed 38-dimension staff review and acceptance criteria"
+    "status/ready-for-tech-lead|5319e7|PR converged to production quality; ready for Tech Lead final signoff"
 )
+
 
 log_step "Synchronizing ${#LABELS[@]} Standard Repository Labels"
 
