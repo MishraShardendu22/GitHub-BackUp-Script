@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Strict Professional Tone & Zero-Fluff Constraints in Agent System Prompts ([`agentic-observatory/agent/prompts.py`](agentic-observatory/agent/prompts.py)):
+  - Enforced strict professional tone across AI agent responses: prohibition of emojis/decorative icons, elimination of conversational fluff and pleasantries (preamble/postamble), direct to-the-point technical synthesis.
+  - Mandated structured Markdown breakdown, exact telemetry identifiers (commit SHAs, repository names, timestamps, error codes), and strict grounding in retrieved tool context without speculation or hallucination.
 - Enterprise SaaS Architecture Blueprint & Autonomous MCP Ecosystem Roadmap ([`docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md`](docs/SAAS_ARCHITECTURE_AND_MCP_ROADMAP.md)):
   - Comprehensive architectural specification for converting the system into a multi-tenant, **Bring-Your-Own-Everything (BYO-Infra)** and one-click self-hostable SaaS platform.
   - **UI Connector Hub & Encrypted Vault**: Eliminates manual `.env` files via in-app UI connectors for multi-account OpenRouter key pools, Neon/Postgres databases, GitHub OAuth apps, and SSH keys backed by AES-256-GCM envelope encryption.
@@ -55,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GitHub Automation Test Suite** ([`tests/github_automation_test.sh`](tests/github_automation_test.sh)):
   - 11 unit and integration tests validating YAML workflow schemas, issue forms, and dry-run label synchronizer.
 
+>>>>>>> main
 - Dedicated 4-Service Architecture & Backup Worker Subsystem ([`backup-worker/`](backup-worker/)):
   - Shifted root CLI backup engine into dedicated `backup-worker/` directory for full microservice separation (`frontend/`, `backend/`, `agentic-observatory/`, `backup-worker/`).
   - Added root `make backup` developer target to execute the backup worker CLI seamlessly.
