@@ -97,23 +97,47 @@ git status
 
 ---
 
-## 4. Automated CLI Target: `make git-clean`
+## 4. Automated CLI & Scripting Targets
 
-To make this workflow instantaneous and deterministic, developers and AI agents can execute:
+To make cleanup and maintenance instantaneous, safe, and deterministic, use the dedicated scripts and Makefile targets:
 
 ```bash
-make git-clean
-```
+# 1. Safe Local Sync & Merged Branch Cleanup
+./scripts/git-sync-and-cleanup.sh --dry-run   # Preview branches to delete
+./scripts/git-sync-and-cleanup.sh --force     # Synchronize main and delete merged branches
+make git-sync-clean                           # Run local sync cleaner via Makefile
 
-This target is defined in `Makefile` and executes the exact sequence above.
+# 2. Deep Git Repository Maintenance & Garbage Collection
+./scripts/git-maintenance.sh                  # Standard garbage collection and repack
+./scripts/git-maintenance.sh --aggressive     # Aggressive compression (maximum space savings)
+make git-gc                                   # Standard GC via Makefile
+make git-maintain                             # Aggressive GC via Makefile
+
+# 3. Automated Weekly Local Maintenance Setup
+./scripts/git-maintenance.sh --install-cron   # Install weekly cron job (Sundays at 02:00 AM)
+./scripts/git-maintenance.sh --status         # Check automated maintenance schedule and logs
+make git-maintain-install                     # Install weekly maintenance cron via Makefile
+make git-maintain-status                      # Inspect maintenance schedule status
+```
 
 ---
 
-## 5. Summary Matrix for AI Agents
+## 5. Automated Remote Branch Cleanup on PR Merge
 
-| Trigger Event | Allowed Agent Action | Command(s) |
+Remote feature branch deletion is fully automated via GitHub Actions:
+* **Workflow**: [`.github/workflows/pr-branch-cleanup.yml`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/.github/workflows/pr-branch-cleanup.yml)
+* **Trigger**: Triggers automatically on `pull_request: [closed]` when `merged == true`.
+* **Action**: Deletes the remote feature branch on GitHub, preventing stale remote reference buildup.
+
+---
+
+## 6. Summary Matrix for AI Agents & Humans
+
+| Trigger Event | Automated / Allowed Action | Command(s) |
 | :--- | :--- | :--- |
-| **PR Opened / In Review** | Wait for user review | Do NOT delete branches or clean git |
-| **User Merged PR & Instructed Cleanup** | **YES (Mandatory)** | `make git-clean` or manual Steps 1–6 |
-| **Unmerged Local Work Present** | Stop & Warn User | Ask user before deleting any branch with unpushed commits |
-| **Remote Branch Deletion** | **STRICTLY NO** | Remote branch deletion is handled by GitHub PR merge button |
+| **PR Merged on GitHub** | **Automated (GitHub Actions)** | `.github/workflows/pr-branch-cleanup.yml` deletes remote branch |
+| **Local Stale Branch Cleanup** | **YES (On Demand / Scripted)** | `make git-sync-clean` or `./scripts/git-sync-and-cleanup.sh --force` |
+| **Local Weekly Git GC & Optimization** | **Automated (Cron / On Demand)** | `make git-maintain-install` or `./scripts/git-maintenance.sh` |
+| **Full Sync, Clean & GC** | **YES (Post-Merge)** | `make git-clean` (`./scripts/git-sync-and-cleanup.sh --force --gc`) |
+| **Unmerged Local Work Present** | Stop & Warn User | Preserved automatically unless `--force` is specified |
+
