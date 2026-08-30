@@ -191,9 +191,50 @@ run_validation_step() {
 }
 
 # ==============================================================================
+# PHASE 0: Secret & Sensitive File Leak Detection
+# ==============================================================================
+check_secrets_and_sensitive_files() {
+
+    local leaks_found=0
+    # Check for forbidden files
+    if [ -n "${STAGED_FILES}" ]; then
+        while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if [[ "$file" =~ (^|/)(\.env|\.env\.local|\.env\.staging|\.env\.production|\.env\.development)$ ]] && ! [[ "$file" =~ \.example$ ]]; then
+                echo -e "${RED}Error: Attempting to commit active environment file:${RESET} ${file}"
+                leaks_found=1
+            fi
+            if [[ "$file" =~ \.(pem|key|pkcs12|pfx|id_rsa|id_ed25519)$ ]]; then
+                echo -e "${RED}Error: Attempting to commit private key/certificate file:${RESET} ${file}"
+                leaks_found=1
+            fi
+        done <<< "${STAGED_FILES}"
+
+        # Pattern scan for leaked tokens
+        local staged_diff
+        staged_diff=$(git diff --cached -U0 2>/dev/null || true)
+        if echo "${staged_diff}" | grep -E -q '^\+[[:space:]]*(ghp_[A-Za-z0-9_]{36}|gho_[A-Za-z0-9_]{36}|sk-or-v1-[A-Za-z0-9]{64}|neon_api_key_[A-Za-z0-9_]+)'; then
+            echo -e "${RED}Error: Detected leaked API token or credential pattern in staged git diff!${RESET}"
+            leaks_found=1
+        fi
+    fi
+
+    if [ "${leaks_found}" -ne 0 ]; then
+        return 1
+    fi
+    return 0
+}
+
+run_validation_step \
+    "Secret & Sensitive File Scan" \
+    "check_secrets_and_sensitive_files" \
+    "Unstage any .env files or credentials using 'git restore --staged <file>'."
+
+# ==============================================================================
 # PHASE 1: Go Backend & Worker Validation
 # ==============================================================================
 if [ "$CHECK_GO" -eq 1 ]; then
+
     # 1.1 Check Go formatting
     check_gofmt() {
         local unformatted=""
