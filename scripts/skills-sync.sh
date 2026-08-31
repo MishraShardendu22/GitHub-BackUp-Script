@@ -23,10 +23,10 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-log_info() { echo -e "${BLUE}ℹ${NC} $*"; }
-log_success() { echo -e "${GREEN}✔${NC} $*"; }
-log_warn() { echo -e "${YELLOW}▲${NC} $*"; }
-log_error() { echo -e "${RED}✖${NC} $*" >&2; }
+log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 
 # Locate repository root and skills directory
 find_skills_dir() {
@@ -108,7 +108,7 @@ cmd_pull() {
 
     log_info "Fetching remote skill catalog..."
     if ! git clone --depth 1 --branch "$BRANCH" "$clone_url" "$tmp_dir/agent-skills" >/dev/null 2>&1; then
-        log_error "Failed to clone upstream repository ${REPO_URL}. Check your internet connection or repository permissions."
+        log_error "Failed to clone upstream repository ${REPO_URL}. Check network connection or repository permissions."
         return 1
     fi
 
@@ -220,7 +220,7 @@ cmd_push() {
 
     log_info "Pushing commit to ${REPO_URL}:${BRANCH}..."
     if git push origin "$BRANCH"; then
-        log_success "Successfully pushed skill updates upstream to ${BOLD}${REPO_URL}${NC}!"
+        log_success "Successfully pushed skill updates upstream to ${BOLD}${REPO_URL}${NC}."
     else
         log_warn "Direct push failed. Attempting to create a sync feature branch and PR..."
         local sync_branch="sync-skills-$(date +%s)"
@@ -310,8 +310,8 @@ cmd_list() {
     fi
 
     echo -e "\n${BOLD}Installed Skills in ${SKILLS_DIR}:${NC}\n"
-    printf "  ${BOLD}%-32s %-50s${NC}\n" "SKILL NAME" "DESCRIPTION"
-    printf "  %-32s %-50s\n" "--------------------------------" "--------------------------------------------------"
+    printf "  ${BOLD}%-36s %-50s${NC}\n" "SKILL NAME" "DESCRIPTION"
+    printf "  %-36s %-50s\n" "------------------------------------" "--------------------------------------------------"
 
     local count=0
     for skill_path in "$SKILLS_DIR"/*; do
@@ -321,7 +321,7 @@ cmd_list() {
             if [[ "$s_name" != .* && -f "$skill_path/SKILL.md" ]]; then
                 local desc
                 desc="$(grep -A 3 '^description:' "$skill_path/SKILL.md" | tr '\n' ' ' | sed 's/description:[ >-]*//g' | sed 's/---.*//' | cut -c 1-50)"
-                printf "  ${CYAN}%-32s${NC} %s...\n" "$s_name" "$desc"
+                printf "  ${CYAN}%-36s${NC} %s...\n" "$s_name" "$desc"
                 count=$((count + 1))
             fi
         fi
@@ -355,7 +355,7 @@ cmd_validate() {
             log_error "Validation failed with $errors errors."
             return 1
         fi
-        log_success "All skills validated successfully!"
+        log_success "All skills validated successfully."
     fi
 }
 

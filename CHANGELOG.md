@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Professional Communication Standard & Zero-Emoji Mandate ([`.agents/skills/professional-communication-standard/SKILL.md`](.agents/skills/professional-communication-standard/SKILL.md)):
+  - Established dedicated agent skill enforcing strictly emoji-free, professional, concise, and technically rigorous communication across all agent interactions, commit messages, PRs, logs, and documentation.
+  - Eliminated decorative emojis across CLI scripts, installers, validation tooling, and documentation.
 - Open-Sourced AI Agent Skills Hub & Cross-Repo Sync Engine ([`MishraShardendu22/agent-skills`](https://github.com/MishraShardendu22/agent-skills), [`scripts/skills-sync.sh`](scripts/skills-sync.sh), [`.github/workflows/sync-skills-upstream.yml`](.github/workflows/sync-skills-upstream.yml)):
   - Published 17+ production-grade AI agent skills to standalone public repository `MishraShardendu22/agent-skills`.
   - Added `skills-sync.sh` CLI and `Makefile` targets (`skills-pull`, `skills-push`, `skills-sync`, `skills-list`) for bidirectional synchronization between local projects and the upstream skills hub.
