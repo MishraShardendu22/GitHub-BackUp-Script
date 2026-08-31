@@ -61,4 +61,5 @@ Before executing `git commit` or finalizing any milestone, execute this 4-step c
 2. **Cross-Reference Subsystem Matrix**: Identify all target docs and agent skills impacted by the modified files.
 3. **Apply Documentation & Skill Edits**: Update markdown files and skills with exact details.
 4. **Log in Changelog**: Add concise bullet points under `## [Unreleased]` in [`CHANGELOG.md`](file:///home/ms22/Coding_stuff/Personal-Projects/github-backup-automation-system/CHANGELOG.md).
+5. **Sync Skills Upstream**: If any skill inside `.agents/skills/` was added or modified, execute `skills-sync push` (or `make skills-push`) to propagate updates to `MishraShardendu22/agent-skills`.
 

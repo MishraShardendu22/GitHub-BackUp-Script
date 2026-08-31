@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Git Post-Commit Hook — Autonomous Skills Hub Auto-Sync
+# Repository: https://github.com/MishraShardendu22/github-backup-automation-system
+# ==============================================================================
+# Checks if the latest commit modified any files in .agents/skills/
+# If so, triggers background synchronization to MishraShardendu22/agent-skills.
+# ==============================================================================
+
+set -euo pipefail
+
+# Check if the latest commit modified .agents/skills or skills
+if git diff-tree --no-commit-id --name-only -r HEAD | grep -E '^(\.agents/skills/|skills/)' >/dev/null 2>&1; then
+    echo "[INFO] Detected changes in .agents/skills/. Triggering automated background sync to agent-skills hub..."
+    
+    # Run sync in background detached
+    if command -v skills-sync >/dev/null 2>&1; then
+        ( skills-sync push >/dev/null 2>&1 & )
+    elif [[ -x "./scripts/skills-sync.sh" ]]; then
+        ( ./scripts/skills-sync.sh push >/dev/null 2>&1 & )
+    fi
+fi
+
+exit 0

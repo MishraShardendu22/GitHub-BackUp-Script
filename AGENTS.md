@@ -118,6 +118,7 @@ Welcome to the **GitHub Backup Automation System** repository. When working on, 
 ## 9. Autonomous Skill & Documentation Synchronization
 
 * **Zero-Reminder Rule**: Whenever ANY new feature, endpoint, service, database migration, or architecture change is added or modified, the agent MUST **automatically and autonomously** update all relevant agent skills (`.agents/skills/`), architectural guides (`docs/`), `README.md`, and `CHANGELOG.md` before finalizing commits.
+* **Autonomous Upstream Skill Sync**: Whenever a skill inside `.agents/skills/` is added or modified, the agent MUST autonomously execute `skills-sync push` (or `make skills-push`) to propagate updates to the central `MishraShardendu22/agent-skills` hub.
 * **No Human Prompting Needed**: Documentation and skill synchronization is a mandatory pre-commit reflex.
 * See [`.agents/skills/doc-synchronization/SKILL.md`](.agents/skills/doc-synchronization/SKILL.md).
 
