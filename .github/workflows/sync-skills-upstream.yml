@@ -1,0 +1,24 @@
+name: Sync Skills Upstream
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.agents/skills/**'
+  workflow_dispatch:
+
+jobs:
+  sync-skills:
+    name: Sync Skills to Central Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run skills-sync Push
+        env:
+          AGENT_SKILLS_REPO: "MishraShardendu22/agent-skills"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/skills-sync.sh push

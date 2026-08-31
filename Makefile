@@ -1,4 +1,4 @@
-.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean install-hooks db-branch-list db-branch-staging db-branch-dev
+.PHONY: help dev backup test test-go test-py test-agents lint build backup-db restore-db hooks-install init-hooks pre-commit format typecheck git-clean install-hooks db-branch-list db-branch-staging db-branch-dev skills-pull skills-push skills-sync skills-list
 
 help:
 	@echo "======================================================================"
@@ -17,6 +17,10 @@ help:
 	@echo "  make install-hooks- Configure Git pre-commit and pre-push hooks"
 	@echo "  make pre-commit   - Run full pre-commit validation pipeline"
 	@echo "  make git-clean    - Sync main branch, delete local feature branches, and run git gc"
+	@echo "  make skills-list  - List all installed AI agent skills"
+	@echo "  make skills-pull  - Pull latest skills from MishraShardendu22/agent-skills hub"
+	@echo "  make skills-push  - Push local skills upstream to MishraShardendu22/agent-skills"
+	@echo "  make skills-sync  - Bidirectional sync with agent-skills hub"
 	@echo "  make db-branch-list    - List Neon PostgreSQL database branches"
 	@echo "  make db-branch-staging - Create or sync Neon staging database branch"
 	@echo "  make db-branch-dev     - Create or sync Neon development database branch"
@@ -141,5 +145,14 @@ jules-fix:
 jules-status:
 	@jules remote list --session 2>/dev/null || ./scripts/jules-review-loop.sh --dry-run
 
+skills-pull:
+	@./scripts/skills-sync.sh pull
 
+skills-push:
+	@./scripts/skills-sync.sh push
 
+skills-sync:
+	@./scripts/skills-sync.sh sync
+
+skills-list:
+	@./scripts/skills-sync.sh list

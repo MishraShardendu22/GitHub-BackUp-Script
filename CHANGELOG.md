@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Open-Sourced AI Agent Skills Hub & Cross-Repo Sync Engine ([`MishraShardendu22/agent-skills`](https://github.com/MishraShardendu22/agent-skills), [`scripts/skills-sync.sh`](scripts/skills-sync.sh), [`.github/workflows/sync-skills-upstream.yml`](.github/workflows/sync-skills-upstream.yml)):
+  - Published 17+ production-grade AI agent skills to standalone public repository `MishraShardendu22/agent-skills`.
+  - Added `skills-sync.sh` CLI and `Makefile` targets (`skills-pull`, `skills-push`, `skills-sync`, `skills-list`) for bidirectional synchronization between local projects and the upstream skills hub.
+  - Added automated downstream sync GitHub Actions workflow for zero-touch upstream synchronization.
 - Strict Single Open PR Rule & Branch Consolidation Standard ([`AGENTS.md`](AGENTS.md), [`.agents/skills/pull-request-management/SKILL.md`](.agents/skills/pull-request-management/SKILL.md)):
   - Mandated that agents verify `gh pr list --state open` before creating branches or opening PRs.
   - Required that when an open PR already exists targeting `main`, all subsequent development and commits must be consolidated onto that existing PR's branch, preventing branch fragmentation and merge conflicts.
