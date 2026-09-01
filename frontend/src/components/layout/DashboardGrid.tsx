@@ -7,5 +7,7 @@ export function DashboardGrid({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={cn("ai-dashboard-grid", className)}>{children}</div>;
+  return (
+    <div className={cn("m-grid m-grid--metrics", className)}>{children}</div>
+  );
 }

@@ -1,9 +1,11 @@
+import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   message: string;
   description?: string;
   icon?: React.ReactNode;
+  action?: React.ReactNode;
   className?: string;
 }
 
@@ -11,25 +13,17 @@ export function EmptyState({
   message,
   description,
   icon,
+  action,
   className,
 }: EmptyStateProps) {
   return (
-    <div
-      className={cn("empty-state", className)}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "200px",
-        color: "var(--text-secondary)",
-        fontSize: "14px",
-        gap: "12px",
-      }}
-    >
-      {icon && <div style={{ opacity: 0.5 }}>{icon}</div>}
-      <p className="empty-state__title">{message}</p>
-      {description && <p className="empty-state__description">{description}</p>}
+    <div className={cn("m-state m-state--inline", className)}>
+      <div className="m-state__icon">
+        {icon ?? <Inbox size={21} aria-hidden="true" />}
+      </div>
+      <p className="m-state__title">{message}</p>
+      {description && <p className="m-state__description">{description}</p>}
+      {action && <div className="m-state__actions">{action}</div>}
     </div>
   );
 }

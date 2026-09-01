@@ -1,8 +1,11 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { SITE } from "@/constants/site";
 import { AIContextProvider } from "./AIContext";
+import { SiteFooter } from "./SiteFooter";
 import Sidebar from "./sidebar";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +18,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  /* The agent console owns the viewport instead of scrolling inside the page
+     column, and it has no room for a footer. */
+  const isConsole = pathname?.startsWith("/ai") ?? false;
 
   useEffect(() => {
     if (!isMobileOpen) return;
@@ -33,30 +41,49 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }, [isMobileOpen]);
 
   return (
-    <div className="app-layout">
-      {/* Collapsible/Drawer Sidebar */}
+    <div className="m-shell">
       <Sidebar
         isMobileOpen={isMobileOpen}
         onCloseMobile={() => setIsMobileOpen(false)}
       />
 
-      <div className="app-content-wrapper">
-        {/* Mobile top navigation bar */}
-        <header className="mobile-header">
+      <button
+        type="button"
+        aria-hidden="true"
+        tabIndex={-1}
+        className={`m-sidebar-scrim${isMobileOpen ? " is-open" : ""}`}
+        onClick={() => setIsMobileOpen(false)}
+      />
+
+      <div className="m-shell__body">
+        <header className="m-topbar m-topbar--mobile">
           <button
             type="button"
             onClick={() => setIsMobileOpen(true)}
-            className="mobile-menu-btn"
+            className="m-icon-btn"
             aria-label="Open navigation menu"
             aria-controls="app-navigation"
             aria-expanded={isMobileOpen}
           >
-            <Menu size={20} />
+            <Menu size={18} aria-hidden="true" />
           </button>
-          <span className="mobile-header-title">Systems Lab</span>
-          <div style={{ width: 32 }} /> {/* Empty space to center title */}
+          <span className="m-wordmark">
+            <span className="m-wordmark__mark" aria-hidden="true">
+              SL
+            </span>
+            <span className="m-wordmark__name">{SITE.name}</span>
+          </span>
+          <span aria-hidden="true" style={{ width: "2.25rem" }} />
         </header>
-        {children}
+
+        <main
+          id="main-content"
+          className={isConsole ? "m-main m-main--flush" : "m-main"}
+        >
+          {children}
+        </main>
+
+        {!isConsole && <SiteFooter />}
       </div>
     </div>
   );
