@@ -45,12 +45,12 @@ export default async function BackupsPage({
     : null;
 
   return (
-    <div className="page">
-      <div className="page-head" style={{ marginBottom: 24 }}>
+    <div className="m-page">
+      <div className="m-masthead" style={{ marginBottom: 24 }}>
         <div>
-          <div className="page-kicker">Backup Run Logs</div>
-          <h1 className="page-title">Execution History</h1>
-          <p className="page-subtitle">
+          <div className="m-kicker">Backup Run Logs</div>
+          <h1 className="m-title">Execution History</h1>
+          <p className="m-subtitle">
             Complete history of all backup executions and their detailed
             results.
           </p>
@@ -58,10 +58,10 @@ export default async function BackupsPage({
       </div>
 
       {!initialData ? (
-        <div className="card">
+        <div className="m-card">
           <p
             style={{
-              color: "var(--danger)",
+              color: "var(--critical-500)",
               padding: 40,
               textAlign: "center",
               fontSize: 15,

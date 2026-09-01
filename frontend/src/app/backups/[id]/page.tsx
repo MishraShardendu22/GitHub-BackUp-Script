@@ -30,12 +30,12 @@ export default async function BackupDetailPage({
   const { run, results = [] } = data;
 
   return (
-    <div className="page">
+    <div className="m-page">
       <div
-        className="card"
+        className="m-card"
         style={{
           background: "rgba(24, 24, 27, 0.4)",
-          borderLeft: "4px solid var(--accent)",
+          borderLeft: "4px solid var(--iris-500)",
           marginBottom: 32,
         }}
       >
@@ -49,7 +49,7 @@ export default async function BackupDetailPage({
           }}
         >
           <div>
-            <div className="page-kicker">
+            <div className="m-kicker">
               <Link
                 href="/backups"
                 style={{ textDecoration: "none", color: "inherit" }}
@@ -58,11 +58,11 @@ export default async function BackupDetailPage({
               </Link>{" "}
               / Investigation
             </div>
-            <h1 className="page-title" style={{ marginTop: 8 }}>
+            <h1 className="m-title" style={{ marginTop: 8 }}>
               Run #{run.id}
             </h1>
             <p
-              className="page-subtitle"
+              className="m-subtitle"
               style={{ marginTop: 8, whiteSpace: "nowrap" }}
             >
               Started {formatDate(run.started_at)} ·{" "}
@@ -101,14 +101,18 @@ export default async function BackupDetailPage({
           >
             <AlertCircle
               size={18}
-              style={{ color: "var(--danger)", flexShrink: 0, marginTop: 2 }}
+              style={{
+                color: "var(--critical-500)",
+                flexShrink: 0,
+                marginTop: 2,
+              }}
             />
             <div>
               <div
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "var(--danger)",
+                  color: "var(--critical-500)",
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
                 }}
@@ -132,34 +136,45 @@ export default async function BackupDetailPage({
         )}
 
         {/* Summary metrics */}
-        <div
-          className="metric-grid metric-grid--four stats-grid"
-          style={{ marginTop: 24 }}
-        >
-          <div className="card-flat" style={{ background: "transparent" }}>
-            <div className="stat-label">Total Repos</div>
-            <div className="stat-value">{run.total_repos}</div>
+        <div className="m-grid m-grid--metrics" style={{ marginTop: 24 }}>
+          <div
+            className="m-card m-card--quiet"
+            style={{ background: "transparent" }}
+          >
+            <div className="m-metric__label">Total Repos</div>
+            <div className="m-metric__value">{run.total_repos}</div>
           </div>
-          <div className="card-flat" style={{ background: "transparent" }}>
-            <div className="stat-label">Successful</div>
-            <div className="stat-value stat-value--success">
+          <div
+            className="m-card m-card--quiet"
+            style={{ background: "transparent" }}
+          >
+            <div className="m-metric__label">Successful</div>
+            <div className="m-metric__value m-metric__value--positive">
               {run.successful}
             </div>
           </div>
-          <div className="card-flat" style={{ background: "transparent" }}>
-            <div className="stat-label">Failed</div>
-            <div className="stat-value stat-value--danger">{run.failed}</div>
+          <div
+            className="m-card m-card--quiet"
+            style={{ background: "transparent" }}
+          >
+            <div className="m-metric__label">Failed</div>
+            <div className="m-metric__value m-metric__value--critical">
+              {run.failed}
+            </div>
           </div>
-          <div className="card-flat" style={{ background: "transparent" }}>
-            <div className="stat-label">Skipped</div>
-            <div className="stat-value text-muted">{run.skipped}</div>
+          <div
+            className="m-card m-card--quiet"
+            style={{ background: "transparent" }}
+          >
+            <div className="m-metric__label">Skipped</div>
+            <div className="m-metric__value m-text-muted">{run.skipped}</div>
           </div>
         </div>
       </div>
 
       {/* Repository results */}
-      <section className="card section-card">
-        <div className="section-title" style={{ marginBottom: 16 }}>
+      <section className="m-card m-card--roomy">
+        <div className="m-section__title" style={{ marginBottom: 16 }}>
           Repository Investigation Logs
         </div>
         {results.length === 0 ? (
@@ -173,8 +188,8 @@ export default async function BackupDetailPage({
             No repository logs for this run.
           </p>
         ) : (
-          <div className="table-wrap" style={{ marginTop: 14 }}>
-            <table className="table table-wide">
+          <div className="m-table-wrap" style={{ marginTop: 14 }}>
+            <table className="m-table m-table--wide">
               <thead>
                 <tr>
                   <th style={{ minWidth: "260px" }}>Repository</th>
@@ -228,7 +243,7 @@ export default async function BackupDetailPage({
                       {result.error_message ? (
                         <div
                           style={{
-                            color: "var(--danger)",
+                            color: "var(--critical-500)",
                             fontFamily: "var(--font-mono, monospace)",
                             fontSize: 12,
                             background: "rgba(239, 68, 68, 0.08)",

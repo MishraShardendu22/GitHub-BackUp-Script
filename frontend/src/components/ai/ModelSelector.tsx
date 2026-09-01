@@ -200,7 +200,7 @@ export function ModelSelector({
 
       {/* Popover Menu Overlay */}
       {isOpen && (
-        <div className="custom-model-popover animate-in">
+        <div className="custom-model-popover">
           {/* Header & Search Filter */}
           <div className="custom-model-popover-header">
             <div className="custom-model-search-box">
@@ -262,9 +262,9 @@ export function ModelSelector({
                     fontSize: "10px",
                     padding: "2px 6px",
                     borderRadius: "4px",
-                    border: "1px solid var(--border)",
+                    border: "1px solid var(--line)",
                     background:
-                      sortBy === "name" ? "var(--accent)" : "transparent",
+                      sortBy === "name" ? "var(--iris-500)" : "transparent",
                     color: sortBy === "name" ? "#fff" : "var(--text-secondary)",
                     cursor: "pointer",
                   }}
@@ -278,9 +278,9 @@ export function ModelSelector({
                     fontSize: "10px",
                     padding: "2px 6px",
                     borderRadius: "4px",
-                    border: "1px solid var(--border)",
+                    border: "1px solid var(--line)",
                     background:
-                      sortBy === "speed" ? "var(--accent)" : "transparent",
+                      sortBy === "speed" ? "var(--iris-500)" : "transparent",
                     color:
                       sortBy === "speed" ? "#fff" : "var(--text-secondary)",
                     cursor: "pointer",
@@ -295,9 +295,9 @@ export function ModelSelector({
                     fontSize: "10px",
                     padding: "2px 6px",
                     borderRadius: "4px",
-                    border: "1px solid var(--border)",
+                    border: "1px solid var(--line)",
                     background:
-                      sortBy === "context" ? "var(--accent)" : "transparent",
+                      sortBy === "context" ? "var(--iris-500)" : "transparent",
                     color:
                       sortBy === "context" ? "#fff" : "var(--text-secondary)",
                     cursor: "pointer",

@@ -19,7 +19,7 @@ export function DaySelector({ currentDays, options }: DaySelectorProps) {
 
   return (
     <nav
-      className="segmented"
+      className="m-segmented"
       aria-label="Day range"
       style={{ alignSelf: "flex-start" }}
     >
@@ -28,7 +28,7 @@ export function DaySelector({ currentDays, options }: DaySelectorProps) {
           key={opt}
           type="button"
           onClick={() => handleDayChange(opt)}
-          className={`segmented-btn${currentDays === opt ? " segmented-btn--active" : ""}`}
+          className={`m-segmented__item${currentDays === opt ? "is-is-active" : ""}`}
           aria-pressed={currentDays === opt}
         >
           {opt}d
