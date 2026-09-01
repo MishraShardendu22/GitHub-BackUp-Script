@@ -1,0 +1,22 @@
+/* =============================================================================
+   Meridian Design System - complete bundle
+   -----------------------------------------------------------------------------
+   Canonical source: MishraShardendu22/agent-skills
+     .agents/skills/meridian-design-system/assets/meridian.css
+
+   The shared visual language for the mishrashardendu22 product ecosystem:
+     Shardendu Mishra (portfolio) - Engineering Notes (blog)
+     Systems Lab (backup observatory) - Console (admin) - the API surfaces
+
+   Import order matters. Tokens first, then reset/base, then layout, then
+   components, then utilities.
+
+   In a Tailwind v4 host, place this AFTER `@import "tailwindcss";` so utility
+   classes still win over component classes at equal specificity.
+   ========================================================================== */
+
+@import "./meridian.tokens.css";
+@import "./meridian.base.css";
+@import "./meridian.layout.css";
+@import "./meridian.components.css";
+@import "./meridian.utilities.css";

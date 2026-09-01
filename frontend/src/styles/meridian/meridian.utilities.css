@@ -1,0 +1,215 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: the visually-hidden helper and the reduced-motion override must beat every component and utility rule; that is precisely what !important exists for. */
+/* =============================================================================
+   Meridian Utilities: typography helpers, motion, visibility
+   -----------------------------------------------------------------------------
+   Canonical source: MishraShardendu22/agent-skills
+     .agents/skills/meridian-design-system/assets/meridian.utilities.css
+   Requires meridian.tokens.css.
+   ========================================================================== */
+
+/* ── Typographic roles ────────────────────────────────────────────────────
+   These exist so a kicker, a caption, or a numeric readout is declared once
+   and never re-invented as an inline style object. */
+
+.m-display {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--ls-display);
+  color: var(--text);
+}
+
+.m-heading {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-heading);
+  color: var(--text);
+}
+
+.m-eyebrow {
+  font-family: var(--font-text);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-kicker);
+  color: var(--text-muted);
+}
+
+.m-lead {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-body);
+  color: var(--text-secondary);
+  max-width: 58ch;
+}
+
+.m-body {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-secondary);
+}
+
+.m-caption {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-snug);
+  color: var(--text-muted);
+}
+
+.m-mono {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  font-variant-ligatures: none;
+}
+
+.m-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.m-text {
+  color: var(--text);
+}
+.m-text-secondary {
+  color: var(--text-secondary);
+}
+.m-text-muted {
+  color: var(--text-muted);
+}
+.m-text-accent {
+  color: var(--iris-400);
+}
+.m-text-positive {
+  color: var(--positive-500);
+}
+.m-text-critical {
+  color: var(--critical-500);
+}
+.m-text-caution {
+  color: var(--caution-500);
+}
+
+.m-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m-clamp-2,
+.m-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.m-clamp-2 {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.m-clamp-3 {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+/* ── Visibility ───────────────────────────────────────────────────────────
+   .m-visually-hidden keeps content in the accessibility tree while removing
+   it visually. Use it for table headers restacked on mobile, icon-button
+   labels, and live-region text. */
+.m-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.m-visually-hidden-focusable:not(:focus):not(:focus-within) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+/* ── Entrance motion ──────────────────────────────────────────────────────
+   Short, low-displacement, staggered. Motion in this system acknowledges an
+   action; it never performs. Nothing travels further than 12px or runs
+   longer than --dur-slow. */
+
+.m-rise {
+  animation: m-rise var(--dur-slow) var(--ease-out) both;
+}
+
+.m-fade {
+  animation: m-fade-in var(--dur-base) var(--ease-standard) both;
+}
+
+.m-stagger > * {
+  animation: m-rise var(--dur-slow) var(--ease-out) both;
+}
+
+.m-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.m-stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.m-stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.m-stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.m-stagger > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.m-stagger > *:nth-child(6) {
+  animation-delay: 200ms;
+}
+.m-stagger > *:nth-child(n + 7) {
+  animation-delay: 240ms;
+}
+
+.m-delay-1 {
+  animation-delay: 40ms;
+}
+.m-delay-2 {
+  animation-delay: 80ms;
+}
+.m-delay-3 {
+  animation-delay: 120ms;
+}
+.m-delay-4 {
+  animation-delay: 160ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-rise,
+  .m-fade,
+  .m-stagger > *,
+  .m-skeleton,
+  .m-spinner {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Ambient accent wash ──────────────────────────────────────────────────
+   A single, very low-opacity radial in the top-right corner. This is the only
+   gradient permitted anywhere in the system: it grounds the accent hue
+   without becoming decoration. */
+.m-ambient {
+  background-image: radial-gradient(
+    circle at 82% -12%,
+    rgba(139, 124, 255, 0.09),
+    transparent 30rem
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}

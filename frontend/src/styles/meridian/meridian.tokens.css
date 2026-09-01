@@ -1,0 +1,222 @@
+/* =============================================================================
+   Meridian Design Tokens
+   -----------------------------------------------------------------------------
+   Canonical source: MishraShardendu22/agent-skills
+     .agents/skills/meridian-design-system/assets/meridian.tokens.css
+
+   Do not edit vendored copies. Edit the canonical file, then run:
+     skills-sync push meridian-design-system
+
+   Framework-agnostic. Pure CSS custom properties. Safe to inline into
+   server-rendered HTML, email-adjacent documents, Tailwind @theme bridges,
+   Svelte global stylesheets, and Next.js global stylesheets alike.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Ink ramp ───────────────────────────────────────────────────────────
+     Warm-neutral greys (~48deg hue, near-zero chroma). The warmth is what
+     separates this from a generic zinc/slate dashboard: it reads as ink on
+     paper rather than as a terminal. */
+  --ink-1000: #0a0a09;
+  --ink-900: #121211;
+  --ink-800: #171716;
+  --ink-700: #1d1d1b;
+  --ink-600: #232321;
+  --ink-500: #2e2e2b;
+  --ink-400: #3b3b37;
+  --ink-300: #57564f;
+  --ink-200: #6e6b65;
+  --ink-150: #8f8b83;
+  --ink-100: #b7b3aa;
+  --ink-50: #dcd8d0;
+  --ink-0: #f5f3ee;
+
+  /* ── Iris: primary accent ────────────────────────────────────────────── */
+  --iris-700: #4b3ad4;
+  --iris-600: #6a58f0;
+  --iris-500: #8b7cff;
+  --iris-400: #a396ff;
+  --iris-300: #c3baff;
+  --iris-wash: rgba(139, 124, 255, 0.1);
+  --iris-wash-strong: rgba(139, 124, 255, 0.18);
+  --iris-edge: rgba(139, 124, 255, 0.32);
+
+  /* ── Ochre: secondary accent, used sparingly for emphasis ────────────── */
+  --ochre-600: #b8933d;
+  --ochre-500: #d8b45a;
+  --ochre-400: #e2c47c;
+  --ochre-wash: rgba(216, 180, 90, 0.1);
+  --ochre-edge: rgba(216, 180, 90, 0.28);
+
+  /* ── Signal colours ─────────────────────────────────────────────────────
+     Every value below clears WCAG AA (>= 4.5:1) against --surface-canvas. */
+  --positive-500: #4caf7d;
+  --positive-wash: rgba(76, 175, 125, 0.1);
+  --positive-edge: rgba(76, 175, 125, 0.26);
+  --critical-500: #e06060;
+  --critical-wash: rgba(224, 96, 96, 0.1);
+  --critical-edge: rgba(224, 96, 96, 0.26);
+  --caution-500: #d8a84a;
+  --caution-wash: rgba(216, 168, 74, 0.1);
+  --caution-edge: rgba(216, 168, 74, 0.26);
+
+  /* ── Semantic surfaces ──────────────────────────────────────────────── */
+  --surface-canvas: var(--ink-900);
+  --surface-sunken: var(--ink-1000);
+  --surface: var(--ink-800);
+  --surface-raised: var(--ink-700);
+  --surface-overlay: var(--ink-600);
+  --surface-hover: rgba(245, 243, 238, 0.04);
+  --surface-active: rgba(245, 243, 238, 0.07);
+  --surface-scrim: rgba(10, 10, 9, 0.72);
+
+  /* ── Semantic text ──────────────────────────────────────────────────────
+     --text-faint is decorative only: it does not clear AA at body sizes.
+     Never use it for text a reader must parse. */
+  --text: var(--ink-0);
+  --text-secondary: var(--ink-100);
+  --text-muted: var(--ink-150);
+  --text-faint: var(--ink-200);
+  --text-inverse: var(--ink-900);
+  --text-accent: var(--iris-500);
+
+  /* ── Lines ──────────────────────────────────────────────────────────────
+     Hairlines carry the structure in this system. Shadows almost never do. */
+  --line: var(--ink-500);
+  --line-strong: var(--ink-400);
+  --line-subtle: rgba(245, 243, 238, 0.06);
+  --line-accent: var(--iris-edge);
+
+  /* ── Typography families ────────────────────────────────────────────────
+     --font-display-var / --font-text-var / --font-mono-var are the hooks a
+     host app fills in (next/font variables, @font-face names, whatever it
+     has). Everything downstream reads only the three composed stacks. */
+  --font-display:
+    var(--font-display-var, "Instrument Serif"), "Iowan Old Style", "Palatino",
+    "Georgia", serif;
+  --font-text:
+    var(--font-text-var, "Inter"), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono:
+    var(--font-mono-var, "IBM Plex Mono"), ui-monospace, "SFMono-Regular",
+    "Menlo", "Consolas", monospace;
+
+  /* ── Type scale ─────────────────────────────────────────────────────────
+     UI sizes are fixed; only headings above h3 scale with the viewport. */
+  --fs-micro: 0.6875rem;
+  --fs-caption: 0.75rem;
+  --fs-small: 0.8125rem;
+  --fs-body: 0.9375rem;
+  --fs-lead: 1.0625rem;
+  --fs-reading: 1.0625rem;
+  --fs-h6: 0.9375rem;
+  --fs-h5: 1.125rem;
+  --fs-h4: 1.375rem;
+  --fs-h3: 1.75rem;
+  --fs-h2: clamp(1.875rem, 1.45rem + 1.9vw, 2.5rem);
+  --fs-h1: clamp(2.25rem, 1.6rem + 3.1vw, 3.5rem);
+  --fs-display: clamp(2.75rem, 1.8rem + 4.6vw, 4.5rem);
+
+  /* ── Line heights ───────────────────────────────────────────────────── */
+  --lh-display: 1.02;
+  --lh-heading: 1.14;
+  --lh-snug: 1.35;
+  --lh-body: 1.6;
+  --lh-reading: 1.75;
+
+  /* ── Letter spacing ─────────────────────────────────────────────────── */
+  --ls-display: -0.028em;
+  --ls-heading: -0.018em;
+  --ls-tight: -0.01em;
+  --ls-body: 0em;
+  --ls-kicker: 0.14em;
+
+  /* ── Weights ─────────────────────────────────────────────────────────────
+     Display is a single-weight serif; never synthesise bold on it. */
+  --fw-display: 400;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ── Spacing: 4px base, Tailwind-aligned steps ──────────────────────── */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* ── Radius ──────────────────────────────────────────────────────────────
+     Deliberately modest. Oversized corners read as template SaaS. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ── Elevation ───────────────────────────────────────────────────────────
+     Reserved for things that genuinely float. Cards use hairlines. */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.48);
+  --shadow-focus: 0 0 0 3px var(--iris-wash-strong);
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasis: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --dur-slower: 560ms;
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+  --measure: 68ch;
+  --width-prose: 44rem;
+  --width-content: 72rem;
+  --width-wide: 84rem;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 64px;
+  --header-height: 56px;
+  --tap-target: 44px;
+
+  /* ── Stacking order ─────────────────────────────────────────────────── */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 80;
+  --z-header: 90;
+  --z-drawer: 100;
+  --z-overlay: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-tooltip: 1200;
+  --z-skip: 9999;
+}
+
+/* ── Breakpoints ────────────────────────────────────────────────────────────
+   Custom properties cannot be used inside media queries, so these are the
+   contract every Meridian surface hard-codes:
+
+     sm   640px    md   768px    lg  1024px
+     xl  1280px    2xl 1536px
+
+   Layout collapse points used across the system:
+     1024px  sidebar becomes a drawer
+      768px  multi-column grids drop to two
+      640px  everything is single column; tables become stacked cards
+   ------------------------------------------------------------------------ */

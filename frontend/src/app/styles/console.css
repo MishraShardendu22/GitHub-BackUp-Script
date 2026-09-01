@@ -1,0 +1,561 @@
+/* =============================================================================
+   Systems Lab console surfaces
+   -----------------------------------------------------------------------------
+   Everything here is specific to this product: the agent chat console, the tool
+   activity stream, and the search playground. Anything reusable across the
+   ecosystem belongs in the Meridian design system, not in this file.
+
+   All values reference Meridian tokens. No literal colours, no literal radii.
+   ========================================================================== */
+
+/* ── Full-height console mode ─────────────────────────────────────────────
+   The agent console is the one route that owns the viewport instead of
+   scrolling inside the page column. */
+html.console-mode,
+body.console-mode,
+body.console-mode .m-shell,
+body.console-mode .m-shell__body {
+  height: 100vh;
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  html.console-mode,
+  body.console-mode,
+  body.console-mode .m-shell,
+  body.console-mode .m-shell__body {
+    height: 100dvh;
+  }
+}
+
+body.console-mode .m-main {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Console shell ────────────────────────────────────────────────────────── */
+.console {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--surface-canvas);
+  color: var(--text);
+}
+
+.console__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.console__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--gutter);
+}
+
+.console__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  height: var(--header-height);
+  min-height: var(--header-height);
+  padding: 0 var(--gutter);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.console__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.console__agent-name {
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.console__agent-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.console__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.console__tools::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Transcript ───────────────────────────────────────────────────────────── */
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: var(--width-wide);
+  margin-inline: auto;
+  padding-bottom: var(--space-8);
+}
+
+.turn {
+  display: grid;
+  gap: var(--space-2);
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.turn--user {
+  justify-items: end;
+}
+
+.turn__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-text);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-kicker);
+  color: var(--text-muted);
+}
+
+.turn__bubble {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  color: var(--text);
+  line-height: var(--lh-body);
+  overflow-wrap: anywhere;
+}
+
+.turn--user .turn__bubble {
+  max-width: min(85%, 60rem);
+  width: fit-content;
+  white-space: pre-wrap;
+}
+
+.turn--assistant .turn__bubble {
+  width: 100%;
+  padding: var(--space-5) var(--space-6);
+}
+
+.turn__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+.turn:hover .turn__delete,
+.turn:focus-within .turn__delete {
+  opacity: 0.8;
+}
+
+.turn__delete:hover,
+.turn__delete:focus-visible {
+  opacity: 1;
+  color: var(--critical-500);
+  background: var(--critical-wash);
+}
+
+.turn.is-deleting {
+  animation: console-collapse var(--dur-base) var(--ease-standard) forwards;
+  pointer-events: none;
+}
+
+@keyframes console-collapse {
+  from {
+    opacity: 1;
+    max-height: 50rem;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+/* ── Composer ─────────────────────────────────────────────────────────────── */
+.composer {
+  padding: var(--space-3) var(--gutter) var(--space-5);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+.composer__shell {
+  display: grid;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: var(--width-wide);
+  margin-inline: auto;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  border-radius: var(--radius-lg);
+}
+
+.composer__input {
+  width: 100%;
+  min-height: 7rem;
+  max-height: 15rem;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  outline: none;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.composer__input:focus {
+  border-color: var(--iris-500);
+  box-shadow: var(--shadow-focus);
+}
+
+.composer__input::placeholder {
+  color: var(--text-faint);
+}
+
+.composer__hint {
+  color: var(--text-muted);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-body);
+}
+
+/* ── Suggested prompts ────────────────────────────────────────────────────── */
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.prompt-card {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-secondary);
+  font-family: var(--font-text);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.prompt-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--line-accent);
+  background: var(--iris-wash);
+  color: var(--text);
+}
+
+/* ── Tool activity ────────────────────────────────────────────────────────── */
+.tool-activity {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+  font-size: var(--fs-small);
+}
+
+.tool-activity__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-raised);
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.tool-activity__header:hover {
+  background: var(--surface-overlay);
+}
+
+.tool-activity__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--line-subtle);
+  background: var(--surface-sunken);
+}
+
+.tool-activity__json {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  background: var(--surface);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--iris-400);
+}
+
+/* ── Streaming affordances ────────────────────────────────────────────────── */
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--iris-500);
+  animation: console-blink 0.9s step-end infinite;
+}
+
+.stream-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stream-thinking span {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--iris-500);
+  opacity: 0.5;
+  animation: console-bounce 1.2s var(--ease-standard) infinite;
+}
+
+.stream-thinking span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.stream-thinking span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes console-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes console-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stream-cursor,
+  .stream-thinking span,
+  .turn.is-deleting {
+    animation: none;
+  }
+}
+
+/* ── Rich agent output ────────────────────────────────────────────────────── */
+.agent-output table {
+  width: 100%;
+  margin-block: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: var(--fs-small);
+}
+
+.agent-output th {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-overlay);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+
+.agent-output td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line-subtle);
+  color: var(--text-secondary);
+}
+
+.agent-output tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Search playground ────────────────────────────────────────────────────── */
+.playground {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.playground__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.playground__models {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-6);
+}
+
+.playground__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.playground__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Console responsive ───────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .console__header {
+    height: auto;
+    min-height: var(--header-height);
+    padding-block: var(--space-2);
+  }
+
+  .turn--user .turn__bubble {
+    max-width: 100%;
+  }
+
+  .composer__shell {
+    padding: var(--space-4);
+  }
+}
+
+/* ── Analytics charts ─────────────────────────────────────────────────────
+   Recharts needs a sized parent; the frame supplies a stable box so the chart
+   does not shift the page as data arrives. */
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.chart-frame {
+  width: 100%;
+  height: 18rem;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .chart-frame {
+    height: 14rem;
+  }
+}
+
+/* ── Retrieved sources panel ──────────────────────────────────────────────── */
+.sources {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.source-chunk {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.source-chunk__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--line-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.source-chunk__body {
+  padding: var(--space-4);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── Workflow diagram ─────────────────────────────────────────────────────── */
+.workflow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
