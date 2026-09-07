@@ -35,11 +35,11 @@ function buildLiveSocketUrl() {
 function levelColor(level?: string) {
   switch (level) {
     case "error":
-      return "var(--critical-500)";
+      return "var(--danger)";
     case "warn":
-      return "var(--caution-500)";
+      return "var(--warning)";
     case "info":
-      return "var(--iris-500)";
+      return "var(--accent)";
     default:
       return "var(--text-muted)";
   }
@@ -140,17 +140,17 @@ export function LiveLogStream() {
 
   return (
     <>
-      <div className="m-masthead" style={{ marginBottom: 24 }}>
+      <div className="page-head" style={{ marginBottom: 24 }}>
         <div>
-          <div className="m-kicker">Live Monitor</div>
-          <h1 className="m-title">Real-time execution logs</h1>
-          <p className="m-subtitle">
+          <div className="page-kicker">Live Monitor</div>
+          <h1 className="page-title">Real-time execution logs</h1>
+          <p className="page-subtitle">
             A live stream of worker events from PostgreSQL-backed execution
             logs.
           </p>
         </div>
         <div
-          className="m-badge"
+          className="pill status-pill"
           style={{
             alignSelf: "flex-start",
             cursor: "default",
@@ -161,17 +161,15 @@ export function LiveLogStream() {
               width: 8,
               height: 8,
               borderRadius: "50%",
-              background: connected
-                ? "var(--positive-500)"
-                : "var(--critical-500)",
+              background: connected ? "var(--success)" : "var(--danger)",
             }}
           />
           {connected ? "Connected" : "Disconnected"}
         </div>
       </div>
 
-      <div className="m-card m-panel" aria-live="polite">
-        <div className="m-panel__head">
+      <div className="card log-card" aria-live="polite">
+        <div className="log-header">
           <span
             style={{
               display: "inline-flex",
@@ -192,7 +190,7 @@ export function LiveLogStream() {
             </span>
             <button
               type="button"
-              className="m-icon-btn"
+              className="icon-button"
               onClick={() => setLogs([])}
               aria-label="Clear live log entries"
               title="Clear log entries"
@@ -202,7 +200,7 @@ export function LiveLogStream() {
             </button>
           </div>
         </div>
-        <div className="m-log">
+        <div className="log-body">
           {logs.length === 0 ? (
             <div
               style={{
@@ -218,7 +216,7 @@ export function LiveLogStream() {
             </div>
           ) : (
             logs.map((log) => (
-              <div key={log.clientId} className="m-log__row">
+              <div key={log.clientId} className="log-row">
                 <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
                   {log.timestamp
                     ? new Date(log.timestamp).toLocaleTimeString()
@@ -234,12 +232,8 @@ export function LiveLogStream() {
                   {log.level?.toUpperCase()}
                 </span>
                 <span
-                  className="m-truncate"
-                  style={{
-                    fontSize: 13,
-                    color: "var(--iris-500)",
-                    opacity: 0.8,
-                  }}
+                  className="truncate"
+                  style={{ fontSize: 13, color: "var(--accent)", opacity: 0.8 }}
                 >
                   {log.repository ? `[${log.repository}]` : "[system]"}
                 </span>

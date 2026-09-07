@@ -52,24 +52,24 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="m-page">
+    <div className="page">
       {/* -- Hero / Status Block ----------------------------------------- */}
       <section
-        className="m-card m-card--roomy m-rise"
+        className="card section-card reveal"
         style={{
-          borderTop: "2px solid var(--iris-500)",
+          borderTop: "2px solid var(--accent)",
           padding: "40px 48px",
         }}
       >
-        <div className="m-masthead" style={{ marginBottom: 32 }}>
+        <div className="page-head" style={{ marginBottom: 32 }}>
           <div>
-            <div className="m-kicker">Backup Operations Overview</div>
-            <h1 className="m-title">
+            <div className="page-kicker">Backup Operations Overview</div>
+            <h1 className="page-title">
               System
               <br />
               <em>Status</em>
             </h1>
-            <p className="m-subtitle">
+            <p className="page-subtitle">
               Real-time monitoring of GitHub repository backups, worker health,
               and system storage.
             </p>
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
                   color: "var(--text-muted)",
                   textTransform: "uppercase",
                   letterSpacing: "0.12em",
-                  fontFamily: "var(--font-text)",
+                  fontFamily: "var(--font-sans)",
                 }}
               >
                 Last Execution
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
                 style={{
                   fontSize: 13,
                   color: "var(--text-secondary)",
-                  fontFamily: "var(--font-text)",
+                  fontFamily: "var(--font-sans)",
                 }}
               >
                 {formatDate(latestRun.started_at)}
@@ -111,64 +111,64 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        <div className="m-grid m-grid--metrics">
-          <div className="m-metric m-rise m-delay-1">
-            <div className="m-metric__label">Total Repos Tracked</div>
-            <div className="m-metric__value">{stats?.distinct_repos ?? 0}</div>
+        <div className="metric-grid metric-grid--four stats-grid">
+          <div className="stat-card reveal reveal-delay-1">
+            <div className="stat-label">Total Repos Tracked</div>
+            <div className="stat-value">{stats?.distinct_repos ?? 0}</div>
           </div>
-          <div className="m-metric m-rise m-delay-2">
-            <div className="m-metric__label">Total Backup Size</div>
-            <div className="m-metric__value m-metric__value--sm">
+          <div className="stat-card reveal reveal-delay-2">
+            <div className="stat-label">Total Backup Size</div>
+            <div className="stat-value stat-value--md">
               {formatBytes(stats?.total_size_bytes ?? 0)}
             </div>
           </div>
-          <div className="m-metric m-rise m-delay-3">
-            <div className="m-metric__label">System Success Rate</div>
-            <div className="m-metric__value m-metric__value--positive">
+          <div className="stat-card reveal reveal-delay-3">
+            <div className="stat-label">System Success Rate</div>
+            <div className="stat-value stat-value--success">
               {stats?.success_rate && stats.success_rate > 0
                 ? `${stats.success_rate.toFixed(1)}%`
                 : "—"}
             </div>
           </div>
-          <div className="m-metric m-rise m-delay-4">
-            <div className="m-metric__label">Total Executions</div>
-            <div className="m-metric__value">{stats?.total_runs ?? 0}</div>
+          <div className="stat-card reveal reveal-delay-4">
+            <div className="stat-label">Total Executions</div>
+            <div className="stat-value">{stats?.total_runs ?? 0}</div>
           </div>
         </div>
       </section>
 
       {/* -- KPI Tiles -------------------------------------------------- */}
-      <div className="m-grid m-grid--metrics">
-        <div className="m-metric m-rise m-delay-1">
-          <div className="m-metric__label">Avg Run Duration</div>
-          <div className="m-metric__value">
+      <div className="metric-grid metric-grid--four stats-grid">
+        <div className="stat-card reveal reveal-delay-1">
+          <div className="stat-label">Avg Run Duration</div>
+          <div className="stat-value">
             {stats?.avg_duration_ms
               ? formatDuration(stats.avg_duration_ms)
               : "—"}
           </div>
         </div>
-        <div className="m-metric m-rise m-delay-2">
-          <div className="m-metric__label">Successful Repos</div>
-          <div className="m-metric__value m-metric__value--positive">
+        <div className="stat-card reveal reveal-delay-2">
+          <div className="stat-label">Successful Repos</div>
+          <div className="stat-value stat-value--success">
             {stats?.total_successful ?? 0}
           </div>
         </div>
-        <div className="m-metric m-rise m-delay-3">
-          <div className="m-metric__label">Failed Repos</div>
-          <div className="m-metric__value m-metric__value--critical">
+        <div className="stat-card reveal reveal-delay-3">
+          <div className="stat-label">Failed Repos</div>
+          <div className="stat-value stat-value--danger">
             {stats?.total_failed ?? 0}
           </div>
         </div>
-        <div className="m-metric m-rise m-delay-4">
-          <div className="m-metric__label">Logs Processed</div>
-          <div className="m-metric__value">{stats?.total_logs ?? 0}</div>
+        <div className="stat-card reveal reveal-delay-4">
+          <div className="stat-label">Logs Processed</div>
+          <div className="stat-value">{stats?.total_logs ?? 0}</div>
         </div>
       </div>
 
       {/* -- Latest Run Quick-Card --------------------------------------- */}
       {latestRun && (
         <section
-          className="m-card m-card--roomy m-rise"
+          className="card section-card reveal"
           style={{ padding: "32px 40px" }}
         >
           <div
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
               flexWrap: "wrap",
               marginBottom: 24,
               paddingBottom: 24,
-              borderBottom: "1px solid var(--line)",
+              borderBottom: "1px solid var(--border)",
             }}
           >
             <div>
@@ -191,7 +191,7 @@ export default async function DashboardPage() {
                   textTransform: "uppercase",
                   letterSpacing: "0.12em",
                   color: "var(--text-muted)",
-                  fontFamily: "var(--font-text)",
+                  fontFamily: "var(--font-sans)",
                   marginBottom: 8,
                 }}
               >
@@ -199,7 +199,7 @@ export default async function DashboardPage() {
               </div>
               <div
                 style={{
-                  fontFamily: "var(--font-display)",
+                  fontFamily: "var(--font-serif)",
                   fontSize: 22,
                   fontWeight: 400,
                   color: "var(--text)",
@@ -214,7 +214,7 @@ export default async function DashboardPage() {
                 style={{
                   fontSize: 13,
                   color: "var(--text-secondary)",
-                  fontFamily: "var(--font-text)",
+                  fontFamily: "var(--font-sans)",
                 }}
               >
                 Started {formatDate(latestRun.started_at)} ·{" "}
@@ -223,42 +223,41 @@ export default async function DashboardPage() {
             </div>
             <Link
               href={`/backups/${latestRun.id}`}
-              className="m-btn m-btn--secondary"
+              className="btn btn-outline"
               style={{ fontSize: 13, marginTop: 4 }}
             >
               View full results →
             </Link>
           </div>
 
-          <div className="m-grid m-grid--metrics">
-            <div className="m-card m-card--quiet">
-              <div className="m-metric__label">Repos backed up</div>
-              <div className="m-metric__value m-metric__value--sm">
+          <div className="metric-grid metric-grid--four">
+            <div className="card-flat">
+              <div className="stat-label">Repos backed up</div>
+              <div className="stat-value stat-value--md">
                 {latestRun.total_repos}
               </div>
             </div>
-            <div className="m-card m-card--quiet">
-              <div className="m-metric__label">Successful</div>
-              <div className="m-metric__value m-metric__value--sm m-metric__value--positive">
+            <div className="card-flat">
+              <div className="stat-label">Successful</div>
+              <div className="stat-value stat-value--md stat-value--success">
                 {latestRun.successful}
               </div>
             </div>
-            <div className="m-card m-card--quiet">
-              <div className="m-metric__label">Failed</div>
+            <div className="card-flat">
+              <div className="stat-label">Failed</div>
               <div
-                className="m-metric__value m-metric__value--sm"
+                className="stat-value stat-value--md"
                 style={{
-                  color:
-                    latestRun.failed > 0 ? "var(--critical-500)" : "inherit",
+                  color: latestRun.failed > 0 ? "var(--danger)" : "inherit",
                 }}
               >
                 {latestRun.failed}
               </div>
             </div>
-            <div className="m-card m-card--quiet">
-              <div className="m-metric__label">Skipped</div>
+            <div className="card-flat">
+              <div className="stat-label">Skipped</div>
               <div
-                className="m-metric__value m-metric__value--sm"
+                className="stat-value stat-value--md"
                 style={{ color: "var(--text-muted)" }}
               >
                 {latestRun.skipped}
@@ -269,7 +268,7 @@ export default async function DashboardPage() {
       )}
 
       {/* -- Navigation Cards -------------------------------------------- */}
-      <div className="m-grid m-grid--metrics">
+      <div className="metric-grid metric-grid--four">
         <NavCard
           href="/backups"
           title="Backup History"
@@ -292,7 +291,7 @@ export default async function DashboardPage() {
         <NavCard
           href="/analytics/runs"
           title="Run History"
-          desc="Full paginated run m-table"
+          desc="Full paginated run table"
           kicker="Logs"
           icon={
             <>
@@ -337,7 +336,7 @@ function NavCard({
       style={{ textDecoration: "none", display: "block", height: "100%" }}
     >
       <div
-        className="m-card m-rise m-card--interactive"
+        className="card reveal nav-card"
         style={{
           padding: "28px 32px",
           cursor: "pointer",
@@ -353,7 +352,7 @@ function NavCard({
             width: 44,
             height: 44,
             borderRadius: 12,
-            background: "var(--iris-wash)",
+            background: "var(--accent-bg)",
             border: "1px solid rgba(139, 124, 255, 0.18)",
             display: "flex",
             alignItems: "center",
@@ -366,7 +365,7 @@ function NavCard({
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="var(--iris-500)"
+            stroke="var(--accent)"
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -385,7 +384,7 @@ function NavCard({
               textTransform: "uppercase",
               letterSpacing: "0.12em",
               color: "var(--text-muted)",
-              fontFamily: "var(--font-text)",
+              fontFamily: "var(--font-sans)",
               marginBottom: 6,
             }}
           >
@@ -393,7 +392,7 @@ function NavCard({
           </div>
           <div
             style={{
-              fontFamily: "var(--font-display)",
+              fontFamily: "var(--font-serif)",
               fontWeight: 400,
               fontSize: 20,
               color: "var(--text)",
@@ -408,7 +407,7 @@ function NavCard({
             style={{
               fontSize: 13,
               color: "var(--text-secondary)",
-              fontFamily: "var(--font-text)",
+              fontFamily: "var(--font-sans)",
               lineHeight: 1.55,
             }}
           >

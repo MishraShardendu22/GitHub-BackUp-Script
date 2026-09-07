@@ -17,9 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added test coverage for fallback and precedence between `DATABASE_URL` and `POSTGRES_URL` across Go backend and Backup Worker test suites.
   - Enforced `TEST_DATABASE_URL` / `POSTGRES_TEST_URL` isolation in `backend/db/embedding_test.go` so live databases are never truncated during unit test runs unless `ALLOW_DESTRUCTIVE_TESTS=1` is explicitly set.
 
-- Meridian Design System & Frontend UI Migration:
-  - Migrated Next.js frontend foundation to the Meridian design system with unified design tokens, typography scales, semantic surfaces, and responsive layout primitives.
-  - Rebuilt dashboard layout shell, navigation, and visual components using Meridian classes.
+- Classic Frontend UI Restoration:
+  - Reverted the Next.js frontend to its classic design and stylesheet architecture (`ai.css`, `base.css`, `components.css`, `layout-grid.css`, `search.css`, `sidebar.css`), eliminating Meridian token wrappers.
+  - Removed the `meridian-design-system` skill from the AI agent skills catalog.
 - Self-Healing Git Hook Tool Resolution & Non-Interactive Daemon Resilience:
   - Added automatic runtime PATH discovery in `.githooks/pre-commit` and `.githooks/pre-push` for `uv`, `pnpm`, `go`, and NVM node runtimes, ensuring full compatibility under restricted systemd and cron environments.
   - Added `DB_ONLY` bypass in pre-commit hook to skip heavy compilation when only SQLite database snapshots are staged.

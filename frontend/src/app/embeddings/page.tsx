@@ -303,12 +303,12 @@ export default function EmbeddingsPage() {
       : 0;
 
   return (
-    <div className="m-page">
+    <div className="page">
       {/* Compact Top Header */}
       <section
-        className="m-card m-card--roomy m-rise"
+        className="card section-card reveal"
         style={{
-          borderTop: "2px solid var(--iris-500)",
+          borderTop: "2px solid var(--accent)",
           padding: "16px 24px",
           marginBottom: 16,
           display: "flex",
@@ -319,10 +319,10 @@ export default function EmbeddingsPage() {
         }}
       >
         <div>
-          <div className="m-kicker" style={{ marginBottom: 2 }}>
+          <div className="page-kicker" style={{ marginBottom: 2 }}>
             Vector Index &amp; Dense Embeddings
           </div>
-          <h1 className="m-title" style={{ fontSize: "22px", margin: 0 }}>
+          <h1 className="page-title" style={{ fontSize: "22px", margin: 0 }}>
             Embedding <em>Management &amp; Indexer</em>
           </h1>
         </div>
@@ -336,7 +336,7 @@ export default function EmbeddingsPage() {
                 background: "var(--surface)",
                 padding: "6px 12px",
                 borderRadius: "var(--radius-md)",
-                border: "1px solid var(--line)",
+                border: "1px solid var(--border)",
               }}
             >
               <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
@@ -347,7 +347,7 @@ export default function EmbeddingsPage() {
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "var(--iris-500)",
+                  color: "var(--accent)",
                 }}
               >
                 #{genStatus.id}
@@ -368,7 +368,7 @@ export default function EmbeddingsPage() {
         }}
       >
         {/* Panel 1: Model Selection & AI Provider */}
-        <section className="m-card" style={{ padding: "22px 24px" }}>
+        <section className="card" style={{ padding: "22px 24px" }}>
           <SectionHeader
             title="Model Selection"
             subtitle="Configure dense vector embedding and cross-encoder reranker"
@@ -388,7 +388,7 @@ export default function EmbeddingsPage() {
                 background: "var(--surface)",
                 padding: "14px 18px",
                 borderRadius: "var(--radius-md)",
-                border: "1px solid var(--line)",
+                border: "1px solid var(--border)",
               }}
             >
               <div
@@ -400,17 +400,17 @@ export default function EmbeddingsPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Layers size={14} style={{ color: "var(--iris-500)" }} />
+                  <Layers size={14} style={{ color: "var(--accent)" }} />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>
                     Dense Embedding Model
                   </span>
                 </div>
                 {selectedEmbedding && (
                   <div style={{ display: "flex", gap: 6 }}>
-                    <span className="m-badge" style={{ fontSize: 11 }}>
+                    <span className="badge" style={{ fontSize: 11 }}>
                       {selectedEmbedding.dimensions} dims
                     </span>
-                    <span className="m-badge" style={{ fontSize: 11 }}>
+                    <span className="badge" style={{ fontSize: 11 }}>
                       {selectedEmbedding.provider}
                     </span>
                   </div>
@@ -436,7 +436,7 @@ export default function EmbeddingsPage() {
                 background: "var(--surface)",
                 padding: "14px 18px",
                 borderRadius: "var(--radius-md)",
-                border: "1px solid var(--line)",
+                border: "1px solid var(--border)",
               }}
             >
               <div
@@ -448,13 +448,13 @@ export default function EmbeddingsPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Layers size={14} style={{ color: "var(--iris-500)" }} />
+                  <Layers size={14} style={{ color: "var(--accent)" }} />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>
                     Cross-Encoder Reranker
                   </span>
                 </div>
                 {selectedRerank && (
-                  <span className="m-badge" style={{ fontSize: 11 }}>
+                  <span className="badge" style={{ fontSize: 11 }}>
                     {selectedRerank.provider}
                   </span>
                 )}
@@ -477,7 +477,7 @@ export default function EmbeddingsPage() {
             <div
               style={{
                 background: "rgba(235, 160, 65, 0.04)",
-                border: "1px dashed var(--line)",
+                border: "1px dashed var(--border)",
                 borderRadius: "var(--radius-md)",
                 padding: "14px 16px",
                 display: "flex",
@@ -497,7 +497,7 @@ export default function EmbeddingsPage() {
               </div>
               <button
                 type="button"
-                className="m-btn m-btn--primary"
+                className="btn btn-primary"
                 onClick={handleStartGeneration}
                 disabled={
                   !selectedEmbedding || isStartingGen || isAutoProcessing
@@ -506,7 +506,7 @@ export default function EmbeddingsPage() {
               >
                 {isStartingGen ? (
                   <>
-                    <Loader2 size={13} className="m-spinner" />
+                    <Loader2 size={13} className="spin" />
                     Scanning...
                   </>
                 ) : (
@@ -521,7 +521,7 @@ export default function EmbeddingsPage() {
         </section>
 
         {/* Panel 2: Vector Index & Interactive Workflow */}
-        <section className="m-card" style={{ padding: "22px 24px" }}>
+        <section className="card" style={{ padding: "22px 24px" }}>
           <SectionHeader
             title="Vector Index & Batch Pipeline"
             subtitle="Real-time chunking progress, batch controls, and live worker logs"
@@ -560,7 +560,7 @@ export default function EmbeddingsPage() {
                     background: "var(--surface)",
                     padding: "10px 12px",
                     borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--line)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   <div
@@ -594,17 +594,15 @@ export default function EmbeddingsPage() {
                     padding: "10px 12px",
                     borderRadius: "var(--radius-md)",
                     border: isBuilding
-                      ? "1px solid var(--iris-500)"
-                      : "1px solid var(--line)",
+                      ? "1px solid var(--accent)"
+                      : "1px solid var(--border)",
                   }}
                 >
                   <div
                     style={{
                       fontSize: 10,
                       fontWeight: 700,
-                      color: isBuilding
-                        ? "var(--iris-500)"
-                        : "var(--text-muted)",
+                      color: isBuilding ? "var(--accent)" : "var(--text-muted)",
                       textTransform: "uppercase",
                     }}
                   >
@@ -631,8 +629,8 @@ export default function EmbeddingsPage() {
                     padding: "10px 12px",
                     borderRadius: "var(--radius-md)",
                     border: isActive
-                      ? "1px solid var(--positive-500, #2ecc71)"
-                      : "1px solid var(--line)",
+                      ? "1px solid var(--success, #2ecc71)"
+                      : "1px solid var(--border)",
                   }}
                 >
                   <div
@@ -640,7 +638,7 @@ export default function EmbeddingsPage() {
                       fontSize: 10,
                       fontWeight: 700,
                       color: isActive
-                        ? "var(--positive-500, #2ecc71)"
+                        ? "var(--success, #2ecc71)"
                         : "var(--text-muted)",
                       textTransform: "uppercase",
                     }}
@@ -681,8 +679,8 @@ export default function EmbeddingsPage() {
                     {isAutoProcessing && (
                       <Loader2
                         size={12}
-                        className="m-spinner"
-                        style={{ color: "var(--iris-500)" }}
+                        className="spin"
+                        style={{ color: "var(--accent)" }}
                       />
                     )}
                     {isBuilding
@@ -693,7 +691,7 @@ export default function EmbeddingsPage() {
                         ? "Serving hybrid search queries"
                         : "All chunks embedded — ready to activate"}
                   </span>
-                  <strong style={{ color: "var(--iris-500)" }}>
+                  <strong style={{ color: "var(--accent)" }}>
                     {progressPercent}% Complete
                   </strong>
                 </div>
@@ -701,7 +699,7 @@ export default function EmbeddingsPage() {
                   style={{
                     width: "100%",
                     height: 8,
-                    background: "var(--surface-overlay)",
+                    background: "var(--surface2)",
                     borderRadius: 4,
                     overflow: "hidden",
                   }}
@@ -711,8 +709,8 @@ export default function EmbeddingsPage() {
                       width: `${progressPercent}%`,
                       height: "100%",
                       background: isActive
-                        ? "var(--positive-500, #2ecc71)"
-                        : "var(--iris-500)",
+                        ? "var(--success, #2ecc71)"
+                        : "var(--accent)",
                       transition: "width 0.4s ease",
                     }}
                   />
@@ -725,7 +723,7 @@ export default function EmbeddingsPage() {
                   background: "var(--surface)",
                   padding: "10px 14px",
                   borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--line)",
+                  border: "1px solid var(--border)",
                   marginBottom: 16,
                   display: "flex",
                   justifyContent: "space-between",
@@ -742,17 +740,17 @@ export default function EmbeddingsPage() {
                     style={{
                       fontSize: 12,
                       fontWeight: 600,
-                      color: "var(--iris-500)",
+                      color: "var(--accent)",
                     }}
                   >
                     {genStatus.model_id}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <span className="m-badge" style={{ fontSize: 11 }}>
+                  <span className="badge" style={{ fontSize: 11 }}>
                     {genStatus.dimensions} Dims
                   </span>
-                  <span className="m-badge" style={{ fontSize: 11 }}>
+                  <span className="badge" style={{ fontSize: 11 }}>
                     Status: {genStatus.status}
                   </span>
                 </div>
@@ -771,19 +769,19 @@ export default function EmbeddingsPage() {
                 {isReadyToActivate ? (
                   <button
                     type="button"
-                    className="m-btn m-btn--primary"
+                    className="btn btn-primary"
                     onClick={handleActivateGeneration}
                     disabled={isActivating}
                     style={{
                       padding: "8px 18px",
                       fontSize: 13,
-                      background: "var(--positive-500, #2ecc71)",
-                      borderColor: "var(--positive-500, #2ecc71)",
+                      background: "var(--success, #2ecc71)",
+                      borderColor: "var(--success, #2ecc71)",
                     }}
                   >
                     {isActivating ? (
                       <>
-                        <Loader2 size={14} className="m-spinner" />
+                        <Loader2 size={14} className="spin" />
                         Activating...
                       </>
                     ) : (
@@ -797,7 +795,7 @@ export default function EmbeddingsPage() {
                   <>
                     <button
                       type="button"
-                      className="m-btn m-btn--primary"
+                      className="btn btn-primary"
                       onClick={toggleAutoProcess}
                       style={{ padding: "8px 16px", fontSize: 13 }}
                     >
@@ -816,14 +814,14 @@ export default function EmbeddingsPage() {
 
                     <button
                       type="button"
-                      className="m-btn m-btn--secondary"
+                      className="btn btn-outline"
                       onClick={handleProcessSingleBatch}
                       disabled={isAutoProcessing || isProcessingSingle}
                       style={{ padding: "8px 14px", fontSize: 12 }}
                     >
                       {isProcessingSingle ? (
                         <>
-                          <Loader2 size={13} className="m-spinner" />
+                          <Loader2 size={13} className="spin" />
                           Processing...
                         </>
                       ) : (
@@ -839,7 +837,7 @@ export default function EmbeddingsPage() {
                       style={{
                         display: "inline-flex",
                         background: "var(--surface)",
-                        border: "1px solid var(--line)",
+                        border: "1px solid var(--border)",
                         borderRadius: "var(--radius-md)",
                         padding: 2,
                       }}
@@ -856,7 +854,7 @@ export default function EmbeddingsPage() {
                             borderRadius: "calc(var(--radius-md) - 2px)",
                             background:
                               batchSize === size
-                                ? "var(--iris-500)"
+                                ? "var(--accent)"
                                 : "transparent",
                             color:
                               batchSize === size ? "#000" : "var(--text-muted)",
@@ -875,7 +873,7 @@ export default function EmbeddingsPage() {
                 {/* Working Refresh Button with Live Animation */}
                 <button
                   type="button"
-                  className="m-btn m-btn--secondary"
+                  className="btn btn-outline"
                   onClick={handleManualRefresh}
                   disabled={isRefreshing}
                   style={{
@@ -888,10 +886,7 @@ export default function EmbeddingsPage() {
                   }}
                   title="Refresh generation status from database"
                 >
-                  <RefreshCw
-                    size={13}
-                    className={isRefreshing ? "m-spinner" : ""}
-                  />
+                  <RefreshCw size={13} className={isRefreshing ? "spin" : ""} />
                   {isRefreshing ? "Updating..." : "Refresh"}
                 </button>
               </div>
@@ -917,7 +912,7 @@ export default function EmbeddingsPage() {
       </div>
 
       {/* Real-time Activity Log & Console Feed */}
-      <section className="m-card" style={{ padding: "16px 20px" }}>
+      <section className="card" style={{ padding: "16px 20px" }}>
         <div
           style={{
             display: "flex",
@@ -927,7 +922,7 @@ export default function EmbeddingsPage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Terminal size={14} style={{ color: "var(--iris-500)" }} />
+            <Terminal size={14} style={{ color: "var(--accent)" }} />
             <span style={{ fontSize: 12, fontWeight: 700 }}>
               Live Vector Worker Console
             </span>
@@ -969,9 +964,9 @@ export default function EmbeddingsPage() {
                 style={{
                   color:
                     log.type === "success"
-                      ? "var(--positive-500, #2ecc71)"
+                      ? "var(--success, #2ecc71)"
                       : log.type === "error"
-                        ? "var(--critical-500, #e74c3c)"
+                        ? "var(--danger, #e74c3c)"
                         : "rgba(255, 255, 255, 0.7)",
                 }}
               >

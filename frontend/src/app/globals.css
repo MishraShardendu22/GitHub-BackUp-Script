@@ -1,15 +1,8 @@
-/* =============================================================================
-   Systems Lab - stylesheet entry
-   -----------------------------------------------------------------------------
-   Import order is load-bearing:
-     1. Tailwind, so its utilities exist.
-     2. Meridian, the ecosystem design system (vendored from the agent-skills
-        hub; edit the canonical copy there, never this one).
-     3. The Systems Lab surfaces that are specific to this product.
-   ========================================================================== */
-
 @import "tailwindcss";
 
-@import "../styles/meridian/meridian.css";
-
-@import "./styles/console.css";
+@import "./styles/base.css";
+@import "./styles/layout-grid.css";
+@import "./styles/components.css";
+@import "./styles/sidebar.css";
+@import "./styles/ai.css";
+@import "./styles/search.css";

@@ -45,9 +45,9 @@ export function AnalyticsCharts({ data, days }: AnalyticsChartsProps) {
   }));
 
   return (
-    <div className="m-grid--wide">
-      <section className="m-card chart-card">
-        <div className="m-section__title">Success vs failure — {days}d</div>
+    <div className="split-grid">
+      <section className="card chart-card">
+        <div className="section-title">Success vs failure — {days}d</div>
         <div className="chart-frame">
           <ResponsiveContainer
             width="100%"
@@ -80,10 +80,8 @@ export function AnalyticsCharts({ data, days }: AnalyticsChartsProps) {
         </div>
       </section>
 
-      <section className="m-card chart-card">
-        <div className="m-section__title">
-          Duration trend — {days}d (seconds)
-        </div>
+      <section className="card chart-card">
+        <div className="section-title">Duration trend — {days}d (seconds)</div>
         <div className="chart-frame">
           <ResponsiveContainer
             width="100%"
@@ -103,7 +101,7 @@ export function AnalyticsCharts({ data, days }: AnalyticsChartsProps) {
                 type="monotone"
                 dataKey="duration"
                 name="Duration (s)"
-                stroke="var(--iris-500)"
+                stroke="var(--accent)"
                 fill="rgba(212,168,50,0.1)"
                 strokeWidth={2}
               />

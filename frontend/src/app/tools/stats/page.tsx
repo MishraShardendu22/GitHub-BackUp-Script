@@ -113,7 +113,7 @@ export default function ToolStatsPage() {
   }, [mergedTools, filter, searchQuery]);
 
   return (
-    <div className="m-page" style={{ paddingBottom: "80px" }}>
+    <div className="page-container" style={{ paddingBottom: "80px" }}>
       <div
         style={{
           display: "flex",
@@ -132,7 +132,7 @@ export default function ToolStatsPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Link
             href="/tools"
-            className="m-btn m-btn--secondary"
+            className="btn btn-secondary"
             style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
             <Play size={13} />
@@ -140,7 +140,7 @@ export default function ToolStatsPage() {
           </Link>
           <button
             type="button"
-            className="m-btn m-btn--secondary"
+            className="btn btn-secondary"
             onClick={() => {
               setIsRefreshing(true);
               loadData();
@@ -159,7 +159,7 @@ export default function ToolStatsPage() {
 
       {/* Summary KPI Cards */}
       <div
-        className="m-grid m-grid--metrics"
+        className="dashboard-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -167,7 +167,7 @@ export default function ToolStatsPage() {
           marginBottom: "28px",
         }}
       >
-        <div className="m-card" style={{ padding: "18px" }}>
+        <div className="card" style={{ padding: "18px" }}>
           <div
             style={{
               display: "flex",
@@ -187,7 +187,7 @@ export default function ToolStatsPage() {
             >
               Registered Tools
             </span>
-            <Wrench size={16} style={{ color: "var(--iris-500)" }} />
+            <Wrench size={16} style={{ color: "var(--accent)" }} />
           </div>
           <div
             style={{
@@ -210,7 +210,7 @@ export default function ToolStatsPage() {
           </div>
         </div>
 
-        <div className="m-card" style={{ padding: "18px" }}>
+        <div className="card" style={{ padding: "18px" }}>
           <div
             style={{
               display: "flex",
@@ -253,7 +253,7 @@ export default function ToolStatsPage() {
           </div>
         </div>
 
-        <div className="m-card" style={{ padding: "18px" }}>
+        <div className="card" style={{ padding: "18px" }}>
           <div
             style={{
               display: "flex",
@@ -296,7 +296,7 @@ export default function ToolStatsPage() {
           </div>
         </div>
 
-        <div className="m-card" style={{ padding: "18px" }}>
+        <div className="card" style={{ padding: "18px" }}>
           <div
             style={{
               display: "flex",
@@ -343,7 +343,7 @@ export default function ToolStatsPage() {
       </div>
 
       {/* Main Table Card */}
-      <div className="m-card" style={{ padding: "24px" }}>
+      <div className="card" style={{ padding: "24px" }}>
         {/* Controls */}
         <div
           style={{
@@ -358,7 +358,7 @@ export default function ToolStatsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button
               type="button"
-              className={`m-btn ${filter === "all" ? "m-btn--primary" : "m-btn--secondary"}`}
+              className={`btn ${filter === "all" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setFilter("all")}
               style={{ padding: "6px 14px", fontSize: "13px" }}
             >
@@ -366,7 +366,7 @@ export default function ToolStatsPage() {
             </button>
             <button
               type="button"
-              className={`m-btn ${filter === "used" ? "m-btn--primary" : "m-btn--secondary"}`}
+              className={`btn ${filter === "used" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setFilter("used")}
               style={{ padding: "6px 14px", fontSize: "13px" }}
             >
@@ -374,7 +374,7 @@ export default function ToolStatsPage() {
             </button>
             <button
               type="button"
-              className={`m-btn ${filter === "unused" ? "m-btn--primary" : "m-btn--secondary"}`}
+              className={`btn ${filter === "unused" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setFilter("unused")}
               style={{ padding: "6px 14px", fontSize: "13px" }}
             >
@@ -402,7 +402,7 @@ export default function ToolStatsPage() {
             />
             <input
               type="text"
-              className="m-input"
+              className="input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tools by name or description..."
@@ -427,8 +427,8 @@ export default function ToolStatsPage() {
             description="Adjust your search query or switch filters to view available agent tools."
           />
         ) : (
-          <div className="agent-output">
-            <table className="">
+          <div className="ai-rich-table-container">
+            <table className="ai-rich-table">
               <thead>
                 <tr>
                   <th>Tool Name</th>
@@ -446,7 +446,7 @@ export default function ToolStatsPage() {
                     <td style={{ fontFamily: "var(--font-mono)" }}>
                       <span
                         style={{
-                          color: "var(--iris-500)",
+                          color: "var(--accent)",
                           fontWeight: 600,
                           fontSize: "13px",
                         }}
@@ -466,7 +466,7 @@ export default function ToolStatsPage() {
                     </td>
                     <td>
                       {t.isUsed ? (
-                        <span className="m-badge m-badge--accent font-mono">
+                        <span className="badge badge-info font-mono">
                           {t.count} runs
                         </span>
                       ) : (
@@ -492,7 +492,7 @@ export default function ToolStatsPage() {
                     <td>
                       {t.isUsed ? (
                         <span
-                          className={`m-badge ${t.successRate >= 90 ? "m-badge--positive" : t.successRate >= 50 ? "badge-warning" : "badge-danger"} font-mono`}
+                          className={`badge ${t.successRate >= 90 ? "badge-success" : t.successRate >= 50 ? "badge-warning" : "badge-danger"} font-mono`}
                         >
                           {t.successRate.toFixed(1)}%
                         </span>
@@ -502,7 +502,7 @@ export default function ToolStatsPage() {
                     </td>
                     <td>
                       {t.isUsed ? (
-                        <span className="m-badge m-badge--positive">
+                        <span className="badge badge-success">
                           <span
                             style={{
                               display: "inline-block",
@@ -517,11 +517,11 @@ export default function ToolStatsPage() {
                         </span>
                       ) : (
                         <span
-                          className="m-badge"
+                          className="badge"
                           style={{
                             background: "rgba(255, 255, 255, 0.04)",
                             color: "var(--text-muted)",
-                            border: "1px dashed var(--line)",
+                            border: "1px dashed var(--border)",
                           }}
                         >
                           Not used yet
@@ -531,7 +531,7 @@ export default function ToolStatsPage() {
                     <td style={{ textAlign: "right" }}>
                       <Link
                         href={`/tools?tool=${encodeURIComponent(t.name)}`}
-                        className="m-btn m-btn--secondary"
+                        className="btn btn-secondary"
                         style={{
                           padding: "4px 10px",
                           fontSize: "12px",

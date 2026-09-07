@@ -1,8 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, Search, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from "react";
 
 export interface DropdownOption {
   value: string;
@@ -27,22 +26,18 @@ export function Dropdown({
   value,
   onChange,
   label,
-  placeholder = "Select an option",
+  placeholder = "Select option...",
   disabled = false,
   searchable = false,
-  className,
+  className = "",
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const listId = useId();
-  const labelId = useId();
 
+  // Close on outside click
   useEffect(() => {
-    if (!isOpen) return;
-
     function handleClickOutside(event: MouseEvent) {
       if (
         containerRef.current &&
@@ -51,159 +46,134 @@ export function Dropdown({
         setIsOpen(false);
       }
     }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+  // Auto-focus search
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  // Escape key handler
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
         setIsOpen(false);
-        triggerRef.current?.focus();
       }
     }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen) searchInputRef.current?.focus();
-  }, [isOpen]);
-
-  const activeOption = options.find((option) => option.value === value);
+  const activeOption = options.find((o) => o.value === value);
   const displayLabel =
-    activeOption?.label ?? activeOption?.value ?? placeholder;
+    activeOption?.label || activeOption?.value || placeholder;
 
-  const query = search.trim().toLowerCase();
   const filteredOptions =
-    searchable && query
+    searchable && search.trim()
       ? options.filter(
-          (option) =>
-            option.label.toLowerCase().includes(query) ||
-            option.value.toLowerCase().includes(query) ||
-            option.sublabel?.toLowerCase().includes(query),
+          (o) =>
+            o.label.toLowerCase().includes(search.toLowerCase()) ||
+            o.value.toLowerCase().includes(search.toLowerCase()) ||
+            o.sublabel?.toLowerCase().includes(search.toLowerCase()),
         )
       : options;
 
   return (
     <div
-      className={cn("m-field", className)}
+      className={`custom-model-selector-wrap ${className}`}
       ref={containerRef}
-      style={{ position: "relative" }}
     >
-      {label && (
-        <span className="m-label" id={labelId}>
-          {label}
-        </span>
-      )}
-
       <button
-        ref={triggerRef}
         type="button"
-        className="m-select"
-        onClick={() => !disabled && setIsOpen((open) => !open)}
+        className={`custom-model-trigger ${isOpen ? "open" : ""} ${disabled ? "disabled" : ""}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-controls={isOpen ? listId : undefined}
-        aria-labelledby={label ? labelId : undefined}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-3)",
-          textAlign: "left",
-          backgroundImage: "none",
-          paddingRight: "var(--space-4)",
-        }}
       >
-        <span className="m-truncate">{displayLabel}</span>
-        <ChevronDown
-          size={14}
-          aria-hidden="true"
-          className="m-navitem__chevron"
-          style={{ transform: isOpen ? "rotate(180deg)" : undefined }}
-        />
+        {label && <span className="custom-model-label">{label}</span>}
+        <span className="custom-model-value">{displayLabel}</span>
+        <span className={`custom-model-arrow ${isOpen ? "rotated" : ""}`}>
+          <ChevronDown size={14} />
+        </span>
       </button>
 
       {isOpen && (
-        <div
-          className="m-menu"
-          style={{
-            position: "absolute",
-            top: "calc(100% + var(--space-2))",
-            left: 0,
-            right: 0,
-            maxHeight: "18rem",
-            overflowY: "auto",
-          }}
-        >
+        <div className="custom-model-popover animate-in">
           {searchable && options.length > 5 && (
-            <div
-              className="m-search"
-              style={{ marginBottom: "var(--space-1)" }}
-            >
-              <span className="m-search__icon">
-                <Search size={13} aria-hidden="true" />
-              </span>
-              <input
-                ref={searchInputRef}
-                type="text"
-                className="m-input m-search__input"
-                placeholder="Filter options"
-                aria-label="Filter options"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  className="m-icon-btn m-icon-btn--bare m-search__clear"
-                  onClick={() => setSearch("")}
-                  aria-label="Clear filter"
-                >
-                  <X size={12} aria-hidden="true" />
-                </button>
-              )}
+            <div className="custom-model-popover-header">
+              <div className="custom-model-search-box">
+                <Search size={13} className="custom-model-search-icon" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="custom-model-search-input"
+                  placeholder="Filter options..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    className="custom-model-search-clear"
+                    onClick={() => setSearch("")}
+                    aria-label="Clear search"
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
-          <div id={listId} role="listbox" aria-labelledby={labelId}>
+          <div className="custom-model-list" role="listbox">
             {filteredOptions.length === 0 ? (
-              <p className="m-menu__label">No options found</p>
+              <div className="custom-model-empty">No options found</div>
             ) : (
-              filteredOptions.map((option) => {
-                const isSelected = option.value === value;
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value;
                 return (
                   <button
-                    key={option.value}
+                    key={opt.value}
                     type="button"
-                    className="m-menu__item"
+                    className={`custom-model-option ${isSelected ? "selected" : ""}`}
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => {
-                      onChange(option.value);
+                      onChange(opt.value);
                       setIsOpen(false);
                       setSearch("");
-                      triggerRef.current?.focus();
                     }}
                   >
-                    <span
-                      className="m-stack m-stack--tight"
-                      style={{ flex: 1, minWidth: 0 }}
-                    >
-                      <span className="m-truncate">{option.label}</span>
-                      {option.sublabel && (
-                        <span className="m-caption m-truncate">
-                          {option.sublabel}
+                    <div className="custom-model-option-main">
+                      <span className="custom-model-option-name">
+                        {opt.label}
+                      </span>
+                      {opt.sublabel && (
+                        <span className="custom-model-option-id">
+                          {opt.sublabel}
                         </span>
                       )}
-                    </span>
-                    {option.badge && (
-                      <span className="m-tag">{option.badge}</span>
-                    )}
-                    {isSelected && <Check size={14} aria-hidden="true" />}
+                    </div>
+
+                    <div className="custom-model-option-meta">
+                      {opt.badge && (
+                        <span className="custom-model-provider-badge">
+                          {opt.badge}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <span className="custom-model-check-icon">
+                          <Check size={14} />
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })

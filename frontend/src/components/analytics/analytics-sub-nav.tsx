@@ -18,7 +18,7 @@ export function AnalyticsSubNav() {
       style={{
         display: "flex",
         gap: 4,
-        borderBottom: "1px solid var(--line)",
+        borderBottom: "1px solid var(--border)",
         paddingBottom: 0,
         marginBottom: 0,
       }}
@@ -35,9 +35,9 @@ export function AnalyticsSubNav() {
               fontWeight: 500,
               textDecoration: "none",
               borderBottom: isActive
-                ? "2px solid var(--iris-500)"
+                ? "2px solid var(--accent)"
                 : "2px solid transparent",
-              color: isActive ? "var(--iris-500)" : "var(--text-muted)",
+              color: isActive ? "var(--accent)" : "var(--text-muted)",
               marginBottom: -1,
               transition: "color 0.15s, border-color 0.15s",
               whiteSpace: "nowrap",

@@ -22,7 +22,7 @@ function renderMarkdownInline(text: string): React.ReactNode {
                 borderRadius: "4px",
                 fontFamily: "var(--font-mono, monospace)",
                 textTransform: "none",
-                color: "var(--iris-500)",
+                color: "var(--accent)",
               }}
             >
               {part.slice(1, -1)}
@@ -118,12 +118,12 @@ export function MessageContentRenderer({ content }: { content: string }) {
         if (block.type === "code") {
           return (
             <div key={blockKey} style={{ margin: "4px 0" }}>
-              <div className="m-code__head">
+              <div className="ai-code-block-header">
                 <span>{block.language || "code"}</span>
                 <span>Copy</span>
               </div>
               <pre
-                className="m-code"
+                className="ai-code-block-body"
                 style={{
                   fontFamily: "var(--font-mono, monospace)",
                   background: "#0d0b0a",
@@ -158,11 +158,11 @@ export function MessageContentRenderer({ content }: { content: string }) {
             .filter((row) => row.length > 0);
           return (
             <div
-              className="agent-output"
+              className="ai-rich-table-container"
               key={blockKey}
               style={{ margin: "6px 0" }}
             >
-              <table className="">
+              <table className="ai-rich-table">
                 <thead>
                   <tr>
                     {headerCells.map((cell) => (
@@ -207,7 +207,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
                     key={lineKey}
                     style={{
                       fontSize: "17px",
-                      color: "var(--iris-500)",
+                      color: "var(--accent)",
                       margin: "8px 0 2px",
                       fontWeight: 700,
                     }}
@@ -283,7 +283,7 @@ export function MessageContentRenderer({ content }: { content: string }) {
                 const [, label, value] = match;
                 return (
                   <div
-                    className="m-metric m-metric--inline"
+                    className="ai-metric-stat-card"
                     style={{
                       display: "inline-flex",
                       flexDirection: "column",
@@ -293,8 +293,8 @@ export function MessageContentRenderer({ content }: { content: string }) {
                     }}
                     key={lineKey}
                   >
-                    <span className="m-metric__value">{value}</span>
-                    <span className="m-metric__label">
+                    <span className="ai-metric-val">{value}</span>
+                    <span className="ai-metric-lbl">
                       {renderMarkdownInline(label)}
                     </span>
                   </div>

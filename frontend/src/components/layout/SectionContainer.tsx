@@ -7,5 +7,7 @@ export function SectionContainer({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <section className={cn("m-section", className)}>{children}</section>;
+  return (
+    <section className={cn("section-container", className)}>{children}</section>
+  );
 }

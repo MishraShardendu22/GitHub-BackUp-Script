@@ -38,12 +38,12 @@ export default async function RunHistoryPage({
   const pagination = result?.pagination;
 
   return (
-    <div className="m-page">
-      <div className="m-masthead" style={{ marginBottom: 24 }}>
+    <div className="page">
+      <div className="page-head" style={{ marginBottom: 24 }}>
         <div>
-          <div className="m-kicker">Analytics / Run History</div>
-          <h1 className="m-title">Backup Runs</h1>
-          <p className="m-subtitle">
+          <div className="page-kicker">Analytics / Run History</div>
+          <h1 className="page-title">Backup Runs</h1>
+          <p className="page-subtitle">
             Full paginated history of all backup runs. Click a run to see
             per-repository results.
           </p>
@@ -52,17 +52,17 @@ export default async function RunHistoryPage({
 
       <AnalyticsSubNav />
 
-      <section className="m-card m-card--roomy">
+      <section className="card section-card">
         {!result ? (
-          <p style={{ color: "var(--critical-500)", fontSize: 15 }}>
+          <p style={{ color: "var(--danger)", fontSize: 15 }}>
             Failed to load run history. Check the backend is running.
           </p>
         ) : runs.length === 0 ? (
           <EmptyRuns />
         ) : (
           <>
-            <div className="m-table-wrap">
-              <table className="m-table m-table--wide">
+            <div className="table-wrap">
+              <table className="table table-wide">
                 <thead>
                   <tr>
                     <th style={{ whiteSpace: "nowrap" }}>Run #</th>
@@ -87,12 +87,12 @@ export default async function RunHistoryPage({
                       </td>
                       <td data-label="Status" style={{ whiteSpace: "nowrap" }}>
                         <span
-                          className={`m-badge ${
+                          className={`badge ${
                             run.status === "completed"
-                              ? "m-badge--positive"
+                              ? "badge-success"
                               : run.status === "running"
-                                ? "m-badge--accent"
-                                : "m-badge--critical"
+                                ? "badge-running"
+                                : "badge-error"
                           }`}
                         >
                           {run.status}
@@ -114,26 +114,25 @@ export default async function RunHistoryPage({
                       <td data-label="Repos">{run.total_repos}</td>
                       <td
                         data-label="Success"
-                        style={{ color: "var(--positive-500)" }}
+                        style={{ color: "var(--success)" }}
                       >
                         {run.successful}
                       </td>
                       <td
                         data-label="Failed"
                         style={{
-                          color:
-                            run.failed > 0 ? "var(--critical-500)" : "inherit",
+                          color: run.failed > 0 ? "var(--danger)" : "inherit",
                         }}
                       >
                         {run.failed}
                       </td>
-                      <td data-label="Skipped" className="m-text-muted">
+                      <td data-label="Skipped" className="text-muted">
                         {run.skipped}
                       </td>
                       <td data-label="Details">
                         <Link
                           href={`/backups/${run.id}`}
-                          className="m-btn m-btn--ghost"
+                          className="btn btn-ghost"
                           style={{ fontSize: 14 }}
                         >
                           Details →
