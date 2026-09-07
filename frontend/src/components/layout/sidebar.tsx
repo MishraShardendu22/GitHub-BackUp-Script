@@ -240,10 +240,10 @@ export default function Sidebar({
     const Icon = node.icon;
     const content = (
       <>
-        <span className="m-navitem__icon">
+        <span className="tree-node-icon">
           <Icon size={iconSize} />
         </span>
-        <span className="m-navitem__label">{node.label}</span>
+        <span className="tree-node-label">{node.label}</span>
       </>
     );
 
@@ -327,9 +327,12 @@ export default function Sidebar({
 
   if (!mounted) {
     return (
-      <aside className="m-sidebar" style={{ width: "280px" }}>
-        <div className="m-sidebar__head" style={{ justifyContent: "flex-end" }}>
-          <button type="button" className="m-icon-btn m-icon-btn--bare">
+      <aside className="global-sidebar" style={{ width: "280px" }}>
+        <div
+          className="global-sidebar-header"
+          style={{ justifyContent: "flex-end" }}
+        >
+          <button type="button" className="global-sidebar-toggle-btn">
             <ChevronsLeft size={16} />
           </button>
         </div>
@@ -343,21 +346,21 @@ export default function Sidebar({
       {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop click */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click */}
       <div
-        className={`m-sidebar-scrim ${isMobileOpen ? "mobile-open" : ""}`}
+        className={`sidebar-overlay ${isMobileOpen ? "mobile-open" : ""}`}
         onClick={onCloseMobile}
       />
 
       <aside
         id="app-navigation"
         aria-label="Primary navigation"
-        className={`m-sidebar ${isMobileOpen ? "mobile-open" : ""}`}
+        className={`global-sidebar ${isMobileOpen ? "mobile-open" : ""}`}
         style={{
           width: isCollapsed ? "68px" : "280px",
         }}
       >
         {/* Sidebar Header */}
         <div
-          className="m-sidebar__head"
+          className="global-sidebar-header"
           style={{
             justifyContent: isCollapsed ? "center" : "space-between",
             padding: isCollapsed ? "0" : "0 16px",
@@ -385,7 +388,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={handleSidebarToggle}
-            className="m-icon-btn m-icon-btn--bare"
+            className="global-sidebar-toggle-btn"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse navigation"}
             title={isCollapsed ? "Expand sidebar" : "Collapse navigation"}
           >
@@ -397,7 +400,7 @@ export default function Sidebar({
           </button>
         </div>
 
-        <nav className="m-sidebar__nav">
+        <nav className="tree-nav">
           {treeData.map((node) => {
             const hasChildren = node.children && node.children.length > 0;
             const nodeActive = hasChildren
@@ -410,13 +413,13 @@ export default function Sidebar({
             if (isCollapsed) {
               const mainHref = node.href || node.children?.[0]?.href || "/";
               return (
-                <div key={node.label} className="m-tooltip">
+                <div key={node.label} className="sidebar-tooltip-wrapper">
                   {isExternalLink(node.href) ? (
                     <a
                       href={node.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`m-navitem ${nodeActive ? "is-active" : ""}`}
+                      className={`tree-node ${nodeActive ? "active" : ""}`}
                       style={{ justifyContent: "center", padding: "10px 0" }}
                       onClick={onCloseMobile}
                     >
@@ -425,14 +428,14 @@ export default function Sidebar({
                   ) : (
                     <Link
                       href={mainHref}
-                      className={`m-navitem ${nodeActive ? "is-active" : ""}`}
+                      className={`tree-node ${nodeActive ? "active" : ""}`}
                       style={{ justifyContent: "center", padding: "10px 0" }}
                       onClick={onCloseMobile}
                     >
                       <RepIcon size={20} />
                     </Link>
                   )}
-                  <span className="m-tooltip__bubble m-tooltip__bubble--right">
+                  <span className="sidebar-tooltip">
                     {node.label}
                     {hasChildren &&
                       node.children &&
@@ -448,10 +451,10 @@ export default function Sidebar({
               const FolderIcon = isOpen ? FolderOpen : Folder;
 
               return (
-                <div key={node.label} className="m-navitem__group">
+                <div key={node.label} className="tree-node-wrapper">
                   <button
                     type="button"
-                    className={`m-navitem ${nodeActive ? "is-active" : ""}`}
+                    className={`tree-node ${nodeActive ? "active" : ""}`}
                     onClick={(e) => toggleFolder(node.label, e)}
                     style={{
                       width: "100%",
@@ -465,21 +468,21 @@ export default function Sidebar({
                       cursor: "pointer",
                     }}
                   >
-                    <span className="m-navitem__chevron">
+                    <span className="tree-node-chevron">
                       {isOpen ? (
                         <ChevronDown size={14} />
                       ) : (
                         <ChevronRight size={14} />
                       )}
                     </span>
-                    <span className="m-navitem__icon">
+                    <span className="tree-node-icon">
                       <FolderIcon size={18} />
                     </span>
-                    <span className="m-navitem__label">{node.label}</span>
+                    <span className="tree-node-label">{node.label}</span>
                   </button>
 
                   {isOpen && (
-                    <div className="m-navitem__children">
+                    <div className="tree-children-container">
                       {node.children.map((child) => {
                         const childActive = isActive(child.href);
                         const ChildIcon = child.icon;
@@ -488,17 +491,17 @@ export default function Sidebar({
                           <Link
                             key={child.href}
                             href={child.href || "/"}
-                            className={`m-navitem ${childActive ? "is-active" : ""}`}
+                            className={`tree-node ${childActive ? "active" : ""}`}
                             onClick={onCloseMobile}
                           >
                             <span
-                              className="m-navitem__icon"
+                              className="tree-node-icon"
                               style={{ marginLeft: 4 }}
                             >
                               <ChildIcon size={16} />
                             </span>
                             <span
-                              className="m-navitem__label"
+                              className="tree-node-label"
                               style={{ fontSize: "14px" }}
                             >
                               {child.label}
@@ -515,7 +518,7 @@ export default function Sidebar({
             // Expanded direct leaf layout
             return renderNavLink(
               node,
-              `m-navitem ${nodeActive ? "is-active" : ""}`,
+              `tree-node ${nodeActive ? "active" : ""}`,
               { paddingLeft: "26px" },
               18,
             );
@@ -523,26 +526,26 @@ export default function Sidebar({
 
           {/* DYNAMIC AGENTIC ASSISTANCE NODE (Consolidated Sidebar) */}
           {isCollapsed ? (
-            <div className="m-tooltip">
+            <div className="sidebar-tooltip-wrapper">
               <Link
                 href="/ai"
-                className={`m-navitem ${pathname.startsWith("/ai") || pathname.startsWith("/tools") || pathname === "/search-playground" || pathname === "/embeddings" ? "is-active" : ""}`}
+                className={`tree-node ${pathname.startsWith("/ai") || pathname.startsWith("/tools") || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
                 style={{ justifyContent: "center", padding: "10px 0" }}
                 onClick={onCloseMobile}
               >
                 <Bot size={20} />
               </Link>
-              <span className="m-tooltip__bubble m-tooltip__bubble--right">
+              <span className="sidebar-tooltip">
                 Agentic Assistance{" "}
                 {sessions.length > 0 && `(${sessions.length} chats)`}
               </span>
             </div>
           ) : (
-            <div className="m-navitem__group">
+            <div className="tree-node-wrapper">
               {/* Folder Row header */}
               <button
                 type="button"
-                className={`m-navitem ${pathname.startsWith("/ai") || pathname.startsWith("/tools") || pathname === "/search-playground" || pathname === "/embeddings" ? "is-active" : ""}`}
+                className={`tree-node ${pathname.startsWith("/ai") || pathname.startsWith("/tools") || pathname === "/search-playground" || pathname === "/embeddings" ? "active" : ""}`}
                 onClick={(e) => toggleFolder("AgenticAssistance", e)}
                 style={{
                   width: "100%",
@@ -556,24 +559,24 @@ export default function Sidebar({
                   cursor: "pointer",
                 }}
               >
-                <span className="m-navitem__chevron">
+                <span className="tree-node-chevron">
                   {expandedNodes.AgenticAssistance ? (
                     <ChevronDown size={16} />
                   ) : (
                     <ChevronRight size={16} />
                   )}
                 </span>
-                <span className="m-navitem__label" style={{ fontWeight: 600 }}>
+                <span className="tree-node-label" style={{ fontWeight: 600 }}>
                   Agentic Assistance
                 </span>
               </button>
 
               {expandedNodes.AgenticAssistance && (
-                <div className="m-navitem__children">
+                <div className="tree-children-container">
                   {/* Action 1: New Chat */}
                   <button
                     type="button"
-                    className="m-navitem"
+                    className="tree-node"
                     onClick={handleNewChat}
                     disabled={!isAuthenticated}
                     style={{
@@ -587,14 +590,14 @@ export default function Sidebar({
                       gap: "6px",
                       cursor: isAuthenticated ? "pointer" : "not-allowed",
                       opacity: isAuthenticated ? 1 : 0.5,
-                      color: "var(--iris-500)",
+                      color: "var(--accent)",
                     }}
                   >
-                    <span className="m-navitem__icon" style={{ marginLeft: 4 }}>
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
                       <Plus size={16} />
                     </span>
                     <span
-                      className="m-navitem__label"
+                      className="tree-node-label"
                       style={{ fontSize: "14px", fontWeight: 600 }}
                     >
                       New Analysis Chat
@@ -604,7 +607,7 @@ export default function Sidebar({
                   {/* Action 2: Stats Dashboard */}
                   <button
                     type="button"
-                    className={`m-navitem ${pathname === "/ai" ? "is-active" : ""}`}
+                    className={`tree-node ${pathname === "/ai" ? "active" : ""}`}
                     onClick={() => {
                       router.push("/ai");
                       onCloseMobile?.();
@@ -621,11 +624,11 @@ export default function Sidebar({
                       cursor: "pointer",
                     }}
                   >
-                    <span className="m-navitem__icon" style={{ marginLeft: 4 }}>
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
                       <LayoutDashboard size={15} />
                     </span>
                     <span
-                      className="m-navitem__label"
+                      className="tree-node-label"
                       style={{ fontSize: "14px" }}
                     >
                       Stats Dashboard
@@ -635,7 +638,7 @@ export default function Sidebar({
                   {/* Link 3: Tools Playground */}
                   <Link
                     href="/tools"
-                    className={`m-navitem ${pathname === "/tools" ? "is-active" : ""}`}
+                    className={`tree-node ${pathname === "/tools" ? "active" : ""}`}
                     onClick={onCloseMobile}
                     style={{
                       padding: "5px 8px",
@@ -644,11 +647,11 @@ export default function Sidebar({
                       gap: "6px",
                     }}
                   >
-                    <span className="m-navitem__icon" style={{ marginLeft: 4 }}>
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
                       <Wrench size={15} />
                     </span>
                     <span
-                      className="m-navitem__label"
+                      className="tree-node-label"
                       style={{ fontSize: "14px" }}
                     >
                       Tools Playground
@@ -658,7 +661,7 @@ export default function Sidebar({
                   {/* Link 4: Tool Telemetry */}
                   <Link
                     href="/tools/stats"
-                    className={`m-navitem ${pathname === "/tools/stats" ? "is-active" : ""}`}
+                    className={`tree-node ${pathname === "/tools/stats" ? "active" : ""}`}
                     onClick={onCloseMobile}
                     style={{
                       padding: "5px 8px",
@@ -667,11 +670,11 @@ export default function Sidebar({
                       gap: "6px",
                     }}
                   >
-                    <span className="m-navitem__icon" style={{ marginLeft: 4 }}>
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
                       <BarChart3 size={15} />
                     </span>
                     <span
-                      className="m-navitem__label"
+                      className="tree-node-label"
                       style={{ fontSize: "14px" }}
                     >
                       Tool Telemetry
@@ -681,7 +684,7 @@ export default function Sidebar({
                   {/* Link 5: Search Playground */}
                   <Link
                     href="/search-playground"
-                    className={`m-navitem ${pathname === "/search-playground" ? "is-active" : ""}`}
+                    className={`tree-node ${pathname === "/search-playground" ? "active" : ""}`}
                     onClick={onCloseMobile}
                     style={{
                       padding: "5px 8px",
@@ -690,11 +693,11 @@ export default function Sidebar({
                       gap: "6px",
                     }}
                   >
-                    <span className="m-navitem__icon" style={{ marginLeft: 4 }}>
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
                       <Search size={15} />
                     </span>
                     <span
-                      className="m-navitem__label"
+                      className="tree-node-label"
                       style={{ fontSize: "14px" }}
                     >
                       Search Playground
@@ -704,7 +707,7 @@ export default function Sidebar({
                   {/* Link 5: Embeddings Playground */}
                   <Link
                     href="/embeddings"
-                    className={`m-navitem ${pathname === "/embeddings" ? "is-active" : ""}`}
+                    className={`tree-node ${pathname === "/embeddings" ? "active" : ""}`}
                     onClick={onCloseMobile}
                     style={{
                       padding: "5px 8px",
@@ -713,11 +716,11 @@ export default function Sidebar({
                       gap: "6px",
                     }}
                   >
-                    <span className="m-navitem__icon" style={{ marginLeft: 4 }}>
+                    <span className="tree-node-icon" style={{ marginLeft: 4 }}>
                       <Database size={15} />
                     </span>
                     <span
-                      className="m-navitem__label"
+                      className="tree-node-label"
                       style={{ fontSize: "14px" }}
                     >
                       Embeddings
@@ -768,7 +771,7 @@ export default function Sidebar({
                       return (
                         <div
                           key={s.id}
-                          className={`m-navitem ${isSessionActive ? "is-active" : ""} ${isSessionDeleting ? "sidebar-session-deleting" : ""}`}
+                          className={`tree-node ${isSessionActive ? "active" : ""} ${isSessionDeleting ? "sidebar-session-deleting" : ""}`}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -802,7 +805,7 @@ export default function Sidebar({
                             }}
                           >
                             <span
-                              className="m-navitem__icon"
+                              className="tree-node-icon"
                               style={{ marginLeft: 4 }}
                             >
                               <MessageSquare size={15} />
@@ -810,7 +813,7 @@ export default function Sidebar({
                             {renamingSessionId === s.id ? (
                               <input
                                 type="text"
-                                className="m-input m-input--sm"
+                                className="ai-session-rename-input"
                                 value={renameInput}
                                 onChange={(e) => setRenameInput(e.target.value)}
                                 onBlur={() =>
@@ -824,7 +827,7 @@ export default function Sidebar({
                                 }}
                                 style={{
                                   background: "rgba(0, 0, 0, 0.4)",
-                                  border: "1px solid var(--iris-500)",
+                                  border: "1px solid var(--accent)",
                                   color: "var(--text)",
                                   fontSize: "11px",
                                   padding: "1px 4px",
@@ -836,7 +839,7 @@ export default function Sidebar({
                               />
                             ) : (
                               <span
-                                className="m-navitem__label"
+                                className="tree-node-label"
                                 style={{
                                   fontSize: "13.5px",
                                   textOverflow: "ellipsis",
@@ -852,7 +855,7 @@ export default function Sidebar({
                           {/* Action Hover Controls */}
                           {renamingSessionId !== s.id && (
                             <div
-                              className="m-cluster m-cluster--tight"
+                              className="sidebar-item-actions"
                               style={{
                                 display: "flex",
                                 gap: 2,
@@ -915,7 +918,7 @@ export default function Sidebar({
         <div
           style={{
             padding: isCollapsed ? "12px 8px" : "12px 16px",
-            borderTop: "1px solid var(--line-subtle)",
+            borderTop: "1px solid var(--border-light)",
             display: "flex",
             flexDirection: "column",
             gap: "8px",
@@ -931,7 +934,7 @@ export default function Sidebar({
                   title="Sign Out"
                   style={{
                     background: "transparent",
-                    border: "1px solid var(--line-subtle)",
+                    border: "1px solid var(--border-light)",
                     color: "var(--text-secondary)",
                     padding: "6px",
                     borderRadius: "4px",
@@ -949,7 +952,7 @@ export default function Sidebar({
                   onClick={onCloseMobile}
                   title="Sign In"
                   style={{
-                    border: "1px solid var(--line-subtle)",
+                    border: "1px solid var(--border-light)",
                     color: "var(--text-secondary)",
                     padding: "6px",
                     borderRadius: "4px",
@@ -992,7 +995,7 @@ export default function Sidebar({
                     onClick={logout}
                     style={{
                       background: "transparent",
-                      border: "1px solid var(--line)",
+                      border: "1px solid var(--border)",
                       color: "var(--text-secondary)",
                       padding: "4px 8px",
                       borderRadius: "4px",
@@ -1002,14 +1005,13 @@ export default function Sidebar({
                       whiteSpace: "nowrap",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "var(--critical-500)";
-                      e.currentTarget.style.borderColor =
-                        "var(--critical-wash)";
-                      e.currentTarget.style.background = "var(--critical-wash)";
+                      e.currentTarget.style.color = "var(--danger)";
+                      e.currentTarget.style.borderColor = "var(--danger-bg)";
+                      e.currentTarget.style.background = "var(--danger-bg)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = "var(--text-secondary)";
-                      e.currentTarget.style.borderColor = "var(--line)";
+                      e.currentTarget.style.borderColor = "var(--border)";
                       e.currentTarget.style.background = "transparent";
                     }}
                   >
@@ -1021,9 +1023,9 @@ export default function Sidebar({
                   href="/ai"
                   onClick={onCloseMobile}
                   style={{
-                    border: "1px solid var(--iris-500)",
-                    color: "var(--iris-500)",
-                    background: "var(--iris-wash)",
+                    border: "1px solid var(--accent)",
+                    color: "var(--accent)",
+                    background: "var(--accent-bg)",
                     padding: "5px 8px",
                     borderRadius: "4px",
                     fontSize: "11px",

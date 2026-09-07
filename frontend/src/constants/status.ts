@@ -15,8 +15,8 @@ export const STATUS_BACKGROUNDS = {
 } as const;
 
 export const BADGE_CLASSES = {
-  success: "m-badge--positive",
-  running: "m-badge--accent",
-  error: "m-badge--critical",
+  success: "badge-success",
+  running: "badge-running",
+  error: "badge-error",
   warning: "badge-warning",
 } as const;

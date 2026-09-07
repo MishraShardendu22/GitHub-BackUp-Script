@@ -60,7 +60,7 @@ export function PaginationBar({
         flexWrap: "wrap",
         gap: 12,
         paddingTop: 14,
-        borderTop: "1px solid var(--line)",
+        borderTop: "1px solid var(--border)",
         marginTop: 2,
       }}
     >
@@ -82,14 +82,14 @@ export function PaginationBar({
           <PBtn
             onClick={() => handlePage(1)}
             disabled={page <= 1}
-            aria-label="First m-page"
+            aria-label="First page"
           >
             <ChevronsLeft size={14} />
           </PBtn>
           <PBtn
             onClick={() => handlePage(page - 1)}
             disabled={page <= 1}
-            aria-label="Previous m-page"
+            aria-label="Previous page"
           >
             <ChevronLeft size={14} />
           </PBtn>
@@ -106,14 +106,14 @@ export function PaginationBar({
           <PBtn
             onClick={() => handlePage(page + 1)}
             disabled={page >= totalPages}
-            aria-label="Next m-page"
+            aria-label="Next page"
           >
             <ChevronRight size={14} />
           </PBtn>
           <PBtn
             onClick={() => handlePage(totalPages)}
             disabled={page >= totalPages}
-            aria-label="Last m-page"
+            aria-label="Last page"
           >
             <ChevronsRight size={14} />
           </PBtn>
@@ -146,12 +146,12 @@ function PBtn({
       style={{
         border: active
           ? "1px solid rgba(212,168,50,0.5)"
-          : "1px solid var(--line)",
+          : "1px solid var(--border)",
         background: active ? "rgba(212,168,50,0.15)" : "var(--surface)",
         color: disabled
           ? "var(--text-muted)"
           : active
-            ? "var(--iris-500)"
+            ? "var(--accent)"
             : "var(--text-secondary)",
         borderRadius: 6,
         padding: "4px 8px",

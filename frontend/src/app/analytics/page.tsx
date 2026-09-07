@@ -24,12 +24,12 @@ export default async function AnalyticsOverviewPage({
   const hasData = metrics?.runs && metrics.runs.length > 0;
 
   return (
-    <div className="m-page">
-      <div className="m-masthead">
+    <div className="page">
+      <div className="page-head">
         <div>
-          <div className="m-kicker">Analytics</div>
-          <h1 className="m-title">Overview</h1>
-          <p className="m-subtitle">
+          <div className="page-kicker">Analytics</div>
+          <h1 className="page-title">Overview</h1>
+          <p className="page-subtitle">
             Backup performance trends over time. Use the tabs below to browse
             detailed run history or Git snapshot records.
           </p>
@@ -44,28 +44,28 @@ export default async function AnalyticsOverviewPage({
       {!hasData ? (
         <InsufficientData days={days} />
       ) : (
-        <div className="m-grid m-grid--metrics">
-          <div className="m-metric">
-            <div className="m-metric__label">Runs in {days}d window</div>
-            <div className="m-metric__value">{metrics?.total_runs ?? 0}</div>
+        <div className="metric-grid metric-grid--four stats-grid">
+          <div className="stat-card">
+            <div className="stat-label">Runs in {days}d window</div>
+            <div className="stat-value">{metrics?.total_runs ?? 0}</div>
           </div>
-          <div className="m-metric">
-            <div className="m-metric__label">Avg duration</div>
-            <div className="m-metric__value">
+          <div className="stat-card">
+            <div className="stat-label">Avg duration</div>
+            <div className="stat-value">
               {metrics?.avg_duration_ms
                 ? formatDuration(metrics.avg_duration_ms)
                 : "—"}
             </div>
           </div>
-          <div className="m-metric">
-            <div className="m-metric__label">Successful</div>
-            <div className="m-metric__value m-metric__value--positive">
+          <div className="stat-card">
+            <div className="stat-label">Successful</div>
+            <div className="stat-value stat-value--success">
               {metrics?.total_successful ?? 0}
             </div>
           </div>
-          <div className="m-metric">
-            <div className="m-metric__label">Failed</div>
-            <div className="m-metric__value m-metric__value--critical">
+          <div className="stat-card">
+            <div className="stat-label">Failed</div>
+            <div className="stat-value stat-value--danger">
               {metrics?.total_failed ?? 0}
             </div>
           </div>
@@ -79,9 +79,9 @@ export default async function AnalyticsOverviewPage({
 
       {/* -- Storage summary (only on overview) --------------------------- */}
       {metrics && (
-        <div className="m-grid--wide">
+        <div className="split-grid">
           {/* Storage card */}
-          <div className="m-card m-card--roomy">
+          <div className="card section-card">
             <div
               style={{
                 display: "flex",
@@ -95,7 +95,7 @@ export default async function AnalyticsOverviewPage({
                   width: 36,
                   height: 36,
                   borderRadius: 10,
-                  background: "var(--iris-wash)",
+                  background: "var(--accent-bg)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -107,7 +107,7 @@ export default async function AnalyticsOverviewPage({
                   height="20"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="var(--iris-500)"
+                  stroke="var(--accent)"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -163,7 +163,7 @@ export default async function AnalyticsOverviewPage({
           </div>
 
           {/* Dive deeper card */}
-          <div className="m-card m-card--roomy">
+          <div className="card section-card">
             <div
               style={{
                 display: "flex",
@@ -177,7 +177,7 @@ export default async function AnalyticsOverviewPage({
                   width: 36,
                   height: 36,
                   borderRadius: 10,
-                  background: "var(--iris-wash)",
+                  background: "var(--accent-bg)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -189,7 +189,7 @@ export default async function AnalyticsOverviewPage({
                   height="20"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="var(--iris-500)"
+                  stroke="var(--accent)"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -220,7 +220,7 @@ export default async function AnalyticsOverviewPage({
               <DiveLink
                 href="/analytics/runs"
                 label="Run History"
-                desc="Full paginated m-table of all backup runs"
+                desc="Full paginated table of all backup runs"
                 icon={
                   <>
                     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -265,7 +265,7 @@ function InsufficientData({ days }: { days: number }) {
         height="18"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="var(--iris-500)"
+        stroke="var(--accent)"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -327,7 +327,7 @@ function StorageStat({
         style={{
           fontSize: 16,
           fontWeight: 600,
-          color: accent ? "var(--iris-500)" : "var(--text-primary)",
+          color: accent ? "var(--accent)" : "var(--text-primary)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: truncate ? "nowrap" : undefined,
@@ -353,7 +353,7 @@ function DiveLink({
   return (
     <Link
       href={href}
-      className="m-badge"
+      className="dive-link"
       style={{
         display: "flex",
         alignItems: "center",
@@ -369,7 +369,7 @@ function DiveLink({
         height="24"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="var(--iris-500)"
+        stroke="var(--accent)"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"

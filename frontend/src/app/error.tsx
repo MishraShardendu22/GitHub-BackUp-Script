@@ -9,19 +9,19 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <div className="m-viewport-state">
-      <section className="m-card m-state" role="alert">
-        <div className="m-state__icon" style={{ color: "var(--critical-500)" }}>
+    <div className="page-error">
+      <section className="card state-card" role="alert">
+        <div className="state-card__icon" style={{ color: "var(--danger)" }}>
           <AlertTriangle size={21} aria-hidden="true" />
         </div>
-        <h1 className="m-state__title">The workspace could not load</h1>
-        <p className="m-state__description">
+        <h1 className="state-card__title">The workspace could not load</h1>
+        <p className="state-card__description">
           The connection was interrupted or the backup service is unavailable.
           Please try again.
         </p>
         <button
           type="button"
-          className="m-btn m-btn--primary"
+          className="btn btn-primary"
           onClick={reset}
           style={{ marginTop: 24 }}
         >

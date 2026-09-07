@@ -8,13 +8,7 @@ interface ToolBadgeProps {
 
 export function ToolBadge({ name, active = true, className }: ToolBadgeProps) {
   return (
-    <span
-      className={cn(
-        "m-badge",
-        active ? "m-badge--accent" : "m-badge--quiet",
-        className,
-      )}
-    >
+    <span className={cn("ai-tool-badge", active && "active", className)}>
       {name}
     </span>
   );

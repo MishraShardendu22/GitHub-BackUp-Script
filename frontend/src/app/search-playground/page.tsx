@@ -121,12 +121,12 @@ export default function SearchPlaygroundPage() {
   };
 
   return (
-    <div className="m-page">
+    <div className="page">
       {/* Compact Hero */}
       <section
-        className="m-card m-card--roomy m-rise"
+        className="card section-card reveal"
         style={{
-          borderTop: "2px solid var(--iris-500)",
+          borderTop: "2px solid var(--accent)",
           padding: "16px 24px",
           marginBottom: 16,
           display: "flex",
@@ -137,15 +137,15 @@ export default function SearchPlaygroundPage() {
         }}
       >
         <div>
-          <div className="m-kicker" style={{ marginBottom: 2 }}>
+          <div className="page-kicker" style={{ marginBottom: 2 }}>
             Retrieval Engine &amp; Experiments
           </div>
-          <h1 className="m-title" style={{ fontSize: "22px", margin: 0 }}>
+          <h1 className="page-title" style={{ fontSize: "22px", margin: 0 }}>
             Search <em>Playground</em>
           </h1>
         </div>
         <p
-          className="m-subtitle"
+          className="page-subtitle"
           style={{
             margin: 0,
             fontSize: "13px",
@@ -159,7 +159,7 @@ export default function SearchPlaygroundPage() {
       </section>
 
       {/* Search Engine Workbench */}
-      <section className="m-card" style={{ padding: "20px 24px" }}>
+      <section className="card" style={{ padding: "20px 24px" }}>
         {/* Search Mode Tabs */}
         <div
           style={{
@@ -171,7 +171,7 @@ export default function SearchPlaygroundPage() {
         >
           <button
             type="button"
-            className={`m-btn ${searchMode === "hybrid" ? "m-btn--primary" : "m-btn--secondary"}`}
+            className={`btn ${searchMode === "hybrid" ? "btn-primary" : "btn-outline"}`}
             onClick={() => setSearchMode("hybrid")}
             style={{ padding: "6px 14px", fontSize: 13 }}
           >
@@ -180,7 +180,7 @@ export default function SearchPlaygroundPage() {
           </button>
           <button
             type="button"
-            className={`m-btn ${searchMode === "fts" ? "m-btn--primary" : "m-btn--secondary"}`}
+            className={`btn ${searchMode === "fts" ? "btn-primary" : "btn-outline"}`}
             onClick={() => setSearchMode("fts")}
             style={{ padding: "6px 14px", fontSize: 13 }}
           >
@@ -189,7 +189,7 @@ export default function SearchPlaygroundPage() {
           </button>
           <button
             type="button"
-            className={`m-btn ${searchMode === "semantic" ? "m-btn--primary" : "m-btn--secondary"}`}
+            className={`btn ${searchMode === "semantic" ? "btn-primary" : "btn-outline"}`}
             onClick={() => setSearchMode("semantic")}
             style={{ padding: "6px 14px", fontSize: 13 }}
           >
@@ -206,7 +206,7 @@ export default function SearchPlaygroundPage() {
               padding: "12px 18px",
               borderRadius: "var(--radius-md)",
               marginBottom: 16,
-              border: "1px solid var(--line)",
+              border: "1px solid var(--border)",
             }}
           >
             <div
@@ -217,7 +217,7 @@ export default function SearchPlaygroundPage() {
                 marginBottom: 10,
               }}
             >
-              <Sliders size={13} style={{ color: "var(--iris-500)" }} />
+              <Sliders size={13} style={{ color: "var(--accent)" }} />
               <span
                 style={{
                   fontSize: 11,
@@ -262,7 +262,7 @@ export default function SearchPlaygroundPage() {
                   onChange={(e) => setFtsWeight(parseFloat(e.target.value))}
                   style={{
                     width: "100%",
-                    accentColor: "var(--iris-500)",
+                    accentColor: "var(--accent)",
                     height: 4,
                   }}
                 />
@@ -295,7 +295,7 @@ export default function SearchPlaygroundPage() {
                   }
                   style={{
                     width: "100%",
-                    accentColor: "var(--iris-500)",
+                    accentColor: "var(--accent)",
                     height: 4,
                   }}
                 />
@@ -324,7 +324,7 @@ export default function SearchPlaygroundPage() {
                 width: 15,
                 height: 15,
                 cursor: "pointer",
-                accentColor: "var(--iris-500)",
+                accentColor: "var(--accent)",
               }}
             />
             <label
@@ -358,7 +358,7 @@ export default function SearchPlaygroundPage() {
         <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
           <input
             type="text"
-            className="m-input"
+            className="input"
             style={{ flex: 1, height: 42, fontSize: 14 }}
             placeholder="Enter search query — e.g. backup connection error, failed repositories, rate limit..."
             value={query}
@@ -368,7 +368,7 @@ export default function SearchPlaygroundPage() {
           />
           <button
             type="button"
-            className="m-btn m-btn--primary"
+            className="btn btn-primary"
             onClick={handleSearch}
             disabled={isSearching || !query.trim()}
             style={{ height: 42, padding: "0 22px", fontSize: 13 }}
@@ -410,13 +410,13 @@ export default function SearchPlaygroundPage() {
               type="button"
               key={type.id}
               onClick={() => toggleSourceType(type.id)}
-              className={`m-badge ${selectedTypes.includes(type.id) ? "m-badge--accent" : ""}`}
+              className={`badge ${selectedTypes.includes(type.id) ? "badge-running" : ""}`}
               style={{
                 cursor: "pointer",
                 padding: "3px 10px",
                 fontSize: 12,
                 background: selectedTypes.includes(type.id)
-                  ? "var(--iris-wash)"
+                  ? "var(--accent-bg)"
                   : "var(--surface)",
               }}
             >
@@ -435,7 +435,7 @@ export default function SearchPlaygroundPage() {
             searchResults.map((result) => (
               <div
                 key={`${result.source_type}-${result.id}`}
-                className="m-card m-card--quiet"
+                className="card-flat"
                 style={{ marginBottom: 10, padding: "14px 18px" }}
               >
                 <div
@@ -450,7 +450,7 @@ export default function SearchPlaygroundPage() {
                     style={{ display: "flex", gap: 8, alignItems: "center" }}
                   >
                     <span
-                      className="m-badge m-badge--accent"
+                      className="badge badge-running"
                       style={{ fontSize: 11 }}
                     >
                       {result.source_type}
@@ -473,7 +473,7 @@ export default function SearchPlaygroundPage() {
                     </span>
                     {result.reranked && (
                       <span
-                        className="m-badge m-badge--positive"
+                        className="badge badge-success"
                         style={{ fontSize: 10 }}
                       >
                         Reranked
@@ -499,7 +499,7 @@ export default function SearchPlaygroundPage() {
                 padding: "24px 16px",
                 color: "var(--text-muted)",
                 fontSize: 13,
-                border: "1px dashed var(--line)",
+                border: "1px dashed var(--border)",
                 borderRadius: "var(--radius-md)",
               }}
             >
@@ -512,8 +512,8 @@ export default function SearchPlaygroundPage() {
 
       {/* Quick Sign-In Modal */}
       {showLoginModal && (
-        <div className="m-scrim">
-          <div className="m-dialog" style={{ maxWidth: 420 }}>
+        <div className="ai-confirm-overlay">
+          <div className="ai-confirm-modal" style={{ maxWidth: 420 }}>
             <h3>Sign In to AI Observatory</h3>
             <p
               style={{
@@ -535,7 +535,7 @@ export default function SearchPlaygroundPage() {
               >
                 <input
                   type="text"
-                  className="m-input"
+                  className="ai-login-input"
                   placeholder="Username"
                   autoComplete="username"
                   value={loginUsername}
@@ -544,7 +544,7 @@ export default function SearchPlaygroundPage() {
                 />
                 <input
                   type="password"
-                  className="m-input"
+                  className="ai-login-input"
                   placeholder="Password"
                   autoComplete="current-password"
                   value={loginPassword}
@@ -553,24 +553,21 @@ export default function SearchPlaygroundPage() {
                 />
               </div>
               {authError && (
-                <div
-                  className="m-alert m-alert--critical"
-                  style={{ marginBottom: 14 }}
-                >
+                <div className="ai-login-error" style={{ marginBottom: 14 }}>
                   {authError}
                 </div>
               )}
-              <div className="m-dialog__foot">
+              <div className="ai-confirm-actions">
                 <button
                   type="button"
-                  className="m-btn m-btn--secondary"
+                  className="ai-confirm-btn-abort"
                   onClick={() => setShowLoginModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="m-btn m-btn--primary"
+                  className="ai-confirm-btn"
                   disabled={authLoading || !loginUsername || !loginPassword}
                 >
                   {authLoading ? "Signing in..." : "Sign In"}
