@@ -21,7 +21,8 @@ func LoadEnv() {
 		}
 
 		// 3. If neither file exists, log warning only if key variables are missing
-		if util.GetEnv("DATABASE_URL", "") == "" && util.GetEnv("GITHUB_TOKEN_PERSONAL", "") == "" {
+		dbURL := util.GetEnv("DATABASE_URL", util.GetEnv("POSTGRES_URL", ""))
+		if dbURL == "" && util.GetEnv("GITHUB_TOKEN_PERSONAL", "") == "" {
 			util.Logger().Warn("No .env file found in service directory (.env) or parent root (../.env)")
 		}
 	}
@@ -32,6 +33,7 @@ func LoadConfig() *model.ConfigModel {
 	return &model.ConfigModel{
 		OrgAccount:          util.GetEnv("ORG_ACCOUNT", ""),
 		PostgreSql:          dbURL,
+		DatabaseURL:         dbURL,
 		DBPath:              util.GetEnv("DB_PATH", "./app.db"),
 		ProjectAccount:      util.GetEnv("PROJECT_ACCOUNT", ""),
 		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),

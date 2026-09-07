@@ -32,7 +32,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}
+      DATABASE_URL: ${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}}
+      POSTGRES_URL: ${POSTGRES_URL:-${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}}
       PORT: "8080"
       INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-internal-secret-min-32-chars-long}
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-min-32-chars-long}
@@ -52,7 +53,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}
+      DATABASE_URL: ${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}}
+      POSTGRES_URL: ${POSTGRES_URL:-${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}}
       GO_BACKEND_URL: http://backend:8080
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-internal-secret-min-32-chars-long}
@@ -89,6 +91,8 @@ services:
       dockerfile: backup-worker/Dockerfile
     container_name: github-backup-worker
     environment:
+      DATABASE_URL: ${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}}
+      POSTGRES_URL: ${POSTGRES_URL:-${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/github_backup?sslmode=disable}}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       BACKUP_DIR: /tmp/github-backups
     volumes:

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Database Connection Standardization & Universal Dual-Key Env Parity:
+  - Synchronized and standardized `DATABASE_URL` (primary standard) and `POSTGRES_URL` (alias) across all environment files (`.env`, `backend/.env`, `backup-worker/.env`, `agentic-observatory/.env`), shell scripts, and `docker-compose.yml`.
+  - Added `DatabaseURL` field to backup-worker `ConfigModel` and `data.config.go` alongside `PostgreSql` for structural naming consistency.
+  - Added test coverage for fallback and precedence between `DATABASE_URL` and `POSTGRES_URL` across Go backend and Backup Worker test suites.
+  - Enforced `TEST_DATABASE_URL` / `POSTGRES_TEST_URL` isolation in `backend/db/embedding_test.go` so live databases are never truncated during unit test runs unless `ALLOW_DESTRUCTIVE_TESTS=1` is explicitly set.
+
 - Meridian Design System & Frontend UI Migration:
   - Migrated Next.js frontend foundation to the Meridian design system with unified design tokens, typography scales, semantic surfaces, and responsive layout primitives.
   - Rebuilt dashboard layout shell, navigation, and visual components using Meridian classes.

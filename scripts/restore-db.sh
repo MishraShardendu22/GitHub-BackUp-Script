@@ -31,6 +31,8 @@ elif [ -f "../.env" ]; then
 fi
 
 DB_CONN="${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@localhost:5432/github_backup}}"
+export DATABASE_URL="${DB_CONN}"
+export POSTGRES_URL="${DB_CONN}"
 
 echo "WARNING: This will restore database from '${BACKUP_FILE}'."
 read -p "Are you sure you want to proceed? [y/N]: " -r CONFIRM

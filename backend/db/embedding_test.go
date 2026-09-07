@@ -17,21 +17,25 @@ import (
 
 // testSetup connects to the test database, runs migrations, and cleans up
 // embedding tables for test isolation. Tests require an isolated test database
-// (POSTGRES_URL or TEST_DATABASE_URL) so that live DATABASE_URL tables are not truncated.
+// (TEST_DATABASE_URL or POSTGRES_TEST_URL) so that live DATABASE_URL / POSTGRES_URL
+// tables are not accidentally truncated.
 func testSetup(t *testing.T) context.Context {
 	t.Helper()
 
 	_ = godotenv.Load(".env", "../.env", "../../.env", "backend/.env", "../backend/.env")
 
-	url := os.Getenv("POSTGRES_URL")
+	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
-		url = os.Getenv("TEST_DATABASE_URL")
+		url = os.Getenv("POSTGRES_TEST_URL")
 	}
 	if url == "" && os.Getenv("ALLOW_DESTRUCTIVE_TESTS") == "1" {
 		url = os.Getenv("DATABASE_URL")
+		if url == "" {
+			url = os.Getenv("POSTGRES_URL")
+		}
 	}
 	if url == "" {
-		t.Skip("POSTGRES_URL / TEST_DATABASE_URL not set — skipping integration test (DATABASE_URL is protected from table truncate; set POSTGRES_URL or TEST_DATABASE_URL to run)")
+		t.Skip("TEST_DATABASE_URL not set — skipping integration test (DATABASE_URL / POSTGRES_URL protected from truncate; set TEST_DATABASE_URL or ALLOW_DESTRUCTIVE_TESTS=1 to run)")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

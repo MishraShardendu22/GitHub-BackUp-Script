@@ -20,6 +20,8 @@ fi
 
 # Database Connection (DATABASE_URL preferred, fallback to POSTGRES_URL or localhost default)
 DB_CONN="${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@localhost:5432/github_backup}}"
+export DATABASE_URL="${DB_CONN}"
+export POSTGRES_URL="${DB_CONN}"
 
 mkdir -p "${BACKUP_DIR}"
 
