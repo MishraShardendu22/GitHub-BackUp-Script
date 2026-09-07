@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Meridian Design System & Frontend UI Migration:
+  - Migrated Next.js frontend foundation to the Meridian design system with unified design tokens, typography scales, semantic surfaces, and responsive layout primitives.
+  - Rebuilt dashboard layout shell, navigation, and visual components using Meridian classes.
+- Self-Healing Git Hook Tool Resolution & Non-Interactive Daemon Resilience:
+  - Added automatic runtime PATH discovery in `.githooks/pre-commit` and `.githooks/pre-push` for `uv`, `pnpm`, `go`, and NVM node runtimes, ensuring full compatibility under restricted systemd and cron environments.
+  - Added `DB_ONLY` bypass in pre-commit hook to skip heavy compilation when only SQLite database snapshots are staged.
+  - Updated `backup-worker` automated database sync (`CommitAndPushDatabase`) with `--no-verify` and `SKIP_HOOKS=1` to ensure autonomous scheduled backups are never halted by client-side developer verification gates.
+  - Added test database isolation (`TEST_DATABASE_URL` / `POSTGRES_URL`) in `backend/db/embedding_test.go` to safeguard production/live vector database chunks from destructive test isolation truncation.
+  - Added auto-sourcing of `.env` files in PostgreSQL backup and restore scripts.
+
 - Professional Communication Standard & Zero-Emoji Mandate ([`.agents/skills/professional-communication-standard/SKILL.md`](.agents/skills/professional-communication-standard/SKILL.md)):
   - Established dedicated agent skill enforcing strictly emoji-free, professional, concise, and technically rigorous communication across all agent interactions, commit messages, PRs, logs, and documentation.
   - Eliminated decorative emojis across CLI scripts, installers, validation tooling, and documentation.
