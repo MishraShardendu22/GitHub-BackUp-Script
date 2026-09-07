@@ -11,17 +11,27 @@ import (
 
 	"github.com/MishraShardendu22/github-backup/backend/models"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	pgvector "github.com/pgvector/pgvector-go"
 )
 
 // testSetup connects to the test database, runs migrations, and cleans up
-// embedding tables for test isolation. Tests require POSTGRES_URL to be set.
+// embedding tables for test isolation. Tests require an isolated test database
+// (POSTGRES_URL or TEST_DATABASE_URL) so that live DATABASE_URL tables are not truncated.
 func testSetup(t *testing.T) context.Context {
 	t.Helper()
 
+	_ = godotenv.Load(".env", "../.env", "../../.env", "backend/.env", "../backend/.env")
+
 	url := os.Getenv("POSTGRES_URL")
 	if url == "" {
-		t.Skip("POSTGRES_URL not set — skipping integration test")
+		url = os.Getenv("TEST_DATABASE_URL")
+	}
+	if url == "" && os.Getenv("ALLOW_DESTRUCTIVE_TESTS") == "1" {
+		url = os.Getenv("DATABASE_URL")
+	}
+	if url == "" {
+		t.Skip("POSTGRES_URL / TEST_DATABASE_URL not set — skipping integration test (DATABASE_URL is protected from table truncate; set POSTGRES_URL or TEST_DATABASE_URL to run)")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

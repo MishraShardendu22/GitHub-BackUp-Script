@@ -12,6 +12,25 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "${REPO_ROOT}"
 
+# Auto-resolve PATH for standard user and runtime directories (systemd/cron compatibility)
+for path_dir in \
+    "$HOME/.local/bin" \
+    "$HOME/.cargo/bin" \
+    "$HOME/go/bin" \
+    "/usr/local/go/bin" \
+    "$HOME/.bun/bin"; do
+    if [ -d "$path_dir" ] && [[ ":$PATH:" != *":$path_dir:"* ]]; then
+        export PATH="$path_dir:$PATH"
+    fi
+done
+
+if ! command -v pnpm &>/dev/null && [ -d "$HOME/.nvm/versions/node" ]; then
+    NVM_NODE_BIN=$(find "$HOME/.nvm/versions/node" -maxdepth 2 -type d -name "bin" 2>/dev/null | sort -V | tail -n 1)
+    if [ -n "$NVM_NODE_BIN" ] && [ -d "$NVM_NODE_BIN" ]; then
+        export PATH="$NVM_NODE_BIN:$PATH"
+    fi
+fi
+
 if [ -t 1 ]; then
     BOLD="\033[1m"
     RED="\033[1;31m"

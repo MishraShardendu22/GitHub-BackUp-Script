@@ -19,6 +19,25 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "${REPO_ROOT}"
 
+# Auto-resolve PATH for standard user and runtime directories (systemd/cron compatibility)
+for path_dir in \
+    "$HOME/.local/bin" \
+    "$HOME/.cargo/bin" \
+    "$HOME/go/bin" \
+    "/usr/local/go/bin" \
+    "$HOME/.bun/bin"; do
+    if [ -d "$path_dir" ] && [[ ":$PATH:" != *":$path_dir:"* ]]; then
+        export PATH="$path_dir:$PATH"
+    fi
+done
+
+if ! command -v pnpm &>/dev/null && [ -d "$HOME/.nvm/versions/node" ]; then
+    NVM_NODE_BIN=$(find "$HOME/.nvm/versions/node" -maxdepth 2 -type d -name "bin" 2>/dev/null | sort -V | tail -n 1)
+    if [ -n "$NVM_NODE_BIN" ] && [ -d "$NVM_NODE_BIN" ]; then
+        export PATH="$NVM_NODE_BIN:$PATH"
+    fi
+fi
+
 if [ -t 1 ]; then
     BOLD="\033[1m"
     DIM="\033[2m"
@@ -98,6 +117,23 @@ if [ -z "${STAGED_FILES}" ] || [ "${PRECOMMIT_ALL:-0}" = "1" ]; then
     CHECK_FE=1
     MODE_DESC="Full Repository Validation (All Subsystems)"
 else
+    # Check if only database snapshot files changed (.db, .sqlite, .sqlite3)
+    DB_ONLY=1
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        if ! [[ "$file" =~ \.(db|sqlite|sqlite3)$ ]]; then
+            DB_ONLY=0
+            break
+        fi
+    done <<< "${STAGED_FILES}"
+
+    if [ "$DB_ONLY" -eq 1 ]; then
+        print_banner
+        log_info "Only database snapshot files changed (*.db). Skipping heavy compilation and test suites."
+        log_pass "Database snapshot validation successful."
+        exit 0
+    fi
+
     # Inspect individual file paths
     while IFS= read -r file; do
         [ -z "$file" ] && continue

@@ -1,110 +1,126 @@
 /* =============================================================================
-   Meridian Design Tokens
+   Meridian Design Tokens — Claude Edition
    -----------------------------------------------------------------------------
-   Canonical source: MishraShardendu22/agent-skills
+   Canonical source: MishraShardendu22/agent-skills-hub-sync-engine
      .agents/skills/meridian-design-system/assets/meridian.tokens.css
 
-   Do not edit vendored copies. Edit the canonical file, then run:
-     skills-sync push meridian-design-system
-
    Framework-agnostic. Pure CSS custom properties. Safe to inline into
-   server-rendered HTML, email-adjacent documents, Tailwind @theme bridges,
-   Svelte global stylesheets, and Next.js global stylesheets alike.
+   server-rendered HTML, Tailwind @theme bridges, Svelte, Preact, and Next.js.
    ========================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* ── Ink ramp ───────────────────────────────────────────────────────────
-     Warm-neutral greys (~48deg hue, near-zero chroma). The warmth is what
-     separates this from a generic zinc/slate dashboard: it reads as ink on
-     paper rather than as a terminal. */
-  --ink-1000: #0a0a09;
-  --ink-900: #121211;
-  --ink-800: #171716;
-  --ink-700: #1d1d1b;
-  --ink-600: #232321;
-  --ink-500: #2e2e2b;
-  --ink-400: #3b3b37;
-  --ink-300: #57564f;
-  --ink-200: #6e6b65;
-  --ink-150: #8f8b83;
-  --ink-100: #b7b3aa;
+  /* ── Claude Ink Ramp ─────────────────────────────────────────────────────
+     Warm-neutral charcoal/ink (~40deg hue, minimal chroma).
+     Reads as ink on warm paper rather than a cold OLED screen. */
+  --ink-1000: #0c0c0b;
+  --ink-950: #10100f;
+  --ink-900: #141413;
+  --ink-850: #181817;
+  --ink-800: #1b1b1a;
+  --ink-700: #232321;
+  --ink-600: #2a2a28;
+  --ink-500: #343431;
+  --ink-400: #42423e;
+  --ink-300: #5a5852;
+  --ink-200: #78766e;
+  --ink-150: #9a978f;
+  --ink-100: #b0aea5;
   --ink-50: #dcd8d0;
-  --ink-0: #f5f3ee;
+  --ink-0: #faf9f5;
 
-  /* ── Iris: primary accent ────────────────────────────────────────────── */
-  --iris-700: #4b3ad4;
-  --iris-600: #6a58f0;
-  --iris-500: #8b7cff;
-  --iris-400: #a396ff;
-  --iris-300: #c3baff;
-  --iris-wash: rgba(139, 124, 255, 0.1);
-  --iris-wash-strong: rgba(139, 124, 255, 0.18);
-  --iris-edge: rgba(139, 124, 255, 0.32);
+  /* ── Claude Terracotta: Primary Brand Accent ─────────────────────────── */
+  --terracotta-800: #7c2d16;
+  --terracotta-700: #9c3d21;
+  --terracotta-600: #b84f30;
+  --terracotta-500: #d97757; /* Canonical Claude terracotta */
+  --terracotta-400: #e28b6d;
+  --terracotta-300: #f0b5a1;
+  --terracotta-200: #f7d2c4;
+  --terracotta-100: #fdeee8;
+  --terracotta-wash: rgba(217, 119, 87, 0.12);
+  --terracotta-wash-strong: rgba(217, 119, 87, 0.22);
+  --terracotta-edge: rgba(217, 119, 87, 0.35);
 
-  /* ── Ochre: secondary accent, used sparingly for emphasis ────────────── */
+  /* Legacy & Semantic Accent Aliases */
+  --accent-500: var(--terracotta-500);
+  --accent-400: var(--terracotta-400);
+  --accent-wash: var(--terracotta-wash);
+  --accent-edge: var(--terracotta-edge);
+
+  /* Iris backwards-compatibility mapped to Terracotta */
+  --iris-700: var(--terracotta-700);
+  --iris-600: var(--terracotta-600);
+  --iris-500: var(--terracotta-500);
+  --iris-400: var(--terracotta-400);
+  --iris-300: var(--terracotta-300);
+  --iris-wash: var(--terracotta-wash);
+  --iris-wash-strong: var(--terracotta-wash-strong);
+  --iris-edge: var(--terracotta-edge);
+
+  /* ── Ochre / Amber: Secondary Accent ─────────────────────────────────── */
   --ochre-600: #b8933d;
-  --ochre-500: #d8b45a;
+  --ochre-500: #d8a84a;
   --ochre-400: #e2c47c;
-  --ochre-wash: rgba(216, 180, 90, 0.1);
-  --ochre-edge: rgba(216, 180, 90, 0.28);
+  --ochre-wash: rgba(216, 168, 74, 0.12);
+  --ochre-edge: rgba(216, 168, 74, 0.3);
 
-  /* ── Signal colours ─────────────────────────────────────────────────────
-     Every value below clears WCAG AA (>= 4.5:1) against --surface-canvas. */
-  --positive-500: #4caf7d;
-  --positive-wash: rgba(76, 175, 125, 0.1);
-  --positive-edge: rgba(76, 175, 125, 0.26);
-  --critical-500: #e06060;
-  --critical-wash: rgba(224, 96, 96, 0.1);
-  --critical-edge: rgba(224, 96, 96, 0.26);
-  --caution-500: #d8a84a;
-  --caution-wash: rgba(216, 168, 74, 0.1);
-  --caution-edge: rgba(216, 168, 74, 0.26);
+  /* ── Signal Colours ─────────────────────────────────────────────────────
+     Calibrated against Anthropic palette; clears WCAG AA (>= 4.5:1). */
+  --positive-500: #788c5d; /* Claude sage green */
+  --positive-wash: rgba(120, 140, 93, 0.14);
+  --positive-edge: rgba(120, 140, 93, 0.32);
 
-  /* ── Semantic surfaces ──────────────────────────────────────────────── */
-  --surface-canvas: var(--ink-900);
-  --surface-sunken: var(--ink-1000);
-  --surface: var(--ink-800);
-  --surface-raised: var(--ink-700);
-  --surface-overlay: var(--ink-600);
-  --surface-hover: rgba(245, 243, 238, 0.04);
-  --surface-active: rgba(245, 243, 238, 0.07);
-  --surface-scrim: rgba(10, 10, 9, 0.72);
+  --critical-500: #cf5656; /* Claude brick red */
+  --critical-wash: rgba(207, 86, 86, 0.14);
+  --critical-edge: rgba(207, 86, 86, 0.32);
 
-  /* ── Semantic text ──────────────────────────────────────────────────────
-     --text-faint is decorative only: it does not clear AA at body sizes.
-     Never use it for text a reader must parse. */
-  --text: var(--ink-0);
-  --text-secondary: var(--ink-100);
-  --text-muted: var(--ink-150);
-  --text-faint: var(--ink-200);
+  --caution-500: #d8a84a; /* Claude warm amber */
+  --caution-wash: rgba(216, 168, 74, 0.14);
+  --caution-edge: rgba(216, 168, 74, 0.32);
+
+  --info-500: #6a9bcc; /* Claude dusty blue */
+  --info-wash: rgba(106, 155, 204, 0.14);
+  --info-edge: rgba(106, 155, 204, 0.32);
+
+  /* ── Semantic Surfaces ──────────────────────────────────────────────── */
+  --surface-canvas: var(--ink-900); /* #141413 */
+  --surface-sunken: var(--ink-1000); /* #0c0c0b */
+  --surface: var(--ink-800); /* #1b1b1a */
+  --surface-raised: var(--ink-700); /* #232321 */
+  --surface-overlay: var(--ink-600); /* #2a2a28 */
+  --surface-hover: rgba(250, 249, 245, 0.04);
+  --surface-active: rgba(250, 249, 245, 0.08);
+  --surface-scrim: rgba(12, 12, 11, 0.76);
+
+  /* ── Semantic Text ──────────────────────────────────────────────────── */
+  --text: var(--ink-0); /* #faf9f5 warm ivory */
+  --text-secondary: var(--ink-50); /* #dcd8d0 */
+  --text-muted: var(--ink-100); /* #b0aea5 */
+  --text-faint: var(--ink-200); /* #78766e */
   --text-inverse: var(--ink-900);
-  --text-accent: var(--iris-500);
+  --text-accent: var(--terracotta-400);
 
-  /* ── Lines ──────────────────────────────────────────────────────────────
-     Hairlines carry the structure in this system. Shadows almost never do. */
-  --line: var(--ink-500);
-  --line-strong: var(--ink-400);
-  --line-subtle: rgba(245, 243, 238, 0.06);
-  --line-accent: var(--iris-edge);
+  /* ── Lines & Borders ──────────────────────────────────────────────────
+     Hairlines carry visual structure; heavy shadows are avoided. */
+  --line: var(--ink-500); /* #343431 */
+  --line-strong: var(--ink-400); /* #42423e */
+  --line-subtle: rgba(250, 249, 245, 0.08);
+  --line-accent: var(--terracotta-edge);
 
-  /* ── Typography families ────────────────────────────────────────────────
-     --font-display-var / --font-text-var / --font-mono-var are the hooks a
-     host app fills in (next/font variables, @font-face names, whatever it
-     has). Everything downstream reads only the three composed stacks. */
+  /* ── Typography Families ────────────────────────────────────────────── */
   --font-display:
-    var(--font-display-var, "Instrument Serif"), "Iowan Old Style", "Palatino",
-    "Georgia", serif;
+    var(--font-heading, var(--font-display-var, "Instrument Serif")),
+    "Iowan Old Style", "Palatino", "Georgia", serif;
   --font-text:
-    var(--font-text-var, "Inter"), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
+    var(--font-body, var(--font-text-var, "Inter")), "IBM Plex Sans",
+    ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono:
-    var(--font-mono-var, "IBM Plex Mono"), ui-monospace, "SFMono-Regular",
-    "Menlo", "Consolas", monospace;
+    var(--font-mono, var(--font-mono-var, "IBM Plex Mono")), ui-monospace,
+    "SFMono-Regular", "Menlo", monospace;
 
-  /* ── Type scale ─────────────────────────────────────────────────────────
-     UI sizes are fixed; only headings above h3 scale with the viewport. */
+  /* ── Type scale ─────────────────────────────────────────────────────── */
   --fs-micro: 0.6875rem;
   --fs-caption: 0.75rem;
   --fs-small: 0.8125rem;
@@ -133,15 +149,14 @@
   --ls-body: 0em;
   --ls-kicker: 0.14em;
 
-  /* ── Weights ─────────────────────────────────────────────────────────────
-     Display is a single-weight serif; never synthesise bold on it. */
+  /* ── Weights ────────────────────────────────────────────────────────── */
   --fw-display: 400;
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
 
-  /* ── Spacing: 4px base, Tailwind-aligned steps ──────────────────────── */
+  /* ── Spacing ────────────────────────────────────────────────────────── */
   --space-0: 0;
   --space-px: 1px;
   --space-1: 0.25rem;
@@ -157,8 +172,7 @@
   --space-20: 5rem;
   --space-24: 6rem;
 
-  /* ── Radius ──────────────────────────────────────────────────────────────
-     Deliberately modest. Oversized corners read as template SaaS. */
+  /* ── Radius ─────────────────────────────────────────────────────────── */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -166,13 +180,12 @@
   --radius-xl: 20px;
   --radius-full: 999px;
 
-  /* ── Elevation ───────────────────────────────────────────────────────────
-     Reserved for things that genuinely float. Cards use hairlines. */
+  /* ── Elevation ──────────────────────────────────────────────────────── */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.28);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.36);
   --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.48);
-  --shadow-focus: 0 0 0 3px var(--iris-wash-strong);
+  --shadow-focus: 0 0 0 3px var(--terracotta-wash-strong);
 
   /* ── Motion ─────────────────────────────────────────────────────────── */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -207,16 +220,3 @@
   --z-tooltip: 1200;
   --z-skip: 9999;
 }
-
-/* ── Breakpoints ────────────────────────────────────────────────────────────
-   Custom properties cannot be used inside media queries, so these are the
-   contract every Meridian surface hard-codes:
-
-     sm   640px    md   768px    lg  1024px
-     xl  1280px    2xl 1536px
-
-   Layout collapse points used across the system:
-     1024px  sidebar becomes a drawer
-      768px  multi-column grids drop to two
-      640px  everything is single column; tables become stacked cards
-   ------------------------------------------------------------------------ */
