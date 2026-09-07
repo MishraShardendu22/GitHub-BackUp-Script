@@ -24,7 +24,7 @@ The Backup Worker is an autonomous Go CLI engine that discovers repositories acr
 
 ### Configuration
 
-Create or update `.env` (at repository root or in `backup-worker/`) with the following environment variables:
+Create or update `.env` in the `backup-worker/` directory with the following environment variables:
 
 ```env
 # Required for discovery & rate limits:

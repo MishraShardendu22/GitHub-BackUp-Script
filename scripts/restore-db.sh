@@ -19,18 +19,19 @@ if [ -f "${BACKUP_FILE}.sha256" ]; then
   (cd "$(dirname "${BACKUP_FILE}")" && sha256sum -c "$(basename "${BACKUP_FILE}.sha256")")
 fi
 
-# Auto-source .env if present
-if [ -f ".env" ]; then
-  set -a
-  source ".env"
-  set +a
-elif [ -f "../.env" ]; then
-  set -a
-  source "../.env"
-  set +a
-fi
+# Auto-source service .env if present
+for env_file in "backend/.env" "backup-worker/.env" ".env" "../backend/.env" "../backup-worker/.env" "../.env"; do
+  if [ -f "${env_file}" ]; then
+    set -a
+    source "${env_file}"
+    set +a
+    break
+  fi
+done
 
 DB_CONN="${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@localhost:5432/github_backup}}"
+export DATABASE_URL="${DB_CONN}"
+export POSTGRES_URL="${DB_CONN}"
 
 echo "WARNING: This will restore database from '${BACKUP_FILE}'."
 read -p "Are you sure you want to proceed? [y/N]: " -r CONFIRM

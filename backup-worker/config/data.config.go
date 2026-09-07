@@ -10,19 +10,17 @@ func LoadEnv() {
 	currEnv := "development"
 
 	if currEnv == "development" {
-		// 1. Try local service .env (.env)
-		if err := godotenv.Load(".env"); err == nil {
-			return
+		// 1. Try local service .env or relative service paths
+		for _, envPath := range []string{".env", "backup-worker/.env", "../backup-worker/.env", "../.env"} {
+			if err := godotenv.Load(envPath); err == nil {
+				return
+			}
 		}
 
-		// 2. Try root-level .env (../.env)
-		if err := godotenv.Load("../.env"); err == nil {
-			return
-		}
-
-		// 3. If neither file exists, log warning only if key variables are missing
-		if util.GetEnv("DATABASE_URL", "") == "" && util.GetEnv("GITHUB_TOKEN_PERSONAL", "") == "" {
-			util.Logger().Warn("No .env file found in service directory (.env) or parent root (../.env)")
+		// 2. If no env file exists, log warning only if key variables are missing
+		dbURL := util.GetEnv("DATABASE_URL", util.GetEnv("POSTGRES_URL", ""))
+		if dbURL == "" && util.GetEnv("GITHUB_TOKEN_PERSONAL", "") == "" {
+			util.Logger().Warn("No .env file found in backup-worker service directory")
 		}
 	}
 }
@@ -32,6 +30,7 @@ func LoadConfig() *model.ConfigModel {
 	return &model.ConfigModel{
 		OrgAccount:          util.GetEnv("ORG_ACCOUNT", ""),
 		PostgreSql:          dbURL,
+		DatabaseURL:         dbURL,
 		DBPath:              util.GetEnv("DB_PATH", "./app.db"),
 		ProjectAccount:      util.GetEnv("PROJECT_ACCOUNT", ""),
 		BackupRepoPath:      util.GetEnv("BACKUP_REPO_PATH", ""),

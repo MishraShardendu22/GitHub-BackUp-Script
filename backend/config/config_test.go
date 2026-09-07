@@ -61,4 +61,21 @@ func TestConfigValidation(t *testing.T) {
 			t.Errorf("expected singleton Get() to return the loaded config instance")
 		}
 	})
+
+	t.Run("succeeds with POSTGRES_URL fallback when DATABASE_URL is missing", func(t *testing.T) {
+		os.Unsetenv("DATABASE_URL")
+		os.Setenv("POSTGRES_URL", "postgresql://fallback-user:pass@localhost:5432/fallback_db")
+		defer os.Unsetenv("POSTGRES_URL")
+
+		cfg, err := LoadAndValidate()
+		if err != nil {
+			t.Fatalf("unexpected error with POSTGRES_URL fallback: %v", err)
+		}
+		if cfg.DatabaseURL != "postgresql://fallback-user:pass@localhost:5432/fallback_db" {
+			t.Errorf("expected DatabaseURL to be populated from POSTGRES_URL fallback, got %s", cfg.DatabaseURL)
+		}
+		if cfg.PostgresURL != "postgresql://fallback-user:pass@localhost:5432/fallback_db" {
+			t.Errorf("expected PostgresURL to be populated from POSTGRES_URL fallback, got %s", cfg.PostgresURL)
+		}
+	})
 }

@@ -13,6 +13,7 @@ type ConfigModel struct {
 	GitHubTokenPrivate  string
 	GitHubTokenPersonal string
 	PostgreSql          string
+	DatabaseURL         string
 }
 
 type Repos struct {
