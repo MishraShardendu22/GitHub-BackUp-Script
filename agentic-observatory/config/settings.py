@@ -53,7 +53,7 @@ class Settings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "agentic-observatory/.env"),
         extra="ignore",
     )
 

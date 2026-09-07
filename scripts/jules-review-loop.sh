@@ -253,7 +253,7 @@ run_review_analysis() {
         log_success "PR satisfies all Principal Staff Engineer acceptance criteria! Quality score: ${score}/${CONVERGENCE_THRESHOLD}"
         return 0
     else
-        log_warn "PR requires refinement. Quality score ${score} is below convergence threshold ${CONVERGENCE_THRESHOLD}."
+        log_warn "PR requires refinement. Quality score: ${score} is below convergence threshold ${CONVERGENCE_THRESHOLD}."
         return 1
     fi
 }

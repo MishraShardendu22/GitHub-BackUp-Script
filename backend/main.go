@@ -19,7 +19,12 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load()
+	for _, envFile := range []string{".env", "backend/.env"} {
+		if _, err := os.Stat(envFile); err == nil {
+			_ = godotenv.Load(envFile)
+			break
+		}
+	}
 
 	cfg, err := config.LoadAndValidate()
 	if err != nil {
