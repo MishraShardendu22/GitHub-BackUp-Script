@@ -16,14 +16,12 @@ export function LoginPanel({ onLogin, loading, error }: LoginPanelProps) {
   };
 
   return (
-    <div className="ai-login-panel">
-      <p className="ai-login-label">
-        Sign in to access the AI Systems Lab Dashboard
-      </p>
-      <form onSubmit={handleSubmit} className="ai-login-form" noValidate>
+    <div className="m-stack">
+      <p className="m-label">Sign in to access the AI Systems Lab Dashboard</p>
+      <form onSubmit={handleSubmit} className="m-cluster" noValidate>
         <input
           type="text"
-          className="ai-login-input"
+          className="m-input"
           placeholder="Username"
           autoComplete="username"
           value={username}
@@ -32,7 +30,7 @@ export function LoginPanel({ onLogin, loading, error }: LoginPanelProps) {
         />
         <input
           type="password"
-          className="ai-login-input"
+          className="m-input"
           placeholder="Password"
           autoComplete="current-password"
           value={password}
@@ -41,7 +39,7 @@ export function LoginPanel({ onLogin, loading, error }: LoginPanelProps) {
         />
         <button
           type="submit"
-          className="sendBtn"
+          className="m-btn m-btn--primary"
           disabled={loading || !username || !password}
         >
           {loading ? "Signing in…" : "Sign In"}
@@ -50,7 +48,7 @@ export function LoginPanel({ onLogin, loading, error }: LoginPanelProps) {
       {error && (
         <p
           role="alert"
-          className="ai-login-error"
+          className="m-alert m-alert--critical"
           style={{ width: "100%", marginTop: 8 }}
         >
           {error}

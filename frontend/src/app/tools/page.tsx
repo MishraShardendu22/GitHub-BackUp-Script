@@ -185,7 +185,7 @@ function ToolsPlaygroundContent() {
   };
 
   return (
-    <div className="page-container" style={{ paddingBottom: "80px" }}>
+    <div className="m-page" style={{ paddingBottom: "80px" }}>
       <div
         style={{
           display: "flex",
@@ -204,15 +204,15 @@ function ToolsPlaygroundContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Link
             href="/tools/stats"
-            className="btn btn-secondary"
+            className="m-btn m-btn--secondary"
             style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
-            <BarChart3 size={13} style={{ color: "var(--accent)" }} />
+            <BarChart3 size={13} style={{ color: "var(--iris-500)" }} />
             <span>View Tool Telemetry & Stats</span>
           </Link>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="m-btn m-btn--secondary"
             onClick={() => {
               setIsRefreshing(true);
               loadTools();
@@ -230,19 +230,19 @@ function ToolsPlaygroundContent() {
       </div>
 
       {/* Main Interactive Tool Testing Workbench */}
-      <div className="card" style={{ padding: "24px", marginTop: "16px" }}>
+      <div className="m-card" style={{ padding: "24px", marginTop: "16px" }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             marginBottom: "20px",
-            borderBottom: "1px solid var(--border)",
+            borderBottom: "1px solid var(--line)",
             paddingBottom: "14px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Zap size={18} style={{ color: "var(--accent)" }} />
+            <Zap size={18} style={{ color: "var(--iris-500)" }} />
             <h2
               style={{
                 fontSize: "16px",
@@ -332,13 +332,13 @@ function ToolsPlaygroundContent() {
                       marginBottom: "6px",
                     }}
                   >
-                    <Code2 size={13} style={{ color: "var(--accent)" }} />
+                    <Code2 size={13} style={{ color: "var(--iris-500)" }} />
                     <span
                       style={{
                         fontSize: "12px",
                         fontWeight: 700,
                         fontFamily: "var(--font-mono)",
-                        color: "var(--accent)",
+                        color: "var(--iris-500)",
                       }}
                     >
                       {selectedTool.name}
@@ -390,7 +390,7 @@ function ToolsPlaygroundContent() {
                 </div>
                 <textarea
                   id="tool-arguments-editor"
-                  className="input font-mono"
+                  className="m-input font-mono"
                   value={argsJson}
                   onChange={(e) => setArgsJson(e.target.value)}
                   rows={6}
@@ -407,7 +407,7 @@ function ToolsPlaygroundContent() {
 
               <button
                 type="button"
-                className="btn btn-primary"
+                className="m-btn m-btn--primary"
                 onClick={handleExecute}
                 disabled={isExecuting || !selectedTool}
                 style={{
@@ -458,7 +458,7 @@ function ToolsPlaygroundContent() {
                 {executionResult && (
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="m-btn m-btn--secondary"
                     onClick={handleCopyResult}
                     style={{
                       padding: "2px 8px",
@@ -491,7 +491,7 @@ function ToolsPlaygroundContent() {
                       padding: "8px 12px",
                       background: "rgba(0, 0, 0, 0.2)",
                       borderRadius: "6px",
-                      border: "1px solid var(--border)",
+                      border: "1px solid var(--line)",
                     }}
                   >
                     <div
@@ -539,7 +539,7 @@ function ToolsPlaygroundContent() {
                     style={{
                       flex: 1,
                       background: "rgba(0, 0, 0, 0.4)",
-                      border: "1px solid var(--border)",
+                      border: "1px solid var(--line)",
                       borderRadius: "6px",
                       padding: "12px",
                       overflowX: "auto",
@@ -572,7 +572,7 @@ function ToolsPlaygroundContent() {
                   style={{
                     height: "100%",
                     minHeight: "240px",
-                    border: "1px dashed var(--border)",
+                    border: "1px dashed var(--line)",
                     borderRadius: "6px",
                     display: "flex",
                     flexDirection: "column",
@@ -614,7 +614,7 @@ export default function ToolsPlaygroundPage() {
   return (
     <Suspense
       fallback={
-        <div className="page-container">
+        <div className="m-page">
           <LoadingState message="Loading Tools Playground..." />
         </div>
       }

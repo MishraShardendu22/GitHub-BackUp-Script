@@ -23,19 +23,19 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="ai-tool-activity-card">
+    <div className="tool-activity">
       <button
         type="button"
-        className="ai-tool-activity-header w-full flex items-center justify-between text-left"
+        className="tool-activity__header w-full flex items-center justify-between text-left"
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-label={`Toggle tool activity details for ${tool.name}`}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
           <span
-            className={`ai-tool-status-icon ${tool.running ? "running" : tool.success ? "success" : "error"}`}
+            className={`m-dot ${tool.running ? "running" : tool.success ? "success" : "error"}`}
           />
-          <strong style={{ fontFamily: "monospace", color: "var(--accent)" }}>
+          <strong style={{ fontFamily: "monospace", color: "var(--iris-500)" }}>
             {tool.name}
           </strong>
           <span
@@ -60,12 +60,12 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
         </div>
       </button>
       {expanded && (
-        <div className="ai-tool-activity-details">
+        <div className="tool-activity__body">
           <div>
             <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
               Arguments:
             </span>
-            <pre className="ai-json-viewer">
+            <pre className="tool-activity__json">
               {JSON.stringify(tool.args, null, 2)}
             </pre>
           </div>
@@ -74,7 +74,7 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
               <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
                 Result:
               </span>
-              <pre className="ai-json-viewer">
+              <pre className="tool-activity__json">
                 {typeof tool.result === "string"
                   ? tool.result
                   : JSON.stringify(tool.result, null, 2)}
@@ -84,7 +84,7 @@ export function ToolActivityBlock({ tool }: { tool: MessageToolCall }) {
           {tool.error && (
             <div>
               <span style={{ color: "#ef4444", fontWeight: 600 }}>Error:</span>
-              <pre className="ai-json-viewer" style={{ color: "#f87171" }}>
+              <pre className="tool-activity__json" style={{ color: "#f87171" }}>
                 {tool.error}
               </pre>
             </div>

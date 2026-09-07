@@ -220,11 +220,11 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
 
   return (
     <>
-      <div className="card table-card">
+      <div className="m-card m-card--flush">
         {errorMessage ? (
           <p
             style={{
-              color: "var(--danger)",
+              color: "var(--critical-500)",
               padding: 40,
               textAlign: "center",
               fontSize: 15,
@@ -240,18 +240,18 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               color: "var(--text-secondary)",
             }}
           >
-            <span className="loading-state">Loading runs...</span>
+            <span className="m-body">Loading runs...</span>
           </div>
         ) : runs.length === 0 ? (
           <p
-            className="text-sm text-muted"
+            className="text-sm m-text-muted"
             style={{ padding: 40, textAlign: "center" }}
           >
             No backup runs found. Run the worker to create backups.
           </p>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
+          <div className="m-table-wrap">
+            <table className="m-table">
               <thead>
                 <tr>
                   <th style={{ whiteSpace: "nowrap" }}>Run</th>
@@ -285,12 +285,12 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       </td>
                       <td data-label="Status">
                         <span
-                          className={`badge ${
+                          className={`m-badge ${
                             run.status === "completed"
-                              ? "badge-success"
+                              ? "m-badge--positive"
                               : run.status === "running"
-                                ? "badge-running"
-                                : "badge-error"
+                                ? "m-badge--accent"
+                                : "m-badge--critical"
                           }`}
                         >
                           {run.status}
@@ -312,19 +312,20 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       <td data-label="Total">{run.total_repos}</td>
                       <td
                         data-label="Success"
-                        style={{ color: "var(--success)" }}
+                        style={{ color: "var(--positive-500)" }}
                       >
                         {run.successful}
                       </td>
                       <td
                         data-label="Failed"
                         style={{
-                          color: run.failed > 0 ? "var(--danger)" : "inherit",
+                          color:
+                            run.failed > 0 ? "var(--critical-500)" : "inherit",
                         }}
                       >
                         {run.failed}
                       </td>
-                      <td data-label="Skipped" className="text-muted">
+                      <td data-label="Skipped" className="m-text-muted">
                         {run.skipped}
                       </td>
                       <td data-label="Fix Status">
@@ -335,7 +336,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                               onClick={() =>
                                 setActiveFix(run.fixes?.[0] ?? null)
                               }
-                              className="badge"
+                              className="m-badge"
                               style={{
                                 background: "rgba(16, 185, 129, 0.15)",
                                 color: "#10b981",
@@ -357,10 +358,10 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                             </button>
                           ) : (
                             <span
-                              className="badge"
+                              className="m-badge"
                               style={{
                                 background: "rgba(239, 68, 68, 0.1)",
-                                color: "var(--danger)",
+                                color: "var(--critical-500)",
                                 border: "1px solid rgba(239, 68, 68, 0.2)",
                                 fontSize: "12px",
                                 padding: "2px 8px",
@@ -372,7 +373,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                             >
                               <XCircle
                                 size={12}
-                                style={{ color: "var(--danger)" }}
+                                style={{ color: "var(--critical-500)" }}
                               />{" "}
                               Failed
                             </span>
@@ -404,12 +405,12 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                             <button
                               type="button"
                               onClick={() => openCreateFix(run)}
-                              className="btn btn-outline"
+                              className="m-btn m-btn--secondary"
                               style={{
                                 padding: "6px 12px",
                                 fontSize: "12px",
                                 borderColor: "rgba(139, 92, 246, 0.4)",
-                                color: "var(--accent)",
+                                color: "var(--iris-500)",
                                 whiteSpace: "nowrap",
                               }}
                             >
@@ -422,7 +423,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                               onClick={() =>
                                 setActiveFix(run.fixes?.[0] ?? null)
                               }
-                              className="btn btn-outline"
+                              className="m-btn m-btn--secondary"
                               style={{
                                 padding: "6px 12px",
                                 fontSize: "12px",
@@ -436,7 +437,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                           )}
                           <Link
                             href={`/backups/${run.id}`}
-                            className="btn btn-ghost"
+                            className="m-btn m-btn--ghost"
                             style={{
                               padding: "6px 10px",
                               fontSize: "13px",
@@ -472,7 +473,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
         <button
           type="button"
           aria-label="Close modal overlay backdrop"
-          className="modal-overlay block w-full border-none p-0 text-left"
+          className="m-scrim block w-full border-none p-0 text-left"
           onClick={() => {
             setActiveFix(null);
             setIsEditing(false);
@@ -484,7 +485,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
             }
           }}
         >
-          <div className="modal-content" role="dialog" aria-modal="true">
+          <div className="m-dialog" role="dialog" aria-modal="true">
             <div
               style={{
                 display: "flex",
@@ -532,12 +533,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       marginBottom: 6,
                     }}
                   >
-                    Title <span style={{ color: "var(--danger)" }}>*</span>
+                    Title{" "}
+                    <span style={{ color: "var(--critical-500)" }}>*</span>
                   </label>
                   <input
                     id="edit-fix-title"
                     type="text"
-                    className="input"
+                    className="m-input"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     required
@@ -559,7 +561,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   </label>
                   <textarea
                     id="edit-fix-desc"
-                    className="textarea"
+                    className="m-textarea"
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
                   />
@@ -588,7 +590,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     <input
                       id="edit-fix-commit"
                       type="text"
-                      className="input"
+                      className="m-input"
                       value={editCommit}
                       onChange={(e) => setEditCommit(e.target.value)}
                     />
@@ -610,7 +612,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     <input
                       id="edit-fix-author"
                       type="text"
-                      className="input"
+                      className="m-input"
                       value={editAuthor}
                       onChange={(e) => setEditAuthor(e.target.value)}
                     />
@@ -634,7 +636,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       maxHeight: 120,
                       overflowY: "auto",
                       background: "rgba(0,0,0,0.15)",
-                      border: "1px solid var(--border)",
+                      border: "1px solid var(--line)",
                       borderRadius: "var(--radius-md)",
                       padding: "8px 12px",
                       display: "flex",
@@ -684,7 +686,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 {submitError && (
                   <div
                     style={{
-                      color: "var(--danger)",
+                      color: "var(--critical-500)",
                       fontSize: 14,
                       fontWeight: 500,
                       display: "flex",
@@ -707,7 +709,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="btn btn-outline"
+                    className="m-btn m-btn--secondary"
                     style={{ padding: "10px 18px", fontSize: 14 }}
                     disabled={submitting}
                   >
@@ -715,7 +717,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="m-btn m-btn--primary"
                     style={{ padding: "10px 18px", fontSize: 14 }}
                     disabled={submitting}
                   >
@@ -904,7 +906,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                                 fontSize: 12,
                                 fontWeight: 600,
                                 background: "rgba(139, 92, 246, 0.1)",
-                                color: "var(--accent)",
+                                color: "var(--iris-500)",
                                 padding: "2px 6px",
                                 borderRadius: 4,
                                 textDecoration: "none",
@@ -938,12 +940,12 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     <button
                       type="button"
                       onClick={startEditing}
-                      className="btn btn-outline"
+                      className="m-btn m-btn--secondary"
                       style={{
                         padding: "8px 16px",
                         fontSize: 14,
                         borderColor: "rgba(139, 92, 246, 0.4)",
-                        color: "var(--accent)",
+                        color: "var(--iris-500)",
                       }}
                     >
                       Edit Fix
@@ -952,7 +954,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <button
                     type="button"
                     onClick={() => setActiveFix(null)}
-                    className="btn btn-outline"
+                    className="m-btn m-btn--secondary"
                     style={{ padding: "8px 16px", fontSize: 14 }}
                   >
                     Close
@@ -969,13 +971,13 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
         <button
           type="button"
           aria-label="Close create fix modal overlay backdrop"
-          className="modal-overlay block w-full border-none p-0 text-left"
+          className="m-scrim block w-full border-none p-0 text-left"
           onClick={() => setCreateFixForRun(null)}
           onKeyDown={(e) => {
             if (e.key === "Escape") setCreateFixForRun(null);
           }}
         >
-          <div className="modal-content" role="dialog" aria-modal="true">
+          <div className="m-dialog" role="dialog" aria-modal="true">
             <div
               style={{
                 display: "flex",
@@ -1019,12 +1021,12 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     marginBottom: 6,
                   }}
                 >
-                  Title <span style={{ color: "var(--danger)" }}>*</span>
+                  Title <span style={{ color: "var(--critical-500)" }}>*</span>
                 </label>
                 <input
                   id="fix-title"
                   type="text"
-                  className="input"
+                  className="m-input"
                   placeholder="e.g., Disable GPG signing for automated commits"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
@@ -1047,7 +1049,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 </label>
                 <textarea
                   id="fix-desc"
-                  className="textarea"
+                  className="m-textarea"
                   placeholder="Explain what caused the failure and how it was resolved..."
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
@@ -1077,7 +1079,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <input
                     id="fix-commit"
                     type="text"
-                    className="input"
+                    className="m-input"
                     placeholder="e.g., a0252b8"
                     value={formCommit}
                     onChange={(e) => setFormCommit(e.target.value)}
@@ -1100,7 +1102,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                   <input
                     id="fix-author"
                     type="text"
-                    className="input"
+                    className="m-input"
                     placeholder="e.g., Shardendu Mishra"
                     value={formAuthor}
                     onChange={(e) => setFormAuthor(e.target.value)}
@@ -1125,7 +1127,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                     maxHeight: 120,
                     overflowY: "auto",
                     background: "rgba(0,0,0,0.15)",
-                    border: "1px solid var(--border)",
+                    border: "1px solid var(--line)",
                     borderRadius: "var(--radius-md)",
                     padding: "8px 12px",
                     display: "flex",
@@ -1149,7 +1151,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                       disabled={true}
                       style={{ cursor: "not-allowed" }}
                     />
-                    <span style={{ fontWeight: 600, color: "var(--accent)" }}>
+                    <span style={{ fontWeight: 600, color: "var(--iris-500)" }}>
                       Run #{createFixForRun.id} (Current Run)
                     </span>
                   </label>
@@ -1193,7 +1195,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               {submitError && (
                 <div
                   style={{
-                    color: "var(--danger)",
+                    color: "var(--critical-500)",
                     fontSize: 14,
                     fontWeight: 500,
                     display: "flex",
@@ -1207,7 +1209,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
               {!hasToken && (
                 <div
                   style={{
-                    color: "var(--danger)",
+                    color: "var(--critical-500)",
                     fontSize: 14,
                     fontWeight: 500,
                     display: "flex",
@@ -1238,7 +1240,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 <button
                   type="button"
                   onClick={() => setCreateFixForRun(null)}
-                  className="btn btn-outline"
+                  className="m-btn m-btn--secondary"
                   style={{ padding: "10px 18px", fontSize: 14 }}
                   disabled={submitting}
                 >
@@ -1246,7 +1248,7 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="m-btn m-btn--primary"
                   style={{ padding: "10px 18px", fontSize: 14 }}
                   disabled={submitting || !hasToken}
                 >
@@ -1275,8 +1277,8 @@ export default function BackupsClient({ initialData }: BackupsClientProps) {
         }
 
         .modal-content {
-          background: var(--bg-card, #1c1c1f);
-          border: 1px solid var(--border, #2a2a2e);
+          background: var(--surface-raised, #1c1c1f);
+          border: 1px solid var(--line, #2a2a2e);
           border-radius: var(--radius-lg, 12px);
           width: 90%;
           max-width: 600px;

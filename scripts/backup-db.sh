@@ -7,6 +7,17 @@ RETENTION_DAYS="${RETENTION_DAYS:-14}"
 TIMESTAMP="$(date +'%Y%m%d_%H%M%S')"
 BACKUP_FILE="${BACKUP_DIR}/gbm_pg_backup_${TIMESTAMP}.sql.gz"
 
+# Auto-source .env if present
+if [ -f ".env" ]; then
+  set -a
+  source ".env"
+  set +a
+elif [ -f "../.env" ]; then
+  set -a
+  source "../.env"
+  set +a
+fi
+
 # Database Connection (DATABASE_URL preferred, fallback to POSTGRES_URL or localhost default)
 DB_CONN="${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@localhost:5432/github_backup}}"
 

@@ -104,11 +104,11 @@ export function AIDashboard() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    document.documentElement.classList.add("ai-page-active");
-    document.body.classList.add("ai-page-active");
+    document.documentElement.classList.add("console-mode");
+    document.body.classList.add("console-mode");
     return () => {
-      document.documentElement.classList.remove("ai-page-active");
-      document.body.classList.remove("ai-page-active");
+      document.documentElement.classList.remove("console-mode");
+      document.body.classList.remove("console-mode");
     };
   }, []);
 
@@ -188,15 +188,17 @@ export function AIDashboard() {
   };
 
   return (
-    <div className="ai-dashboard-container">
+    <div className="console">
       {/* Main Area */}
-      <main className="ai-main-area">
-        <header className="ai-agent-header">
-          <div className="ai-agent-identity">
-            <div className="ai-agent-info">
-              <div className="ai-agent-name">Systems Lab Agent</div>
-              <div className="ai-agent-status">
-                <span className={`ai-status-dot ${sending ? "busy" : ""}`} />
+      <main className="console__main">
+        <header className="console__header">
+          <div className="console__identity">
+            <div className="m-stack m-stack--tight">
+              <div className="console__agent-name">Systems Lab Agent</div>
+              <div className="console__agent-status">
+                <span
+                  className={`m-dot m-dot--positive ${sending ? "busy" : ""}`}
+                />
                 <span>
                   {sending
                     ? "Processing Query..."
@@ -233,14 +235,14 @@ export function AIDashboard() {
             {isAuthenticated && (
               <button
                 type="button"
-                className="ai-new-chat-btn"
+                className="m-btn m-btn--primary m-btn--block"
                 style={{
                   width: "auto",
                   padding: "6px 16px",
                   fontSize: "13px",
                   background: "rgba(139, 92, 246, 0.12)",
-                  borderColor: "var(--accent)",
-                  color: "var(--accent)",
+                  borderColor: "var(--iris-500)",
+                  color: "var(--iris-500)",
                   marginTop: 0,
                   height: 24,
                   display: "flex",
@@ -259,7 +261,7 @@ export function AIDashboard() {
               </button>
             )}
             <div
-              className="ai-tools-list"
+              className="console__tools"
               style={{ marginTop: 0, flexShrink: 0 }}
             >
               <ToolBadge name="Metrics" />
@@ -271,21 +273,21 @@ export function AIDashboard() {
         </header>
 
         <div
-          className="ai-content-scroll-area"
+          className="console__scroll"
           ref={currentView === "chat" ? feedRef : undefined}
         >
           {currentView === "dashboard" ? (
             statsLoading && !stats ? (
               <LoaderPanel message={loadMsg} />
             ) : (
-              <div className="ai-dashboard-panel">
+              <div className="m-stack m-stack--loose">
                 <div style={{ marginBottom: "28px" }}>
-                  <div className="page-kicker">Systems Lab Operations</div>
-                  <h1 className="hero-title" style={{ margin: "4px 0" }}>
+                  <div className="m-kicker">Systems Lab Operations</div>
+                  <h1 className="m-title" style={{ margin: "4px 0" }}>
                     Systems Lab Dashboard
                   </h1>
                   <p
-                    className="hero-subtitle"
+                    className="m-subtitle"
                     style={{ fontSize: "16px", color: "var(--text-secondary)" }}
                   >
                     Real-time analysis statistics from agent database
@@ -294,7 +296,7 @@ export function AIDashboard() {
                   </p>
                 </div>
 
-                <div className="ai-dashboard-grid">
+                <div className="m-grid m-grid--metrics">
                   <MetricCard
                     label="Total Conversations"
                     value={stats?.total_conversations ?? 0}
@@ -315,16 +317,16 @@ export function AIDashboard() {
                   />
                 </div>
 
-                <div className="ai-dashboard-section-title">
+                <div className="m-section__title">
                   Ask the Agent About Backups
                 </div>
                 {!hasInteracted && (
-                  <div className="premadeGrid" style={{ marginTop: 12 }}>
+                  <div className="prompt-grid" style={{ marginTop: 12 }}>
                     {PREMADE_PROMPTS.map((prompt) => (
                       <button
                         key={prompt}
                         type="button"
-                        className="premadeBtn"
+                        className="prompt-card"
                         onClick={() => {
                           if (isAuthenticated) {
                             setInput(prompt);
@@ -353,7 +355,7 @@ export function AIDashboard() {
               </div>
             )
           ) : (
-            <div className="ai-chat-messages">
+            <div className="transcript">
               {messagesLoading ? (
                 <div
                   style={{
@@ -397,11 +399,11 @@ export function AIDashboard() {
           )}
         </div>
 
-        <div className="ai-chat-composer-wrap">
+        <div className="composer">
           {isAuthenticated ? (
             <form
               onSubmit={handleSubmit}
-              className="composerWrap"
+              className="composer__shell"
               style={{
                 display: "flex",
                 flexDirection: "row",
@@ -412,7 +414,7 @@ export function AIDashboard() {
             >
               <textarea
                 ref={composerRef}
-                className="composer"
+                className="composer__input"
                 style={{
                   flex: 1,
                   minHeight: "38px",
@@ -450,7 +452,7 @@ export function AIDashboard() {
               >
                 <button
                   type="submit"
-                  className="sendBtn"
+                  className="m-btn m-btn--primary"
                   style={{
                     height: "32px",
                     padding: "0 16px",
@@ -467,7 +469,7 @@ export function AIDashboard() {
                   {!sending && <ArrowRight size={13} />}
                 </button>
                 <span
-                  className="promptHint"
+                  className="composer__hint"
                   style={{
                     fontSize: "12px",
                     margin: 0,
@@ -492,14 +494,14 @@ export function AIDashboard() {
       </main>
 
       {activeConfirmation && (
-        <div className="ai-confirm-overlay">
-          <div className="ai-confirm-modal">
+        <div className="m-scrim">
+          <div className="m-dialog">
             <h3>Confirm Sensitive Action</h3>
             <p>
               The agent wants to execute the tool{" "}
               <code>{activeConfirmation.name}</code> to send an email report:
             </p>
-            <div className="ai-confirm-details">
+            <div className="m-alert m-alert--accent">
               <div>
                 <strong>Subject:</strong>{" "}
                 {String(activeConfirmation.args?.subject || "")}
@@ -511,17 +513,17 @@ export function AIDashboard() {
                   : "Default Recipient (SMTP_TO)"}
               </div>
             </div>
-            <div className="ai-confirm-actions">
+            <div className="m-dialog__foot">
               <button
                 type="button"
-                className="ai-confirm-btn"
+                className="m-btn m-btn--primary"
                 onClick={() => confirmAction(auth.token || "", true)}
               >
                 Yes, Send Email
               </button>
               <button
                 type="button"
-                className="ai-confirm-btn-abort"
+                className="m-btn m-btn--secondary"
                 onClick={() => confirmAction(auth.token || "", false)}
               >
                 No, Abort

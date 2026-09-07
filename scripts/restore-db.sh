@@ -19,6 +19,17 @@ if [ -f "${BACKUP_FILE}.sha256" ]; then
   (cd "$(dirname "${BACKUP_FILE}")" && sha256sum -c "$(basename "${BACKUP_FILE}.sha256")")
 fi
 
+# Auto-source .env if present
+if [ -f ".env" ]; then
+  set -a
+  source ".env"
+  set +a
+elif [ -f "../.env" ]; then
+  set -a
+  source "../.env"
+  set +a
+fi
+
 DB_CONN="${DATABASE_URL:-${POSTGRES_URL:-postgresql://postgres:postgres@localhost:5432/github_backup}}"
 
 echo "WARNING: This will restore database from '${BACKUP_FILE}'."

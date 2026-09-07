@@ -38,18 +38,18 @@ export default async function SnapshotsPage({
   const latest = page === 1 && snapshots.length > 0 ? snapshots[0] : null;
 
   return (
-    <div className="page">
-      <div className="page-head" style={{ marginBottom: 24 }}>
+    <div className="m-page">
+      <div className="m-masthead" style={{ marginBottom: 24 }}>
         <div>
-          <div className="page-kicker">Analytics / Git Snapshots</div>
-          <h1 className="page-title">Repository Snapshots</h1>
-          <p className="page-subtitle">
+          <div className="m-kicker">Analytics / Git Snapshots</div>
+          <h1 className="m-title">Repository Snapshots</h1>
+          <p className="m-subtitle">
             Git metadata captured by the backend collector at each backup point
             — commits, branches, tags, blob sizes, and archive sizes.
           </p>
         </div>
         {snapshots.length > 0 && (
-          <div className="pill" style={{ alignSelf: "flex-start" }}>
+          <div className="m-badge" style={{ alignSelf: "flex-start" }}>
             {pagination?.total_items || snapshots.length} snapshot
             {(pagination?.total_items || snapshots.length) !== 1 ? "s" : ""}
           </div>
@@ -60,8 +60,8 @@ export default async function SnapshotsPage({
 
       {/* -- Latest snapshot summary ----------------------------------- */}
       {latest && (
-        <section className="card section-card">
-          <div className="section-title">Latest snapshot</div>
+        <section className="m-card m-card--roomy">
+          <div className="m-section__title">Latest snapshot</div>
           <div className="section-desc">
             Captured {formatDate(latest.captured_at)}
             {latest.head_commit && (
@@ -72,7 +72,7 @@ export default async function SnapshotsPage({
                   style={{
                     fontSize: 14,
                     fontFamily: "monospace",
-                    color: "var(--accent)",
+                    color: "var(--iris-500)",
                   }}
                 >
                   {latest.head_commit.slice(0, 10)}
@@ -81,31 +81,28 @@ export default async function SnapshotsPage({
             )}
             {latest.head_commit_message && ` — ${latest.head_commit_message}`}
           </div>
-          <div
-            className="metric-grid metric-grid--four"
-            style={{ marginTop: 14 }}
-          >
-            <div className="card-flat">
-              <div className="stat-label">Total commits</div>
-              <div className="stat-value stat-value--md">
+          <div className="m-grid m-grid--metrics" style={{ marginTop: 14 }}>
+            <div className="m-card m-card--quiet">
+              <div className="m-metric__label">Total commits</div>
+              <div className="m-metric__value m-metric__value--sm">
                 {latest.total_commits}
               </div>
             </div>
-            <div className="card-flat">
-              <div className="stat-label">Branches</div>
-              <div className="stat-value stat-value--md">
+            <div className="m-card m-card--quiet">
+              <div className="m-metric__label">Branches</div>
+              <div className="m-metric__value m-metric__value--sm">
                 {latest.branch_count}
               </div>
             </div>
-            <div className="card-flat">
-              <div className="stat-label">Tracked files</div>
-              <div className="stat-value stat-value--md">
+            <div className="m-card m-card--quiet">
+              <div className="m-metric__label">Tracked files</div>
+              <div className="m-metric__value m-metric__value--sm">
                 {latest.tracked_files}
               </div>
             </div>
-            <div className="card-flat">
-              <div className="stat-label">Total archive size</div>
-              <div className="stat-value stat-value--md">
+            <div className="m-card m-card--quiet">
+              <div className="m-metric__label">Total archive size</div>
+              <div className="m-metric__value m-metric__value--sm">
                 {formatBytes(latest.total_archive_size_bytes)}
               </div>
             </div>
@@ -114,11 +111,17 @@ export default async function SnapshotsPage({
       )}
 
       {/* -- History table --------------------------------------------- */}
-      <section className="card section-card">
-        <div className="section-title">Full history</div>
+      <section className="m-card m-card--roomy">
+        <div className="m-section__title">Full history</div>
 
         {!result ? (
-          <p style={{ color: "var(--danger)", fontSize: 15, paddingTop: 12 }}>
+          <p
+            style={{
+              color: "var(--critical-500)",
+              fontSize: 15,
+              paddingTop: 12,
+            }}
+          >
             Failed to load snapshots. Check the backend is running.
           </p>
         ) : snapshots.length === 0 ? (
@@ -144,8 +147,8 @@ export default async function SnapshotsPage({
           </div>
         ) : (
           <>
-            <div className="table-wrap" style={{ marginTop: 14 }}>
-              <table className="table table-wide">
+            <div className="m-table-wrap" style={{ marginTop: 14 }}>
+              <table className="m-table m-table--wide">
                 <thead>
                   <tr>
                     <th style={{ whiteSpace: "nowrap" }}>Captured at</th>
@@ -184,7 +187,7 @@ export default async function SnapshotsPage({
                       </td>
                       <td
                         data-label="Message"
-                        className="truncate"
+                        className="m-truncate"
                         style={{ maxWidth: 180, fontSize: 14 }}
                         title={snap.head_commit_message}
                       >

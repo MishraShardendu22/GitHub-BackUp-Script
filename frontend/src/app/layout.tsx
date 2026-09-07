@@ -1,80 +1,124 @@
-import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Instrument_Serif, Inter } from "next/font/google";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { SITE, siteJsonLd } from "@/constants/site";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/next";
 
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-heading",
+const display = Instrument_Serif({
+  variable: "--font-display-var",
   subsets: ["latin"],
   weight: ["400"],
   style: ["normal", "italic"],
+  display: "swap",
+  fallback: ["Iowan Old Style", "Palatino", "Georgia", "serif"],
 });
 
-const inter = Inter({
-  variable: "--font-body",
+const text = Inter({
+  variable: "--font-text-var",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+  fallback: ["system-ui", "Segoe UI", "sans-serif"],
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-mono",
+const mono = IBM_Plex_Mono({
+  variable: "--font-mono-var",
   subsets: ["latin"],
-  weight: ["400", "600"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  fallback: ["ui-monospace", "monospace"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "dark",
+  themeColor: "#121211",
+};
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://github.mishrashardendu22.is-a.dev"),
+  metadataBase: new URL(SITE.url),
   title: {
-    default: "Systems Lab | GitHub Backup Monitor",
-    template: "%s | Systems Lab",
+    default: `${SITE.name} | ${SITE.tagline}`,
+    template: `%s | ${SITE.name}`,
   },
-  description:
-    "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
-  alternates: {
-    canonical: "/",
-  },
+  description: SITE.description,
+  applicationName: SITE.name,
+  authors: [{ name: SITE.author, url: "https://mishrashardendu22.is-a.dev" }],
+  creator: SITE.author,
+  publisher: SITE.author,
+  category: "technology",
+  keywords: [
+    "GitHub backup",
+    "repository archiving",
+    "backup monitoring",
+    "run telemetry",
+    "pgvector",
+    "retrieval augmented generation",
+    "Shardendu Mishra",
+  ],
+  manifest: "/manifest.webmanifest",
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Systems Lab | GitHub Backup Monitor",
-    description:
-      "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
-    url: "https://github.mishrashardendu22.is-a.dev",
-    siteName: "Systems Lab",
-    locale: "en_US",
     type: "website",
+    locale: SITE.locale,
+    url: SITE.url,
+    siteName: SITE.name,
+    title: `${SITE.name} | ${SITE.tagline}`,
+    description: SITE.description,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: `${SITE.name} - ${SITE.tagline}`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Systems Lab | GitHub Backup Monitor",
-    description:
-      "Monitor your GitHub repository backup metrics, run execution health, repository archive sizes, and live backup workers in real-time.",
+    title: `${SITE.name} | ${SITE.tagline}`,
+    description: SITE.description,
+    creator: "@Shardendu_M",
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
-      className={`${instrumentSerif.variable} ${inter.variable} ${ibmPlexMono.variable}`}
+      dir="ltr"
+      className={`${display.variable} ${text.variable} ${mono.variable}`}
     >
-      <Analytics />
-      <body className="app-shell">
-        <a className="skip-link" href="#main-content">
+      <head>
+        <script
+          type="application/ld+json"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD requires raw injection; the payload is static and locally authored.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd()) }}
+        />
+      </head>
+      <body className="m-ambient">
+        <a className="m-skip-link" href="#main-content">
           Skip to content
         </a>
-        <AppLayout>
-          <main id="main-content" className="app-main">
-            {children}
-          </main>
-        </AppLayout>
+        <AppLayout>{children}</AppLayout>
+        <Analytics />
       </body>
     </html>
   );

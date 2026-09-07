@@ -101,7 +101,7 @@ jobs:
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-backend
+          images: ${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-backend
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
@@ -125,7 +125,7 @@ jobs:
         id: meta-worker
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-worker
+          images: ${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-worker
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
@@ -149,7 +149,7 @@ jobs:
         id: meta-observatory
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-observatory
+          images: ${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-observatory
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
@@ -172,7 +172,7 @@ jobs:
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-frontend
+          images: ${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-frontend
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
@@ -247,9 +247,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Target Platform | Deployment Artifact | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Go Backend** | Render Container | \`${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-backend:latest\` | ${{ needs.deploy-render.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Backup Worker** | Container Registry | \`${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-worker:latest\` | ${{ needs.publish-docker-images.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Frontend Dashboard** | Vercel Edge / Container | \`${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-frontend:latest\` | ${{ needs.deploy-vercel.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Python Observatory** | Vercel / Container | \`${{ secrets.DOCKERHUB_USERNAME || 'mishrashardendu22' }}/github-backup-observatory:latest\` | ${{ needs.publish-docker-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Go Backend** | Render Container | \`${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-backend:latest\` | ${{ needs.deploy-render.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backup Worker** | Container Registry | \`${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-worker:latest\` | ${{ needs.publish-docker-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Frontend Dashboard** | Vercel Edge / Container | \`${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-frontend:latest\` | ${{ needs.deploy-vercel.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Python Observatory** | Vercel / Container | \`${{ secrets.DOCKERHUB_USERNAME || 'shardendumishra22' }}/github-backup-observatory:latest\` | ${{ needs.publish-docker-images.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Commit SHA: \`${{ github.sha }}\` | Ref: \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY

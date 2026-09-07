@@ -11,20 +11,20 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
   if (!sources || sources.length === 0) return null;
 
   return (
-    <div className="ai-sources-card" style={{ marginBottom: "12px" }}>
+    <div className="m-panel" style={{ marginBottom: "12px" }}>
       <button
         type="button"
-        className="ai-sources-header"
+        className="m-panel__head"
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-label="Toggle retrieved hybrid search sources"
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Database size={13} style={{ color: "var(--accent)" }} />
+          <Database size={13} style={{ color: "var(--iris-500)" }} />
           <strong style={{ fontSize: "12.5px", color: "var(--text)" }}>
             Retrieved Hybrid Search Sources
           </strong>
-          <span className="ai-sources-count-badge">
+          <span className="m-badge m-badge--quiet">
             {sources.length} chunk{sources.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -37,13 +37,13 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
             style={{
               transform: expanded ? "rotate(180deg)" : "none",
               transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-              color: "var(--accent)",
+              color: "var(--iris-500)",
             }}
           />
         </div>
       </button>
       {expanded && (
-        <div className="ai-sources-content-grid">
+        <div className="sources">
           {sources.map((src, idx) => (
             <div
               key={
@@ -51,29 +51,27 @@ function RetrievedSourcesBlock({ sources }: { sources: SearchSource[] }) {
                   ? String(src.id)
                   : `${src.source_type}:${src.source_id}:${idx}`
               }
-              className="ai-source-chunk-card"
+              className="source-chunk"
             >
-              <div className="ai-source-chunk-header">
+              <div className="source-chunk__header">
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className={`ai-source-type-pill ${src.source_type}`}>
-                    {src.source_type}
-                  </span>
+                  <span className="m-tag">{src.source_type}</span>
                   {src.source_id && (
-                    <span className="ai-source-id-label" title={src.source_id}>
+                    <span className="m-mono" title={src.source_id}>
                       #{src.source_id}
                     </span>
                   )}
                 </div>
-                <div className="ai-source-score-pill">
-                  <span className="ai-source-score-label">Score</span>
-                  <span className="ai-source-score-val">
+                <div className="m-tag">
+                  <span className="m-caption">Score</span>
+                  <span className="m-num">
                     {typeof src.score === "number"
                       ? src.score.toFixed(4)
                       : src.score}
                   </span>
                 </div>
               </div>
-              <div className="ai-source-chunk-body">
+              <div className="source-chunk__body">
                 <code>{src.content}</code>
               </div>
             </div>
@@ -95,9 +93,9 @@ export function MessageBubble({
 }) {
   if (msg.role === "user") {
     return (
-      <div className={`userBubbleWrap ${isDeleting ? "deleting" : ""}`}>
+      <div className={`turn turn--user ${isDeleting ? "is-deleting" : ""}`}>
         <div
-          className="msgHeader"
+          className="turn__meta"
           style={{
             display: "flex",
             alignItems: "center",
@@ -108,7 +106,7 @@ export function MessageBubble({
           {onDelete && !msg.streaming && (
             <button
               type="button"
-              className="message-delete-btn"
+              className="turn__delete"
               onClick={() => onDelete(msg.id)}
               title="Delete message"
               aria-label="Delete message"
@@ -118,8 +116,8 @@ export function MessageBubble({
           )}
           <span>You · {formatTime(msg.timestamp)}</span>
         </div>
-        <div className="userBubble">
-          <p className="userText">{msg.content}</p>
+        <div className="turn__bubble">
+          <p className="">{msg.content}</p>
         </div>
       </div>
     );
@@ -128,12 +126,12 @@ export function MessageBubble({
   const runningTool = msg.toolCalls?.find((t) => t.running);
 
   return (
-    <div className={`assistantWrap ${isDeleting ? "deleting" : ""}`}>
-      <div className="msgHeader">
+    <div className={`turn turn--assistant ${isDeleting ? "is-deleting" : ""}`}>
+      <div className="turn__meta">
         <Bot
           size={13}
           style={{
-            color: "var(--accent)",
+            color: "var(--iris-500)",
             display: "inline-block",
             verticalAlign: "-2px",
             marginRight: 4,
@@ -141,7 +139,7 @@ export function MessageBubble({
         />{" "}
         Systems Lab Agent · {formatTime(msg.timestamp)}
       </div>
-      <div className="assistantBubble">
+      <div className="turn__bubble">
         {msg.sources && msg.sources.length > 0 && (
           <RetrievedSourcesBlock sources={msg.sources} />
         )}
@@ -172,7 +170,7 @@ export function MessageBubble({
             <MessageContentRenderer content={msg.content} />
             {msg.streaming && (
               <span
-                className="ai-cursor"
+                className="stream-cursor"
                 aria-hidden="true"
                 style={{ display: "inline-block", marginLeft: 4 }}
               />
@@ -189,7 +187,7 @@ export function MessageBubble({
               padding: "4px 0",
             }}
           >
-            <span className="ai-thinking" style={{ margin: 0 }}>
+            <span className="stream-thinking" style={{ margin: 0 }}>
               <span />
               <span />
               <span />

@@ -9,7 +9,7 @@ export function WorkflowDiagram({ activeStep }: { activeStep: string }) {
   ];
 
   return (
-    <div className="ai-workflow-container">
+    <div className="workflow">
       <span
         style={{
           fontSize: "9px",
@@ -42,7 +42,7 @@ export function WorkflowDiagram({ activeStep }: { activeStep: string }) {
             >
               <span
                 style={{
-                  color: active ? "var(--accent)" : "var(--text-secondary)",
+                  color: active ? "var(--iris-500)" : "var(--text-secondary)",
                   fontWeight: active ? 600 : 400,
                   textShadow: active
                     ? "0 0 8px rgba(212, 168, 50, 0.3)"
@@ -59,7 +59,7 @@ export function WorkflowDiagram({ activeStep }: { activeStep: string }) {
                       width: 5,
                       height: 5,
                       borderRadius: "50%",
-                      background: "var(--accent)",
+                      background: "var(--iris-500)",
                     }}
                   />
                 )}
